@@ -50,6 +50,35 @@ public class OracleCreateTableFactoryTest extends AbstractOracleSqlFactoryTest {
 	}
 
 	@Test
+	public void foreignMetadataDoesNotBecomeOracleDdl() {
+		Table table = getTable1("foreign_table");
+		table.getSpecifics().put("autovacuum_enabled", "true");
+		table.getSpecifics().put("unlogged", "false");
+		table.getSpecifics().put("relallfrozen", "0");
+		String sql = operation.createSql(table).getFirst().getSqlText();
+		org.junit.jupiter.api.Assertions.assertFalse(sql.toLowerCase(java.util.Locale.ROOT).contains("autovacuum"));
+		org.junit.jupiter.api.Assertions.assertFalse(sql.toLowerCase(java.util.Locale.ROOT).contains("unlogged"));
+		org.junit.jupiter.api.Assertions.assertTrue(sql.contains("PCTFREE"));
+		assertEquals("true", table.getSpecifics().get("autovacuum_enabled"));
+	}
+
+	@Test
+	public void inlineConstraintBackingIndexIsNotCreatedTwice() {
+		Table table = new Table("indexed_table");
+		Column column = new Column("id").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(column);
+		table.setPrimaryKey("pk_indexed", column);
+		var backing = table.getIndexes().add("pk_indexed").setUnique(true);
+		backing.getColumns().add(column);
+		var independent = table.getIndexes().add("other_index");
+		independent.getColumns().add(column);
+		var sql = operation.createSql(table);
+		assertEquals(2, sql.size()); // CREATE TABLE (inline PK) and the independent index.
+		org.junit.jupiter.api.Assertions.assertTrue(sql.getLast().getSqlText().contains("other_index"));
+		assertEquals(2, table.getIndexes().size());
+	}
+
+	@Test
 	public void testCreateTable() {
 		Table obj = getTable1("tableA");
 		List<SqlOperation> list = operation.createSql(obj);

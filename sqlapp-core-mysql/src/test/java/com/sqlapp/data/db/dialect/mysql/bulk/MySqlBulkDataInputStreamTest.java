@@ -18,6 +18,69 @@ import com.sqlapp.jdbc.bulk.BulkOption;
 
 class MySqlBulkDataInputStreamTest {
 	@Test
+	void encodesBothInstantsOfADaylightSavingOverlap() throws Exception {
+		final Table table = new Table("overlap");
+		table.getColumns().add(new Column("ts").setDataType(DataType.TIMESTAMPVERSION));
+		for (String instant : new String[] { "2026-11-01T05:30:00.123456Z", "2026-11-01T06:30:00.123456Z" }) {
+			table.getRows().add(row -> row.put("ts", java.sql.Timestamp.from(java.time.Instant.parse(instant))));
+		}
+		try (var input = new MySqlBulkDataInputStream(table, BulkOption.defaults())) {
+			input.useExplicitTimestampOffset();
+			assertEquals("2026-11-01 05:30:00.123456+00:00\u001e2026-11-01 06:30:00.123456+00:00\u001e",
+					new String(input.readAllBytes(), StandardCharsets.UTF_8));
+		}
+	}
+
+	@Test
+	void encodesNativeTimestampInDestinationOffset() throws Exception {
+		final Table table = new Table("temporal_values");
+		table.getColumns().add(new Column("ts").setDataType(DataType.TIMESTAMPVERSION));
+		table.getRows().add(
+				row -> row.put("ts", java.sql.Timestamp.from(java.time.Instant.parse("2026-11-18T12:34:56.123456Z"))));
+		table.getRows().add(row -> row.put("ts", null));
+		try (var input = new MySqlBulkDataInputStream(table, BulkOption.defaults())) {
+			input.setTimestampOffset(java.time.ZoneOffset.of("-03:30"));
+			assertEquals("2026-11-18 09:04:56.123456\u001e\\N\u001e",
+					new String(input.readAllBytes(), StandardCharsets.UTF_8));
+		}
+	}
+
+	@Test
+	void encodesBooleanAndBitValuesWithoutLosingTheirMeaning() throws Exception {
+		final Table table = new Table("typed_values");
+		table.getColumns().add(new Column("flag").setDataType(DataType.BOOLEAN));
+		table.getColumns().add(new Column("bits").setDataType(DataType.BIT).setLength(64));
+		table.getRows().add(row -> {
+			row.put("flag", true);
+			row.put("bits", "1".repeat(64));
+		});
+		table.getRows().add(row -> {
+			row.put("flag", false);
+			row.put("bits", "0");
+		});
+		table.getRows().add(row -> {
+			row.put("flag", null);
+			row.put("bits", null);
+		});
+		try (var input = new MySqlBulkDataInputStream(table, BulkOption.defaults())) {
+			assertEquals("1\u001f" + "1".repeat(64) + "\u001e0\u001f0\u001e\\N\u001f\\N\u001e",
+					new String(input.readAllBytes(), StandardCharsets.UTF_8));
+		}
+	}
+
+	@Test
+	void rejectsBitValuesWiderThanTheColumn() {
+		final Table table = new Table("typed_values");
+		table.getColumns().add(new Column("bits").setDataType(DataType.BIT).setLength(3));
+		table.getRows().add(row -> row.put("bits", "1000"));
+		org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+			try (var input = new MySqlBulkDataInputStream(table, BulkOption.defaults())) {
+				input.readAllBytes();
+			}
+		});
+	}
+
+	@Test
 	void streamsDelimitedRowsAndOmitsGeneratedColumns() throws Exception {
 		final Table table = createTable();
 		try (MySqlBulkDataInputStream input = new MySqlBulkDataInputStream(table, BulkOption.defaults())) {

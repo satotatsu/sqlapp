@@ -62,6 +62,23 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 	}
 
 	@Override
+	protected void onUpdateDefinition(final Column column) {
+		// Native TIMESTAMP supports ON UPDATE even before DATETIME gained it.
+		if (column.getDataType() == DataType.TIMESTAMPVERSION) {
+			on().update().space()._add(column.getOnUpdate());
+		}
+	}
+
+	@Override
+	protected MySqlSqlBuilder notNullDefinition(final Column column) {
+		// Without explicit NULL, older servers can silently make TIMESTAMP NOT NULL.
+		if (!column.isIdentity() && column.getDataType() == DataType.TIMESTAMPVERSION && !column.isNotNull()) {
+			return space()._add("NULL");
+		}
+		return super.notNullDefinition(column);
+	}
+
+	@Override
 	public MySqlSqlBuilder definition(Column column, boolean withRemarks) {
 		if (!CommonUtils.isEmpty(column.getFormula())) {
 			generatedDefinition(column, withRemarks);

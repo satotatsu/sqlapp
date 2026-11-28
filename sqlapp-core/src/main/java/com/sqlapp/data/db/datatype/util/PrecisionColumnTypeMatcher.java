@@ -20,17 +20,20 @@
 package com.sqlapp.data.db.datatype.util;
 
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
  * 正規表現でPrecisionを持つカラムの型を処理します
  */
-public class PrecisionColumnTypeMatcher implements ColumnTypeMatcher, DefaultPrecision {
+public class PrecisionColumnTypeMatcher implements ColumnTypeMatcher, DefaultPrecision, Cloneable {
+
+	private Function<PrecisionColumnTypeMatcher, ColumnTypeMatcher> matcherFactory;
 
 	private ColumnTypeMatcher internalColumnTypeMatcher;
 
 	public PrecisionColumnTypeMatcher(String dataTypeName) {
-		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher(
+		this.matcherFactory = target -> new RegexColumnTypeMatcher(
 				"(?<dataTypeName>" + dataTypeName + ")\\s*(\\((?<length>\\s*[0-9]+\\s*)\\))?", (m, c) -> {
 					String value = m.group("dataTypeName");
 					if (value != null) {
@@ -40,21 +43,35 @@ public class PrecisionColumnTypeMatcher implements ColumnTypeMatcher, DefaultPre
 					if (value != null) {
 						c.setLength(value);
 					} else {
-						setTypeInformationPrecision(c);
+						target.setTypeInformationPrecision(c);
 					}
 				});
+		this.internalColumnTypeMatcher = matcherFactory.apply(this);
 	}
 
 	public PrecisionColumnTypeMatcher(String prefix, String suffix) {
-		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher(
+		this.matcherFactory = target -> new RegexColumnTypeMatcher(
 				prefix + "\\s*(\\(((?<length>\\s*[0-9]+)\\s*)\\))?\\s*" + suffix, (m, c) -> {
 					String length = m.group("length");
 					if (length != null) {
 						c.setLength(length);
 					} else {
-						setTypeInformationPrecision(c);
+						target.setTypeInformationPrecision(c);
 					}
 				});
+		this.internalColumnTypeMatcher = matcherFactory.apply(this);
+	}
+
+	/** Preserves subclass overrides; subclass fields follow Object.clone semantics. */
+	@Override
+	public ColumnTypeMatcher copy() {
+		try {
+			PrecisionColumnTypeMatcher copy = (PrecisionColumnTypeMatcher) super.clone();
+			copy.internalColumnTypeMatcher = copy.matcherFactory.apply(copy);
+			return copy;
+		} catch (CloneNotSupportedException e) {
+			throw new AssertionError(e);
+		}
 	}
 
 	@Override

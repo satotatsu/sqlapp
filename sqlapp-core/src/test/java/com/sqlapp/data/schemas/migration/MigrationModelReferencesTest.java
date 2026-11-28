@@ -39,8 +39,7 @@ class MigrationModelReferencesTest {
 				reference -> reference.kind() == Kind.REF ? "\"m\".\"" + reference.name() + "\""
 						: "read_csv('a$b.csv')");
 
-		assertEquals(
-				"SELECT * FROM (SELECT * FROM read_csv('a$b.csv')) r, \"m\".\"顧客\" k WHERE /*id*/1 = k.id",
+		assertEquals("SELECT * FROM (SELECT * FROM read_csv('a$b.csv')) r, \"m\".\"顧客\" k WHERE /*id*/1 = k.id",
 				resolved);
 	}
 
@@ -50,8 +49,7 @@ class MigrationModelReferencesTest {
 				() -> MigrationModelReferences.find("SELECT * FROM /*$ref('a')*/ WHERE 1=1"));
 
 		assertTrue(e.getMessage().contains("placeholder"), e.getMessage());
-		assertThrows(IllegalArgumentException.class,
-				() -> MigrationModelReferences.find("SELECT * FROM /*$ref(a)*/a"));
+		assertThrows(IllegalArgumentException.class, () -> MigrationModelReferences.find("SELECT * FROM /*$ref(a)*/a"));
 	}
 
 	@Test

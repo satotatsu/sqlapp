@@ -19,7 +19,7 @@ public class PhoenixTableReader extends JdbcTableReader {
 				com.sqlapp.util.CommonUtils.coalesce(getCatalogName(context), getCatalogName()),
 				com.sqlapp.util.CommonUtils.coalesce(getSchemaName(context), getSchemaName()),
 				com.sqlapp.util.CommonUtils.coalesce(getObjectName(context), getObjectName()), false,
-				getReaderOptions());
+				getReaderOptions(), version);
 	}
 
 	@Override

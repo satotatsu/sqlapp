@@ -64,10 +64,33 @@ public class MySql extends Dialect {
 	private static final java.util.regex.Pattern BOOLEAN_TINYINT = java.util.regex.Pattern
 			.compile("\\s*tinyint\\s*\\(\\s*1\\s*\\)\\s*", java.util.regex.Pattern.CASE_INSENSITIVE);
 
+	private boolean numericTinyInt1;
+
+	/**
+	 * Returns the configured interpretation; existing dialects default to BOOLEAN.
+	 */
+	public final MySqlTinyInt1Mapping getTinyInt1Mapping() {
+		return numericTinyInt1 ? MySqlTinyInt1Mapping.NUMERIC : MySqlTinyInt1Mapping.BOOLEAN;
+	}
+
+	/** Used by version factories only on newly constructed numeric dialects. */
+	protected final void useNumericTinyInt1Mapping() {
+		numericTinyInt1 = true;
+	}
+
+	/** Builds a numeric variant without changing an existing shared dialect. */
+	protected static <T extends MySql> T createNumericTinyInt1Dialect(final Supplier<T> factory) {
+		final T dialect = factory.get();
+		dialect.useNumericTinyInt1Mapping();
+		return dialect;
+	}
+
 	@Override
 	public boolean setDbType(final DataType dataType, final String productDataType, final Long lengthOrPrecision,
 			final Integer scale, final com.sqlapp.data.schemas.properties.DataTypeLengthProperties<?> column) {
 		if (productDataType != null && BOOLEAN_TINYINT.matcher(productDataType).matches()) {
+			if (numericTinyInt1)
+				return super.setDbType(DataType.TINYINT, productDataType, lengthOrPrecision, scale, column);
 			return super.setDbType(DataType.BOOLEAN, "BOOLEAN", null, null, column);
 		}
 		return super.setDbType(dataType, productDataType, lengthOrPrecision, scale, column);
@@ -109,10 +132,10 @@ public class MySql extends Dialect {
 		getDbDataTypes().addLongVarchar("TEXT", LEN_64KB - 1, type -> {
 			type.setCreateFormat("TEXT");
 		});
-		getDbDataTypes().addLongVarchar("MEDIUMTEXT", LEN_16MB, type -> {
+		getDbDataTypes().addLongVarchar("MEDIUMTEXT", LEN_16MB - 1, type -> {
 			type.setCreateFormat("MEDIUMTEXT");
 		});
-		getDbDataTypes().addLongVarchar("LONGTEXT", LEN_4GB, type -> {
+		getDbDataTypes().addLongVarchar("LONGTEXT", LEN_4GB - 1, type -> {
 			type.setCreateFormat("LONGTEXT");
 		});
 		// BINARY
@@ -144,6 +167,7 @@ public class MySql extends Dialect {
 
 		// Int8
 		getDbDataTypes().addTinyInt(type -> {
+			type.setJdbcTypeHandler(new MySqlTinyIntJdbcTypeHandler(false));
 			type.clearColumnTypeMatchers();
 			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("TINYINT"));
 		});
@@ -169,6 +193,7 @@ public class MySql extends Dialect {
 		});
 		// UTINYINT
 		getDbDataTypes().addUTinyInt(type -> {
+			type.setJdbcTypeHandler(new MySqlTinyIntJdbcTypeHandler(true));
 			type.clearColumnTypeMatchers();
 			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("UTINYINT"));
 			type.addColumnTypeMatcher(createUnsignedNumberColumnTypeMatcher("TINYINT"));
@@ -218,6 +243,7 @@ public class MySql extends Dialect {
 		});
 		// DateTime
 		getDbDataTypes().addTimestamp("DATETIME", type -> {
+			type.setJdbcTypeHandler(new MySqlDatetimeJdbcTypeHandler());
 			type.setLiteral("'", "'").setCreateFormat("DATETIME").setDefaultValueLiteral(getCurrentDateTimeFunction())
 					.setFixedPrecision(false).setConverter(Converters.getDefault().getConverter(java.util.Date.class));
 		});
@@ -257,6 +283,11 @@ public class MySql extends Dialect {
 		return new MysqlUnsignedNumberColumnTypeMatcher(dataTypeName);
 	}
 
+	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new MySqlDefaultExpressionSupport(this);
+	}
+
 	/**
 	 * DB名
 	 */
@@ -273,6 +304,11 @@ public class MySql extends Dialect {
 	@Override
 	public String getSimpleName() {
 		return "mysql";
+	}
+
+	@Override
+	public String getSelectDummyTableName() {
+		return "DUAL";
 	}
 
 	@Override
@@ -432,7 +468,7 @@ public class MySql extends Dialect {
 
 	@Override
 	public int hashCode() {
-		return getProductName().hashCode();
+		return getProductName().hashCode() + (numericTinyInt1 ? 31 : 0);
 	}
 
 	/**
@@ -443,7 +479,7 @@ public class MySql extends Dialect {
 		if (!super.equals(obj)) {
 			return false;
 		}
-		return true;
+		return numericTinyInt1 == ((MySql) obj).numericTinyInt1;
 	}
 
 	/**
@@ -491,6 +527,20 @@ public class MySql extends Dialect {
 	@Override
 	public boolean supportsRowValueComparisonIn() {
 		return true;
+	}
+
+	/**
+	 * MySQLでは既定でバックスラッシュがエスケープ文字になるため、{@code \} を {@code \\} に、{@code '} を
+	 * {@code ''} にエスケープします。{@code NO_BACKSLASH_ESCAPES} が有効な接続でも安全ですが、その場合は
+	 * バックスラッシュが2つのまま格納されます。
+	 */
+	@Override
+	public String toStringLiteral(final String value) {
+		if (value == null) {
+			return null;
+		}
+		checkStringLiteral(value);
+		return "'" + value.replace("\\", "\\\\").replace("'", "''") + "'";
 	}
 
 	@Override

@@ -1,5 +1,6 @@
 /* Copyright (C) 2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.dialect.spanner.sql;
+
 import java.util.List;
 import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 import com.sqlapp.data.db.sql.SimpleSqlFactory;
@@ -7,8 +8,12 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Role;
 import com.sqlapp.data.schemas.RoleMember;
+
 public class SpannerGrantRoleFactory extends SimpleSqlFactory<RoleMember, SpannerSqlBuilder> {
-	protected boolean revoke() { return false; }
+	protected boolean revoke() {
+		return false;
+	}
+
 	@Override
 	public List<SqlOperation> createSql(final RoleMember member) {
 		if (member.getGrantee() instanceof com.sqlapp.data.schemas.User)

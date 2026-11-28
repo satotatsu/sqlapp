@@ -23,9 +23,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
 
 import com.sqlapp.util.CommonUtils;
 
@@ -52,21 +49,20 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 		}
 		if (isSupplier(value)) {
 			return convertObject(getSupplierValue(value));
+		} else if (isOptional(value)) {
+			// any kind of Optional: empty is the default value
+			return convertObject(getOptionalValue(value));
 		} else if (value instanceof Double) {
 			return (Double) value;
-		} else if (value instanceof OptionalInt) {
-			final OptionalInt op = (OptionalInt) value;
-			return op.isPresent() ? (double) op.getAsInt() : null;
-		} else if (value instanceof OptionalLong) {
-			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? (double) op.getAsLong() : null;
-		} else if (value instanceof OptionalDouble) {
-			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? (double) op.getAsDouble() : null;
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
-			return ((Number) value).doubleValue();
+			final double number = ((Number) value).doubleValue();
+			// a BigDecimal/BigInteger beyond the double range: error, not Infinity
+			if (Double.isInfinite(number) && !(value instanceof Float)) {
+				throw new ConverterException("Value out of range for Double: " + value);
+			}
+			return number;
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return ONE;
@@ -84,7 +80,15 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 			return null;
 		}
 		if (getNumberFormat() == null) {
-			return Double.valueOf(value);
+			try {
+				final double number = Double.parseDouble(value);
+				if (Double.isInfinite(number) && !value.toLowerCase().contains("infinity")) {
+					throw new ConverterException("Value out of range for Double: " + value);
+				}
+				return number;
+			} catch (final NumberFormatException e) {
+				throw new ConverterException("Cannot convert to Double: " + value, e);
+			}
 		}
 		return parse(value).doubleValue();
 	}
@@ -103,7 +107,12 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 	public static double toDouble(final byte[] bytes) {
 		final ByteBuffer keyBuffer = ByteBuffer.wrap(bytes);
 		keyBuffer.order(ByteOrder.BIG_ENDIAN);
-		return keyBuffer.getDouble();
+		if (bytes.length == Double.BYTES) {
+			return keyBuffer.getDouble();
+		} else if (bytes.length == Float.BYTES) {
+			return keyBuffer.getFloat();
+		}
+		throw new ConverterException("Cannot convert " + bytes.length + " bytes to Double (4 or 8 bytes expected)");
 	}
 
 	/*
@@ -113,7 +122,7 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof DoubleConverter)) {

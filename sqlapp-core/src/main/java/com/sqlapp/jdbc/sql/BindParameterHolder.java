@@ -34,15 +34,30 @@ public class BindParameterHolder implements Closeable {
 
 	private final BindParameter bindParameter;
 	private final List<BindParameter> bindParameters;
+	/** Number of source rows, or zero when no row shape was recorded. */
+	private final int rowCount;
 
 	public BindParameterHolder(BindParameter bindParameter) {
 		this.bindParameter = bindParameter;
 		this.bindParameters = null;
+		this.rowCount = 1;
 	}
 
 	public BindParameterHolder() {
+		this(0);
+	}
+
+	/**
+	 * Creates a parameter group with an immutable source row count.
+	 * @param rowCount source row count; zero means unknown
+	 */
+	public BindParameterHolder(int rowCount) {
+		if (rowCount < 0) {
+			throw new IllegalArgumentException("rowCount must not be negative");
+		}
 		this.bindParameter = null;
 		this.bindParameters = CommonUtils.list();
+		this.rowCount = rowCount;
 	}
 
 	public Stream<BindParameter> stream() {

@@ -23,57 +23,61 @@ import java.time.ZonedDateTime;
 
 /**
  * For文の代わりに使用する<code>java.time.ZonedDateTime</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class ZonedDateTimeIterator extends AbstractObjectIterator<ZonedDateTime, Integer>{
+final class ZonedDateTimeIterator extends AbstractObjectIterator<ZonedDateTime, Integer> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start
 	 * @param end
 	 */
-	public ZonedDateTimeIterator(final ZonedDateTime start, final ZonedDateTime end){
-		this(start, end, 3600*24);
+	public ZonedDateTimeIterator(final ZonedDateTime start, final ZonedDateTime end) {
+		this(start, end, 3600 * 24);
 	}
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ(秒単位)
+	 * @param end   終了
+	 * @param step  ステップ(秒単位)
 	 */
-	public ZonedDateTimeIterator(final ZonedDateTime start, final ZonedDateTime end, final Integer step){
+	public ZonedDateTimeIterator(final ZonedDateTime start, final ZonedDateTime end, final Integer step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step>0){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step > 0);
 	}
 
 	@Override
 	protected ZonedDateTime getNext() {
 		return current.plusSeconds(this.step.intValue());
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public ZonedDateTimeIterator clone(){
-		ZonedDateTimeIterator clone=new ZonedDateTimeIterator(this.start, this.end, this.step);
+	public ZonedDateTimeIterator clone() {
+		ZonedDateTimeIterator clone = new ZonedDateTimeIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

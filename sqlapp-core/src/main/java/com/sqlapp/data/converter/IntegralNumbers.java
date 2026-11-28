@@ -69,9 +69,33 @@ final class IntegralNumbers {
 				return toLong(new BigDecimal(value), value, type, min, max);
 			} catch (NumberFormatException decimalFailure) {
 				// Keeps the previous behavior for text such as "1e3" or "NaN".
-				return toLong(Double.valueOf(value), value, type, min, max);
+				try {
+					return toLong(Double.valueOf(value), value, type, min, max);
+				} catch (NumberFormatException doubleFailure) {
+					throw new ConverterException("Cannot convert to " + type + ": " + value, doubleFailure);
+				}
 			}
 		}
+	}
+
+	/**
+	 * Reads big-endian two's complement bytes. Shorter arrays are sign-extended
+	 * and longer arrays are accepted when the value fits, instead of failing
+	 * with {@code BufferUnderflowException} or ignoring the extra bytes.
+	 */
+	static long fromBytes(final byte[] bytes, final String type, final long min, final long max) {
+		if (bytes.length == 0) {
+			throw new ConverterException("Cannot convert to " + type + ": empty byte array");
+		}
+		final BigInteger integer = new BigInteger(bytes);
+		if (integer.bitLength() > 63) {
+			throw outOfRange(java.util.HexFormat.of().formatHex(bytes), type);
+		}
+		final long result = integer.longValue();
+		if (result < min || result > max) {
+			throw outOfRange(java.util.HexFormat.of().formatHex(bytes), type);
+		}
+		return result;
 	}
 
 	private static long toLong(final BigDecimal decimal, final Object original, final String type) {

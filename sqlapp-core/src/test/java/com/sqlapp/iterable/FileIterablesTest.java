@@ -84,10 +84,9 @@ class FileIterablesTest {
 	void appliesFilePredicateToEachFileInDirectory() {
 		final File directory = new File(path);
 
-		assertEquals(1, FileIterables.readAllAsMap(directory,
-				file -> file.getName().endsWith(".xml")).size());
-		assertEquals(1, FileIterables.readAllRecursiveAsMap(directory,
-				file -> file.getName().endsWith(".xlsx")).size());
+		assertEquals(1, FileIterables.readAllAsMap(directory, file -> file.getName().endsWith(".xml")).size());
+		assertEquals(1,
+				FileIterables.readAllRecursiveAsMap(directory, file -> file.getName().endsWith(".xlsx")).size());
 	}
 
 	@Test
@@ -177,8 +176,7 @@ class FileIterablesTest {
 	@Test
 	void readsExcel2003WorkbookAsMaps() throws Exception {
 		final Path xls = temporaryDirectory.resolve("items.xls");
-		try (var workbook = DataFormat.EXCEL2003.createWorkbook();
-				OutputStream output = Files.newOutputStream(xls)) {
+		try (var workbook = DataFormat.EXCEL2003.createWorkbook(); OutputStream output = Files.newOutputStream(xls)) {
 			final var sheet = workbook.createSheet();
 			sheet.createRow(0).createCell(0).setCellValue("id");
 			sheet.createRow(1).createCell(0).setCellValue(1);
@@ -198,8 +196,7 @@ class FileIterablesTest {
 	void readsExcelInputStreamWithItsDeclaredFormat() throws Exception {
 		for (final DataFormat format : List.of(DataFormat.EXCEL2003, DataFormat.EXCEL)) {
 			final byte[] content;
-			try (var workbook = format.createWorkbook();
-					var output = new ByteArrayOutputStream()) {
+			try (var workbook = format.createWorkbook(); var output = new ByteArrayOutputStream()) {
 				final var sheet = workbook.createSheet();
 				sheet.createRow(0).createCell(0).setCellValue("id");
 				sheet.createRow(1).createCell(0).setCellValue(1);
@@ -219,8 +216,7 @@ class FileIterablesTest {
 	@Test
 	void declaredExcelFormatDoesNotDependOnFileExtension() throws Exception {
 		final Path file = temporaryDirectory.resolve("items.data");
-		try (var workbook = DataFormat.EXCEL2003.createWorkbook();
-				var output = Files.newOutputStream(file)) {
+		try (var workbook = DataFormat.EXCEL2003.createWorkbook(); var output = Files.newOutputStream(file)) {
 			final var sheet = workbook.createSheet();
 			sheet.createRow(0).createCell(0).setCellValue("id");
 			sheet.createRow(1).createCell(0).setCellValue(1);

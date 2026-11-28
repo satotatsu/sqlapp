@@ -56,7 +56,7 @@ class TransferNameMappingGridTest {
 			var configuration = panel.configuration();
 			assertTrue(configuration.tables().get("PUBLIC.A").columns().isEmpty());
 			assertEquals("ARCHIVE", configuration.tables().get("PUBLIC.A").targetTable());
-			assertEquals("KEY", configuration.tables().get("PUBLIC.B").columns().get("ID"));
+			assertEquals("KEY", configuration.tables().get("PUBLIC.B").names().get("ID"));
 			assertEquals("0 / 4 shown; 1 renamed", panel.columnTools.count.getText());
 		});
 	}
@@ -70,8 +70,8 @@ class TransferNameMappingGridTest {
 			panel.columnGrid.setRowSelectionInterval(0, 1); // A and B[1], not underlying Z and A
 			panel.columnTools.remove.doClick(0);
 			var configuration = panel.configuration();
-			assertEquals(java.util.Map.of("Z", "LAST"), configuration.tables().get("PUBLIC.A").columns());
-			assertEquals("KEY", configuration.tables().get("PUBLIC.B").columns().get("ID"));
+			assertEquals(java.util.Map.of("Z", "LAST"), configuration.tables().get("PUBLIC.A").names());
+			assertEquals("KEY", configuration.tables().get("PUBLIC.B").names().get("ID"));
 			panel.tableTools.filter.setText("PUBLIC.A");
 			panel.tableGrid.setRowSelectionInterval(0, 0);
 			panel.tableTools.reset.doClick(0);

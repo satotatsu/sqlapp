@@ -42,6 +42,25 @@ import com.sqlapp.data.schemas.Table;
  * 
  */
 public class SqlServer2005AlterTableFactory extends AbstractAlterTableFactory<SqlServerSqlBuilder> {
+	@Override
+	protected void addColumnDefinitions(Map<String, Difference<?>> allDiff, Table originalTable, Table table,
+			com.sqlapp.data.schemas.DbObjectDifferenceCollection columns, List<SqlOperation> result) {
+		var modified = columns.getList(com.sqlapp.data.schemas.State.Modified);
+		for (var deleted : columns.getList(com.sqlapp.data.schemas.State.Deleted)) {
+			if (modified.stream().noneMatch(change -> change.getOriginal() == deleted.getOriginal()))
+				addDeleteColumn(originalTable, table, deleted, result);
+		}
+		var changes = columns.getList(com.sqlapp.data.schemas.State.Added, com.sqlapp.data.schemas.State.Modified);
+		sortColumnDiff(changes);
+		for (var change : changes) {
+			if (change.getState() == com.sqlapp.data.schemas.State.Added) {
+				if (modified.stream().noneMatch(item -> item.getTarget() == change.getTarget()))
+					addAddColumn(originalTable, table, change, result);
+			} else {
+				addRenameOrAlterColumn(originalTable, table, change, result);
+			}
+		}
+	}
 
 	/** SQL Server omits the optional COLUMN keyword in ADD column syntax. */
 	@Override
@@ -143,7 +162,60 @@ public class SqlServer2005AlterTableFactory extends AbstractAlterTableFactory<Sq
 		if (original.getCheckConstraint() != null)
 			throw new IllegalArgumentException(
 					"Remove the column CHECK before altering its column definition: " + target.getName());
-		super.addRenameOrAlterColumn(originalTable, table, diff, result);
+		boolean defaultChanged = !java.util.Objects.equals(original.getDefaultValue(), target.getDefaultValue())
+				|| !com.sqlapp.util.CommonUtils.isEmpty(original.getDefaultValue()) && !java.util.Objects
+						.equals(original.getSpecifics().get("default_name"), target.getSpecifics().get("default_name"));
+		if (defaultChanged && !com.sqlapp.util.CommonUtils.isEmpty(original.getDefaultValue()))
+			dropDefault(original, originalTable, result);
+		if (!java.util.Objects.equals(original.getName(), target.getName()))
+			addRenameColumn(originalTable, table, original, target, diff, result);
+		var changes = diff.toDifference().getChangedProperties(getDialect());
+		if (changes.keySet().stream()
+				.anyMatch(key -> !key.equals("name") && !key.equals("defaultValue") && !key.equals("default_name")))
+			addAlterColumn(originalTable, table, original, target, diff, result);
+		if (defaultChanged && !com.sqlapp.util.CommonUtils.isEmpty(target.getDefaultValue())) {
+			var builder = createSqlBuilder();
+			builder.alter().table().name(table, getOptions().isDecorateSchemaName()).add();
+			String name = target.getSpecifics().get("default_name");
+			if (name != null && !name.isBlank())
+				builder.constraint().name(name);
+			builder._add(" DEFAULT ")._add(target.getDefaultValue())._add(" FOR ").name(target);
+			add(result, createOperation(builder.toString(), SqlType.ALTER, original, target));
+		}
+	}
+
+	@Override
+	protected void addRenameColumn(Table originalTable, Table table, Column original, Column target,
+			DbObjectDifference diff, List<SqlOperation> result) {
+		var name = createSqlBuilder().name(originalTable, getOptions().isDecorateSchemaName());
+		String qualified = name.toString().trim() + "." + getDialect().quote(original.getName());
+		var builder = createSqlBuilder();
+		builder._add("EXEC sys.sp_rename ")._add(SqlServerDdlSupport.nchar(qualified))._add(", ")
+				._add(SqlServerDdlSupport.nchar(target.getName()))._add(", N'COLUMN'");
+		add(result, createOperation(builder.toString(), SqlType.ALTER, original, target));
+	}
+
+	private void dropDefault(Column column, Table table, List<SqlOperation> result) {
+		var builder = createSqlBuilder();
+		String constraint = column.getSpecifics().get("default_name");
+		if (constraint != null && !constraint.isBlank()) {
+			builder.alter().table().name(table, getOptions().isDecorateSchemaName()).drop().constraint()
+					.name(constraint);
+		} else {
+			// Old Schema XML need not duplicate a database-assigned constraint name.
+			String tableName = createSqlBuilder().name(table, getOptions().isDecorateSchemaName()).toString().trim();
+			String drop = "ALTER TABLE " + tableName + " DROP CONSTRAINT ";
+			builder._add("DECLARE @sqlapp_default_name sysname;\nSELECT @sqlapp_default_name = dc.name ")
+					._add("FROM sys.default_constraints dc JOIN sys.columns c ")
+					._add("ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id ")
+					._add("WHERE dc.parent_object_id = OBJECT_ID(")._add(SqlServerDdlSupport.nchar(tableName))
+					._add(") AND c.name = ")._add(SqlServerDdlSupport.nchar(column.getName()))
+					._add(";\nIF @sqlapp_default_name IS NULL\n")
+					._add("RAISERROR ('Expected DEFAULT constraint was not found', 16, 1);\nELSE\nEXEC (")
+					._add(SqlServerDdlSupport.nchar(drop))._add(" + QUOTENAME(@sqlapp_default_name));");
+			builder = createSqlBuilder()._add("EXEC (")._add(SqlServerDdlSupport.nchar(builder.toString()))._add(")");
+		}
+		add(result, createOperation(builder.toString(), SqlType.ALTER, column));
 	}
 
 	@Override
@@ -183,6 +255,8 @@ public class SqlServer2005AlterTableFactory extends AbstractAlterTableFactory<Sq
 	protected void addDeleteColumn(Table originalTable, Table table, DbObjectDifference diff,
 			List<SqlOperation> result) {
 		Column column = diff.getOriginal(Column.class);
+		if (!com.sqlapp.util.CommonUtils.isEmpty(column.getDefaultValue()))
+			dropDefault(column, table, result);
 		if (column.getCheckConstraint() != null)
 			dropColumnCheck(column, table, result);
 		super.addDeleteColumn(originalTable, table, diff, result);

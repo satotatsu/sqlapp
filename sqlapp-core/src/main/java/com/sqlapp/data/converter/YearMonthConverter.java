@@ -83,7 +83,7 @@ public class YearMonthConverter extends AbstractJava8DateConverter<YearMonth, Ye
 			final String lowerVal = ((String) value).toLowerCase();
 			if (isCurrentText(lowerVal)) {
 				return YearMonth.now();
-			} else if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+			} else if (lowerVal.length() >= 2 && lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
 				final String val = cast(value);
 				return parseDate(val.substring(1, val.length() - 1));
 			}

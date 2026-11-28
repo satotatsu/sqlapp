@@ -29,8 +29,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -358,12 +358,10 @@ public final class MvelUtils {
 			return DateUtils.addYears((Date) date, years);
 		} else if (date instanceof Calendar) {
 			return DateUtils.addYears((Calendar) date, years);
+		} else if (date instanceof Year) {
+			return Java8DateUtils.addYears((Year) date, years);
 		} else if (date instanceof Temporal) {
 			return Java8DateUtils.addYears((Temporal) date, years);
-		} else if (date instanceof YearMonth) {
-			return Java8DateUtils.addMonths((YearMonth) date, years);
-		} else if (date instanceof Year) {
-			return Java8DateUtils.addMonths((Year) date, years);
 		}
 		throw new IllegalArgumentException("invalid type. date=" + date.getClass());
 	}
@@ -594,6 +592,11 @@ public final class MvelUtils {
 		return FileUtils.readText(FileUtils.combinePath(currentBasePath, filePath), encoding);
 	}
 
+	/**
+	 * Writes a ZIP including empty directories. Replaces an existing output only
+	 * after the archive has been completed. Replacement is atomic where supported.
+	 * The output archive is excluded when it is located inside the source directory.
+	 */
 	public static String writeZip(String filePath, String zipFilePath, String encoding)
 			throws URISyntaxException, IOException {
 		final Path fromDir;
@@ -608,30 +611,52 @@ public final class MvelUtils {
 			fromDir = Paths.get(filePath);
 			zipPath = Paths.get(zipFilePath);
 		}
-		Files.deleteIfExists(zipPath);
 		final String zipRootDirName = fromDir.getFileName().toString();
-
-		URI zipUri = new URI("jar", zipPath.toUri().toString(), null);
+		final Path output = zipPath.toAbsolutePath().normalize();
+		if (Files.exists(output) && Files.isSameFile(fromDir, output)) {
+			throw new IOException("ZIP source and output must be different: " + output);
+		}
+		final Path temporary = Files.createTempFile(output.getParent(), ".sqlapp-zip-", ".zip");
 		Map<String, Object> env = new HashMap<>();
 		env.put("create", "true");
 		if (encoding != null) {
 			env.put("encoding", encoding);
 
 		}
-		try (FileSystem fs = FileSystems.newFileSystem(zipUri, env, ClassLoader.getSystemClassLoader())) {
-			Files.walkFileTree(fromDir, new SimpleFileVisitor<Path>() {
-				@Override
-				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-					Path relative = fromDir.relativize(file);
-					Path zipFile = fs.getPath(zipRootDirName, relative.toString());
-					Path parent = zipFile.getParent();
-					if (parent != null) {
-						Files.createDirectories(parent);
+		try {
+			Files.delete(temporary);
+			try (FileSystem fs = FileSystems.newFileSystem(temporary, env)) {
+				Files.walkFileTree(fromDir, new SimpleFileVisitor<Path>() {
+					@Override
+					public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attrs) throws IOException {
+						Files.createDirectories(fs.getPath(zipRootDirName, fromDir.relativize(directory).toString()));
+						return FileVisitResult.CONTINUE;
 					}
-					Files.copy(file, zipFile, StandardCopyOption.COPY_ATTRIBUTES);
-					return FileVisitResult.CONTINUE;
-				}
-			});
+
+					@Override
+					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+						final Path absolute = file.toAbsolutePath().normalize();
+						if (absolute.equals(output) || absolute.equals(temporary)) {
+							return FileVisitResult.CONTINUE;
+						}
+						Path relative = fromDir.relativize(file);
+						Path zipFile = fs.getPath(zipRootDirName, relative.toString());
+						Path parent = zipFile.getParent();
+						if (parent != null) {
+							Files.createDirectories(parent);
+						}
+						Files.copy(file, zipFile, StandardCopyOption.COPY_ATTRIBUTES);
+						return FileVisitResult.CONTINUE;
+					}
+				});
+			}
+			try {
+				Files.move(temporary, output, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+			} catch (AtomicMoveNotSupportedException e) {
+				Files.move(temporary, output, StandardCopyOption.REPLACE_EXISTING);
+			}
+		} finally {
+			Files.deleteIfExists(temporary);
 		}
 		return zipFilePath;
 	}
@@ -662,9 +687,10 @@ public final class MvelUtils {
 	 * 
 	 * @param bound 上限(含まず)
 	 * @return 生成した値
+	 * @throws IllegalArgumentException if the bound is not finite and positive
 	 */
 	public static float nextFloat(double bound) {
-		return (float) nextDouble(bound);
+		return nextFloat(0d, bound);
 	}
 
 	/**
@@ -673,9 +699,26 @@ public final class MvelUtils {
 	 * @param origin 開始値
 	 * @param bound  上限(含まず)
 	 * @return 生成した値
+	 * @throws IllegalArgumentException if the bounds are not finite and increasing,
+	 *         or the interval contains no finite float value
 	 */
 	public static float nextFloat(double origin, double bound) {
-		return (float) nextDouble(origin, bound);
+		if (!Double.isFinite(origin) || !Double.isFinite(bound) || origin >= bound) {
+			throw new IllegalArgumentException("Float bounds must be finite and origin < bound");
+		}
+		float minimum = (float) origin;
+		if (minimum < origin) {
+			minimum = Math.nextUp(minimum);
+		}
+		float maximum = (float) bound;
+		if (maximum >= bound) {
+			maximum = Math.nextDown(maximum);
+		}
+		if (!Float.isFinite(minimum) || !Float.isFinite(maximum) || minimum > maximum) {
+			throw new IllegalArgumentException("Interval contains no finite float value: [" + origin + ", " + bound + ")");
+		}
+		final float value = (float) nextDouble(origin, bound);
+		return Math.max(minimum, Math.min(maximum, value));
 	}
 
 	/**

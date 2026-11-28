@@ -19,8 +19,10 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.converter.TimestampConverter;
-import com.sqlapp.data.converter.ZonedDateTimeConverter;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+
+import com.sqlapp.data.converter.OffsetDateTimeConverter;
 
 /**
  * TIMESTAMP_WITH_TIMEZONEを表す型
@@ -35,7 +37,7 @@ public class TimestampWithTimeZoneType extends TimestampType {
 	/**
 	 * コンバータ
 	 */
-	private TimestampConverter converter = null;
+	private OffsetDateTimeConverter converter = null;
 
 	/**
 	 * コンストラクタ
@@ -53,12 +55,16 @@ public class TimestampWithTimeZoneType extends TimestampType {
 			this.setColumnTypeMatcher("TIMESTAMP", "\\s*WITH\\s+TIME\\s*ZONE");
 			this.addColumnTypeMatcher("TIMESTAMPTZ", "");
 		}
-		converter = new TimestampConverter();
-		converter.setZonedDateTimeConverter(ZonedDateTimeConverter.newInstance()
-				.setParseFormats("uuuu-M-d H:m:s.SSS Z", "uuuu-M-d H:m:s.SSS z", "uuuu-M-d H:m:s.SSS",
-						"uuuu-M-d H:m:s Z", "uuuu-M-d H:m:s", "uuuu-M-d H:m Z", "uuuu-M-d H:m", "uuuu-M-d")
-				.setFormat("uuuu-MM-dd HH:mm:ss.SSS Z"));
-		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
+		// Values are OffsetDateTime, the JDBC 4.2 type of TIMESTAMP WITH TIME ZONE.
+		// A region (Asia/Tokyo) is reduced to its offset; see
+		// docs/development/time-zone-values.md.
+		converter = OffsetDateTimeConverter.newInstance()
+				.setParseFormats(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZonedTemporalFormats.dateTimeParser())
+				.setFormat(ZonedTemporalFormats.dateTimeText());
+		this.setConverter(converter);
+		this.setFormatter(converter);
+		this.setJdbcTypeHandler(
+				new JavaTimeJdbcTypeHandler<>(this.getDataType().getJdbcType(), OffsetDateTime.class, converter));
 	}
 
 	/*

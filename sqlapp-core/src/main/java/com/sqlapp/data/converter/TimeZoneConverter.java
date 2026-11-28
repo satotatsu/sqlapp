@@ -22,6 +22,7 @@ package com.sqlapp.data.converter;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.time.Clock;
+import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.TimeZone;
 
@@ -51,7 +52,24 @@ public class TimeZoneConverter extends AbstractConverter<TimeZone> {
 		} else if (value instanceof Clock) {
 			return TimeZone.getTimeZone(((Clock) value).getZone());
 		}
-		return TimeZone.getTimeZone(value.toString());
+		return toTimeZone(value.toString().trim());
+	}
+
+	/**
+	 * TimeZone.getTimeZone returns GMT for an unknown ID, which would silently
+	 * change the data. IDs and offsets that ZoneId understands ("+09:00",
+	 * "UTC+9") are accepted; anything else is an error.
+	 */
+	private static TimeZone toTimeZone(final String id) {
+		final TimeZone timeZone = TimeZone.getTimeZone(id);
+		if (!"GMT".equals(timeZone.getID()) || "GMT".equalsIgnoreCase(id)) {
+			return timeZone;
+		}
+		try {
+			return TimeZone.getTimeZone(ZoneId.of(id));
+		} catch (final DateTimeException e) {
+			throw new ConverterException("Unknown time zone: " + id, e);
+		}
 	}
 
 	@Override
@@ -72,7 +90,7 @@ public class TimeZoneConverter extends AbstractConverter<TimeZone> {
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof TimeZoneConverter)) {

@@ -53,9 +53,13 @@ public class UUIDConverter extends AbstractConverter<UUID> implements Supplier<U
 			if ("random".equalsIgnoreCase((String) value)) {
 				return UUID.randomUUID();
 			}
-			return UUID.fromString((String) value);
+			return parse((String) value);
 		} else if (value instanceof byte[]) {
-			return BinaryUtils.toUUID((byte[]) value);
+			final byte[] bytes = (byte[]) value;
+			if (bytes.length != 16) {
+				throw new ConverterException("Cannot convert " + bytes.length + " bytes to UUID (16 bytes expected)");
+			}
+			return BinaryUtils.toUUID(bytes);
 		} else if (value instanceof long[]) {
 			long[] vals = cast(value);
 			if (vals.length > 1) {
@@ -63,7 +67,30 @@ public class UUIDConverter extends AbstractConverter<UUID> implements Supplier<U
 				return uuid;
 			}
 		}
-		throw new UnsupportedOperationException(value.getClass().getCanonicalName() + " can't convert UUID.");
+		throw new ConverterException(value.getClass().getCanonicalName() + " can't convert UUID.");
+	}
+
+	/**
+	 * Reads the canonical form, Microsoft GUID text in braces ({@code {...}}),
+	 * {@code urn:uuid:...} and 32 hexadecimal digits without hyphens (Oracle
+	 * RAW(16), MySQL HEX()).
+	 */
+	private static UUID parse(final String value) {
+		String text = value.trim();
+		if (text.length() > 2 && text.charAt(0) == '{' && text.charAt(text.length() - 1) == '}') {
+			text = text.substring(1, text.length() - 1);
+		} else if (text.regionMatches(true, 0, "urn:uuid:", 0, 9)) {
+			text = text.substring(9);
+		}
+		if (text.length() == 32 && text.chars().allMatch(c -> Character.digit(c, 16) >= 0)) {
+			return new UUID(Long.parseUnsignedLong(text.substring(0, 16), 16),
+					Long.parseUnsignedLong(text.substring(16), 16));
+		}
+		try {
+			return UUID.fromString(text);
+		} catch (final IllegalArgumentException e) {
+			throw new ConverterException("Invalid UUID text: " + value, e);
+		}
 	}
 
 	@Override

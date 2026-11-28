@@ -75,8 +75,8 @@ class ExcelHeaderRowsTest {
 	void explicitCloseReportsWorkbookCloseFailure() {
 		final IOException closeFailure = new IOException("close failed");
 		final Table table = new Table("ITEMS");
-		final var iterator = new ExcelRowIteratorHandler.ExcelIterator(table.getRows(),
-				new java.io.File("items.xlsx"), 0L, (row, column, value) -> value, 1) {
+		final var iterator = new ExcelRowIteratorHandler.ExcelIterator(table.getRows(), new java.io.File("items.xlsx"),
+				0L, (row, column, value) -> value, 1) {
 			@Override
 			protected void closeWorkbook() throws IOException {
 				throw closeFailure;

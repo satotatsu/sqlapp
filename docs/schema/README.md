@@ -8,6 +8,7 @@ SQL generation, documentation, and migration workflows.
 | Goal | Guide |
 |---|---|
 | Build and modify Schema objects | [Schema model](model.md) |
+| Understand JDBC metadata fallbacks and their limits | [JDBC metadata](jdbc-metadata.md) |
 | Model physical projections and document them | [Physical projections](projections.md) |
 | Define reusable named table selections | [Schema viewpoints](viewpoints.md) |
 | Generate browsable database documentation and ER diagrams | [HTML documentation](html-documentation.md) |

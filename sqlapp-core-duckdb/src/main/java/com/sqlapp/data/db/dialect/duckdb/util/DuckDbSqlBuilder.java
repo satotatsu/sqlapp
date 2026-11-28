@@ -7,6 +7,9 @@ package com.sqlapp.data.db.dialect.duckdb.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.AbstractColumn;
+import com.sqlapp.data.schemas.AbstractSchemaObject;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Routine;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
@@ -21,6 +24,38 @@ public class DuckDbSqlBuilder extends AbstractSqlBuilder<DuckDbSqlBuilder> {
 
 	public DuckDbSqlBuilder(final Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	public DuckDbSqlBuilder name(final AbstractSchemaObject<?> object, final boolean qualified) {
+		if (qualified && !CommonUtils.isEmpty(object.getCatalogName())) {
+			name(object.getCatalogName())._add('.');
+		}
+		return super.name(object, qualified);
+	}
+
+	@Override
+	public DuckDbSqlBuilder name(final Index index, final boolean qualified) {
+		if (qualified && !CommonUtils.isEmpty(index.getCatalogName())) {
+			name(index.getCatalogName())._add('.');
+		}
+		return super.name(index, qualified);
+	}
+
+	@Override
+	public DuckDbSqlBuilder specificName(final Routine<?> routine, final boolean qualified) {
+		if (qualified && !CommonUtils.isEmpty(routine.getCatalogName())) {
+			name(routine.getCatalogName())._add('.');
+		}
+		return super.specificName(routine, qualified);
+	}
+
+	@Override
+	protected DuckDbSqlBuilder typeDefinition(Column column) {
+		super.typeDefinition(column);
+		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL && column.getArrayDimension() > 0)
+			_add("[]".repeat(column.getArrayDimension()));
+		return this;
 	}
 
 	/**

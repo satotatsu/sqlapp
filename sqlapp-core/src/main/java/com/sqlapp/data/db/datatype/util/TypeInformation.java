@@ -41,6 +41,9 @@ import com.sqlapp.util.CommonUtils;
 
 /**
  * 型情報
+ * Defaults retain their origin so metadata can replace them while explicit
+ * declaration parameters remain authoritative. Explicit setters clear the
+ * corresponding default marker.
  */
 public class TypeInformation {
 
@@ -53,6 +56,8 @@ public class TypeInformation {
 	private Optional<Long> length = Optional.empty();
 
 	private boolean setDefaultLength = false;
+
+	private boolean setDefaultScale = false;
 
 	private Optional<Long> octetLength = Optional.empty();
 
@@ -140,6 +145,15 @@ public class TypeInformation {
 	 */
 	public void setSetDefaultLength(boolean setDefaultLength) {
 		this.setDefaultLength = setDefaultLength;
+	}
+
+	/** Whether the scale was supplied as a default rather than explicitly declared. */
+	public boolean isSetDefaultScale() {
+		return setDefaultScale;
+	}
+
+	public void setSetDefaultScale(boolean value) {
+		setDefaultScale = value;
 	}
 
 	/**
@@ -257,6 +271,7 @@ public class TypeInformation {
 	 * @param value length
 	 */
 	public void setLength(Object value) {
+		setDefaultLength = false;
 		Long val = Converters.getDefault().convertObject(value, Long.class);
 		length = Optional.ofNullable(val);
 	}
@@ -264,10 +279,14 @@ public class TypeInformation {
 	/**
 	 * lengthを設定します
 	 * 
+	 * Explicit values retain their length after unit expansion. Defaults apply
+	 * only when the value is omitted; maxima do not truncate explicit values.
+	 *
 	 * @param value length
 	 * @param multi K OR M OR G
 	 */
 	public void setLength(String value, String multi) {
+		setDefaultLength = false;
 		Long val = Converters.getDefault().convertObject(value, Long.class);
 		if (CommonUtils.isEmpty(multi)) {
 			length = Optional.ofNullable(getCaluculatedLength(val));
@@ -280,6 +299,7 @@ public class TypeInformation {
 				length = Optional.of(getCaluculatedLength(val.longValue() * CommonUtils.LEN_1GB));
 			}
 		}
+		setDefaultLength = val == null && length.isPresent();
 	}
 
 	private Long getCaluculatedLength(Long val) {
@@ -289,25 +309,14 @@ public class TypeInformation {
 		if (dbDataType instanceof AbstractNoSizeType) {
 			return null;
 		}
+		if (val != null) {
+			return val;
+		}
 		Optional<Integer> defPre = getDefaultPrecision();
 		if (defPre.isPresent()) {
-			if (val == null) {
-				return Converters.getDefault().convertObject(defPre.get(), Long.class);
-			} else {
-				return Converters.getDefault().convertObject(defPre.get(), Long.class);
-			}
+			return defPre.get().longValue();
 		}
-		Optional<Long> defLen = getDefaultLength();
-		if (defLen.isPresent()) {
-			if (val == null) {
-				return defLen.get();
-			} else {
-				if (defLen.get().longValue() < val) {
-					return defLen.get();
-				}
-			}
-		}
-		return val;
+		return getDefaultLength().orElse(null);
 	}
 
 	public Optional<Integer> getDefaultPrecision() {
@@ -377,6 +386,7 @@ public class TypeInformation {
 	 * @param value scale
 	 */
 	public void setScale(Object value) {
+		setDefaultScale = false;
 		Integer val = Converters.getDefault().convertObject(value, Integer.class);
 		scale = Optional.ofNullable(getCaluculatedScale(val));
 	}

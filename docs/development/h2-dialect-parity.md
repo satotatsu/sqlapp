@@ -31,7 +31,7 @@ form for 1.x. H2 2.x sequence access uses `NEXT VALUE FOR`; removed `CALL IDENTI
 fails with an instruction to use JDBC generated keys. Existing generated-key
 support remains available.
 
-The executable evidence uses the existing H2 **2.3.232** test dependency, Java 21
+The executable evidence uses the existing H2 **2.3.232** test dependency, Java 25
 and in-memory databases. No dependency upgrades, external databases or Docker are
 required. Legacy resolver and SQL generation are tested, but old H2 binaries are
 not executed. This is not a claim that every feature in later H2 releases has
@@ -57,6 +57,11 @@ been implemented or verified.
 | Constants | Complete executable CREATE CONSTANT definition; bare value expressions are not misrepresented as executable DDL |
 | Synonyms | Native source/target identities, filtered set retrieval, CREATE and DROP |
 | Constraints and indexes | Existing primary/unique/FK/check readers remain in use; indexes retain direction and NULLS FIRST/LAST; generated recreation and native ALTER execute against H2 |
+| Catalog, users and roles | 2.x catalog name, users (admin flag, remarks) and roles; built-in INFORMATION_SCHEMA views are read without a definition |
+| Linked tables | Read only as table links, not as ordinary or temporary tables |
+| Index kinds | HASH and SPATIAL map to the shared index type; UNIQUE index null treatment uses `h2.nullsDistinct` like constraints. Index types H2 lacks (for example GIN from another database) are created as ordinary indexes |
+| Identity defaults | An unspecified generation type is created as BY DEFAULT, matching INSERT/MERGE planning; identity with ON UPDATE is rejected. `h2.identityCache` is retained only when it differs from H2's default of 32 |
+| String limits | CHAR/VARCHAR/BINARY families allow 1,000,000,000 in 2.x |
 | Storage | CACHED/MEMORY table kind survives recreation into isolated file databases; LOCAL/GLOBAL temporary identity is retained and generic permanent CREATE is refused |
 
 Modern domain metadata uses `checks` rather than a duplicated flattened `check`.
@@ -130,8 +135,8 @@ H2 2.2 and later retain UNIQUE null treatment in the constraint's existing
 `specifics` map as `h2.nullsDistinct`: `YES` (NULLS DISTINCT), `NO` (NULLS NOT
 DISTINCT), or `ALL` (NULLS ALL DISTINCT). Inline CREATE TABLE and standalone
 constraint creation reproduce the policy explicitly, including defaults read
-from Oracle and MSSQLServer compatibility modes. Older target dialects reject
-this setting. The additional catalog column is queried only on 2.2 and later,
+from Oracle and MSSQLServer compatibility modes. Before 2.2 only the implicit `YES`
+behavior exists, so `YES` is accepted without a clause and `NO`/`ALL` are rejected. The additional catalog column is queried only on 2.2 and later,
 in the existing bulk constraint query. MERGE, MERGE_ROWS and MERGE_TABLE use
 the selected unique key's null treatment when matching existing rows. ALL permits
 duplicate entirely-null keys, while matching partially-null keys. See the native

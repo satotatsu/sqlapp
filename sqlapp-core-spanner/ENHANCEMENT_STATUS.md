@@ -8,18 +8,29 @@ was accessed. The Spanner PostgreSQL interface is outside this dialect.
 
 ## Coverage
 
+The advanced migration regression on 2026-11-19 passed 198 unit tests and
+22 local emulator tests. One existing foreign-key target rename test remains
+skipped. The Gradle wrapper ran `:sqlapp-core-spanner:test` and
+`:sqlapp-core-dialect-test:dockerTest --tests '*spanner.*' -PtestcontainersReuse=false`.
+Covered operations include explicit sequence and identity restarts, staged
+cyclic foreign keys, scalar STRING/BYTES conversion, and selected database
+options. The emulator accepts the generated role and membership DDL, but
+does not expose the roles in its metadata or DDL dump. Authorization behavior
+and hosted execution remain unverified. Resetting a configured sequence kind
+is rejected during generation. See the README for configuration and limits.
+
 | Area | Local coverage | Boundary |
 | --- | --- | --- |
 | Resolution | Existing single-version resolver, reader wiring | Reported versions do not prove service capability |
 | Columns | Native types, arrays, nullability, DEFAULT, generated/hidden/identity metadata, selected options, XML/DDL | New optional catalog fields are read from `col.*`; missing values stay absent |
-| Primary keys | Composite order, ASC/DESC, ordinal/name validation, XML/DDL | Key changes require a separate migration |
+| Primary keys | Composite order, ASC/DESC, ordinal/name validation, XML/DDL, replacement plans with ordinary secondary indexes, named CHECK constraints, and inbound, outbound and self-referencing foreign keys | Replacement requires application quiescence and a dependency check. Only the name swap is atomic. The replacement key uses ASC |
 | CHECK | Expression/state reading, CREATE, add/drop/replace, XML/DDL | Internal NOT NULL catalog exposure needs live verification |
 | Foreign keys | Composite pairing, references, rules/enforcement/state, CREATE and table diffs | Only represented native rules are supported |
 | Indexes | Key/STORING separation, UNIQUE/NULL_FILTERED, native FILTER or nullability fallback, SEARCH partition/order, ordinary/SEARCH interleave, selected options, create/drop/diffs | Layout fields must be exposed by catalog; VECTOR interleave and unmodeled options are unsupported |
-| Sequences | Start/skip/kind metadata, XML/DDL, next-value SQL | Current allocation counter is not restored; generic options are not all native |
+| Sequences | Start/skip/kind and batched counter metadata, XML/DDL, next-value SQL, explicit counter restoration | Restoration requires an explicit migration step |
 | Views | Statement/security reading, XML, CREATE/DROP/replacement | Raw definitions are not rewritten for replacement; privileges need separate handling |
 | Table synonyms | Modeled CREATE/DROP, target replacement through Schema diffs, explicit alias-name diffs | Target must be supplied; replacement uses separate DROP and ADD statements |
-| Column ALTER | Add/drop, defaults, supported nullability, scalar STRING/BYTES length, commit-timestamp options and ON UPDATE, identity skip range | Identity counter changes and unsupported generated/key/type/rename changes fail |
+| Column ALTER | Add/drop, defaults, supported nullability, scalar and array-element STRING/BYTES length, unindexed virtual formulas, commit-timestamp options and ON UPDATE, identity skip range and explicit counter restart | Virtual formula updates require hosted verification; stored formulas, primary-key changes and identity runtime counter capture remain outside this support |
 | Delete all | DELETE FROM ... WHERE TRUE | DML limits/transactions apply; this is not native TRUNCATE |
 | Table deletion | Native DROP TABLE with optional IF EXISTS after modeled user-index drops; managed FK indexes excluded | Complete index metadata is required; external dependencies are not removed automatically |
 | Table recreation and interleave | IN/IN PARENT recreation, parent-first creation, same-parent relationship and deletion-rule changes | Ambiguous metadata and parent changes fail; the server validates data and key compatibility |
@@ -166,11 +177,13 @@ tested without code changes for this audit. The local pass is complete.
    naming on live services, especially older and cross-schema targets. Extend
    unmodeled options before claiming full recreation. Nullability reconstruction
    remains a fallback when FILTER is not exposed.
-3. Design separate migrations for identity/generated/key/type/rename operations,
-   creation-only table options and changes to interleave parents.
-4. Treat current sequence counter restoration, security grants, database options,
-   change streams, newer object types and temporary-table behavior as separate
-   features, not automatic consequences of this local audit.
+3. Primary-key changes involving unmodeled dependencies, interleave parent
+   changes, stored generated expressions, and unsupported type changes require
+   migration plans that handle data and dependencies.
+4. Verify hosted permission round trips. The documented information schema
+   does not expose direct schema USAGE grants. The published identity column
+   metadata exposes the configured start counter; migration restart values
+   remain explicit.
 
 See [README.md](README.md) for individual behavior, examples and source links.
 

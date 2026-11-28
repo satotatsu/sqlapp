@@ -20,17 +20,20 @@
 package com.sqlapp.data.db.datatype.util;
 
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
  * 正規表現でPrecision,Scaleを持つカラムの型を処理します
  */
-public class PrecisionScaleColumnTypeMatcher implements ColumnTypeMatcher, DefaultPrecision, DefaultScale {
+public class PrecisionScaleColumnTypeMatcher implements ColumnTypeMatcher, DefaultPrecision, DefaultScale, Cloneable {
+
+	private Function<PrecisionScaleColumnTypeMatcher, ColumnTypeMatcher> matcherFactory;
 
 	private ColumnTypeMatcher internalColumnTypeMatcher;
 
 	public PrecisionScaleColumnTypeMatcher(String dataTypeName) {
-		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher("(?<dataTypeName>" + dataTypeName
+		this.matcherFactory = target -> new RegexColumnTypeMatcher("(?<dataTypeName>" + dataTypeName
 				+ ")\\s*(\\((?<length>\\s*[0-9]+\\s*)(\\s*,\\s*(?<scale>\\s*[0-9]+\\s*))?\\))?", (m, c) -> {
 					String value = m.group("dataTypeName");
 					if (value != null) {
@@ -40,38 +43,48 @@ public class PrecisionScaleColumnTypeMatcher implements ColumnTypeMatcher, Defau
 					if (value != null) {
 						c.setLength(value);
 					} else {
-						setTypeInformationPrecision(c);
+						target.setTypeInformationPrecision(c);
 					}
 					value = m.group("scale");
 					if (value != null) {
 						c.setScale(value);
 					} else {
-						setTypeInformationScale(c);
+						target.setTypeInformationScale(c);
 					}
 				});
+		this.internalColumnTypeMatcher = matcherFactory.apply(this);
 	}
 
 	public PrecisionScaleColumnTypeMatcher(String prefix, String middle, String suffix) {
 		// "INTERVAL DAY(", ") TO MINUTE(", ")"
-		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher(prefix + "\\s*(\\((?<length>\\s*[0-9]+\\s*)\\s*"
+		this.matcherFactory = target -> new RegexColumnTypeMatcher(prefix + "\\s*(\\((?<length>\\s*[0-9]+\\s*)\\s*"
 				+ middle + "\\s*(\\s*,\\s*(?<scale>\\s*[0-9]+\\s*))?\\))?\\s*" + suffix, (m, c) -> {
-					String value = m.group("dataTypeName");
-					if (value != null) {
-						c.setDataTypeName(value);
-					}
-					value = m.group("length");
+					String value = m.group("length");
 					if (value != null) {
 						c.setLength(value);
 					} else {
-						setTypeInformationPrecision(c);
+						target.setTypeInformationPrecision(c);
 					}
 					value = m.group("scale");
 					if (value != null) {
 						c.setScale(value);
 					} else {
-						setTypeInformationScale(c);
+						target.setTypeInformationScale(c);
 					}
 				});
+		this.internalColumnTypeMatcher = matcherFactory.apply(this);
+	}
+
+	/** Preserves subclass overrides; subclass fields follow Object.clone semantics. */
+	@Override
+	public ColumnTypeMatcher copy() {
+		try {
+			PrecisionScaleColumnTypeMatcher copy = (PrecisionScaleColumnTypeMatcher) super.clone();
+			copy.internalColumnTypeMatcher = copy.matcherFactory.apply(copy);
+			return copy;
+		} catch (CloneNotSupportedException e) {
+			throw new AssertionError(e);
+		}
 	}
 
 	@Override

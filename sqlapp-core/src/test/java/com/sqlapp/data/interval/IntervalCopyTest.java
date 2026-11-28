@@ -16,8 +16,8 @@ import com.sqlapp.data.converter.Converters;
 
 /**
  * Intervals whose time part is a whole number of minutes, hours or days were
- * reset to zero when copied, and the component setters dropped exact
- * multiples of 60 / 24 / 12.
+ * reset to zero when copied, and the component setters dropped exact multiples
+ * of 60 / 24 / 12.
  */
 class IntervalCopyTest {
 

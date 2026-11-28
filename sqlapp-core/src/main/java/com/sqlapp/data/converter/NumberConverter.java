@@ -68,12 +68,17 @@ public class NumberConverter extends AbstractConverter<Number> {
 		} else if (value instanceof Number) {
 			return (Number) value;
 		}
-		return this.converters.convertObject(value, defaultClass);
+		return getConvertersOrDefault().convertObject(value, defaultClass);
 	}
 
 	/**
 	 * @return the defaultClass
 	 */
+	/** A NumberConverter created on its own uses the shared default converters. */
+	private Converters getConvertersOrDefault() {
+		return converters != null ? converters : Converters.getDefault();
+	}
+
 	public Class<? extends Number> getDefaultClass() {
 		return defaultClass;
 	}
@@ -91,11 +96,11 @@ public class NumberConverter extends AbstractConverter<Number> {
 		if (value == null) {
 			return null;
 		}
-		final Converter<?> converter = this.converters.getConverter(value.getClass());
+		final Converter<?> converter = getConvertersOrDefault().getConverter(value.getClass());
 		if (converter instanceof NumberConverter) {
 			return value.toString();
 		}
-		return this.converters.convertString(value);
+		return getConvertersOrDefault().convertString(value);
 	}
 
 	/*

@@ -34,8 +34,8 @@ public class SqlServerSqlSplitter extends SqlSplitter {
 		super(dialect);
 	}
 
-	private static final Pattern GO_PATTERN = Pattern.compile("[\\t ]*GO\\s*(?<itr>[0-9]+)?\\s*",
-			Pattern.CASE_INSENSITIVE);
+	private static final Pattern GO_PATTERN = Pattern
+			.compile("[\\t ]*GO(?:[\\t ]+(?<itr>[0-9]+))?[\\t ]*(?:--[^\\r\\n]*)?", Pattern.CASE_INSENSITIVE);
 
 	private int previousGoPosition = 0;
 

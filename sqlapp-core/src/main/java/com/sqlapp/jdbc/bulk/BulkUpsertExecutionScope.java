@@ -14,6 +14,7 @@ public final class BulkUpsertExecutionScope implements AutoCloseable {
 	private final Connection connection;
 	private final BulkUpsertTransaction transaction;
 	private final List<String> cleanupSql = new ArrayList<>();
+	private boolean closed;
 
 	public static BulkUpsertExecutionScope begin(final Connection connection,
 			final boolean useTransaction) throws SQLException {
@@ -48,6 +49,11 @@ public final class BulkUpsertExecutionScope implements AutoCloseable {
 
 	@Override
 	public void close() throws SQLException {
+		if (closed) return;
+		closed = true;
+		// Cleanup DDL may itself commit. Resolve owned work before sending any SQL.
+		transaction.finishUncommitted();
+		if (transaction.hasFailedRollback()) return;
 		SQLException failure = null;
 		for (final String sql : cleanupSql) {
 			try (var statement = connection.createStatement()) {

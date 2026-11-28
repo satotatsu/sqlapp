@@ -27,25 +27,25 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-public abstract class AbstractResultSetHandler<T> extends AbstractHandler<T>{
+public abstract class AbstractResultSetHandler<T> extends AbstractHandler<T> {
 
-	public List<T> handle(PreparedStatement statement){
-		ResultSet resultSet=null;
-		List<T> list=list();
+	public List<T> handle(PreparedStatement statement) {
+		ResultSet resultSet = null;
+		List<T> list = list();
 		try {
 			resultSet = statement.executeQuery();
-			while(resultSet.next()){
-				T t=handle(resultSet);
+			while (resultSet.next()) {
+				T t = handle(resultSet);
 				list.add(t);
 			}
 		} catch (SQLException e) {
 			throw handleException(e);
-		} finally{
+		} finally {
 			close(resultSet);
 			close(statement);
 		}
 		return list;
 	}
-	
+
 	protected abstract T handle(ResultSet resultSet);
 }

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.duckdb.util.DuckDbMacros;
+import com.sqlapp.data.db.dialect.duckdb.metadata.DuckDbFunctionReader;
 import com.sqlapp.data.db.dialect.duckdb.util.DuckDbSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateFunctionFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
@@ -30,6 +31,10 @@ public class DuckDbCreateFunctionFactory extends AbstractCreateFunctionFactory<D
 			builder._add(String.join(System.lineSeparator(), obj.getDefinition()));
 			return;
 		}
+		if ("true".equals(obj.getSpecifics().get(DuckDbFunctionReader.INCOMPLETE_SIGNATURE))) {
+			throw new IllegalArgumentException("DuckDB metadata does not expose macro parameter defaults; "
+					+ "supply the complete original CREATE MACRO definition for " + obj.getName());
+		}
 		final FunctionType type = obj.getFunctionType();
 		if (type != null && type != FunctionType.Scalar && type != FunctionType.Table) {
 			throw new IllegalArgumentException("DuckDB supports only scalar and table macros: " + obj.getName());
@@ -45,6 +50,7 @@ public class DuckDbCreateFunctionFactory extends AbstractCreateFunctionFactory<D
 		}
 		final String body = String.join(System.lineSeparator(), obj.getStatement());
 		builder._add(DuckDbMacros.createMacro(getDialect(),
+				getOptions().isDecorateSchemaName() ? obj.getCatalogName() : null,
 				getOptions().isDecorateSchemaName() ? obj.getSchemaName() : null, obj.getName(),
 				type == FunctionType.Table, List.of(new DuckDbMacros.Overload(names, types, body))));
 	}

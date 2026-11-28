@@ -22,13 +22,19 @@ class RowConstraintXmlTest {
 		table.getColumns().add("id", c -> c.setDataType(DataType.INT));
 		table.getColumns().add("parent_id", c -> c.setDataType(DataType.INT));
 		table.getColumns().add("label", c -> c.setDataType(DataType.VARCHAR));
-		table.getConstraints().addForeignKeyConstraint("fk", table.getColumns().get("parent_id"), parent.getColumns().get("id"));
-		table.getRows().add(r -> { r.put("id", 10); r.put("parent_id", 20); r.put("label", "child"); });
+		table.getConstraints().addForeignKeyConstraint("fk", table.getColumns().get("parent_id"),
+				parent.getColumns().get("id"));
+		table.getRows().add(r -> {
+			r.put("id", 10);
+			r.put("parent_id", 20);
+			r.put("label", "child");
+		});
 		Schema restoredSchema = SchemaUtils.readXml(new java.io.StringReader(schema.asXml()));
 		Table restored = restoredSchema.getTables().get("child");
 		assertEquals(table.getRows().get(0).getValuesAsMap(), restored.getRows().get(0).getValuesAsMap());
 		assertEquals(1, restored.getColumns().get("parent_id").getOrdinal());
-		assertSame(restored.getColumns().get("parent_id"), ((ForeignKeyConstraint) restored.getConstraints().get("fk")).getColumns().get(0));
+		assertSame(restored.getColumns().get("parent_id"),
+				((ForeignKeyConstraint) restored.getConstraints().get("fk")).getColumns().get(0));
 	}
 
 	@Test

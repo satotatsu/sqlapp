@@ -28,6 +28,8 @@ module com.sqlapp.core.hsql {
 	exports com.sqlapp.data.db.dialect.hsql.resolver;
 	exports com.sqlapp.data.db.dialect.hsql.bulk;
 	exports com.sqlapp.data.db.dialect.hsql.sql to com.sqlapp.core;
+	provides com.sqlapp.jdbc.bulk.GeneratedKeyCounterProvider with
+		com.sqlapp.data.db.dialect.hsql.bulk.HsqlGeneratedKeyCounterProvider;
 	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
 		com.sqlapp.data.db.dialect.hsql.bulk.HsqlSetBasedMigrationSnapshotProvider;
 }

@@ -145,8 +145,8 @@ class TransferCheckedColumnNavigationTest {
 					editor.columnGrid.convertColumnIndexToView(2)));
 			((JTextField) editor.columnGrid.getEditorComponent()).setText("顧客名");
 			editor.columnGrid.getCellEditor().stopCellEditing();
-			assertEquals("顧客名", editor.configuration().tables().get("A").columns().get("NAME"));
-			assertEquals("OTHER", editor.configuration().tables().get("B").columns().get("ID"));
+			assertEquals("顧客名", editor.configuration().tables().get("A").names().get("NAME"));
+			assertEquals("OTHER", editor.configuration().tables().get("B").names().get("ID"));
 		});
 	}
 }

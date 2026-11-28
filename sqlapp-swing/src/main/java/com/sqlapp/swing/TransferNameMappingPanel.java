@@ -52,6 +52,11 @@ final class TransferNameMappingPanel extends JPanel {
 	final JList<TransferNameMappingInputChecks.Issue> issueList = new JList<>(issues);
 	final JLabel checkStatus = new JLabel("Check names to locate input problems. Database review is still required.");
 	private boolean checked;
+	/**
+	 * Column types and conversions are authored in YAML; the name grids keep them
+	 * unchanged for tables that remain in the mapping.
+	 */
+	private Map<String, TransferNameMappingIO.TableMapping> retained = Map.of();
 	private Function<TransferNameMappingIO.Configuration, Callable<Result>> schemaInspector;
 
 	void setSchemaInspector(Function<TransferNameMappingIO.Configuration, Callable<Result>> inspector) {
@@ -274,16 +279,15 @@ final class TransferNameMappingPanel extends JPanel {
 				String table = change.before().get(0).toString();
 				var original = resolved.get(table);
 				if (grid == tableTools)
-					resolved.put(table,
-							new TransferNameMappingIO.TableMapping(change.proposedName(), original.columns()));
+					resolved.put(table, original.withTargetTable(change.proposedName()));
 				else {
-					var names = new LinkedHashMap<>(original.columns());
+					var names = new LinkedHashMap<>(original.names());
 					String column = change.before().get(1).toString();
 					if (column.equals(change.proposedName()))
 						names.remove(column);
 					else
 						names.put(column, change.proposedName());
-					resolved.put(table, new TransferNameMappingIO.TableMapping(original.targetTable(), names));
+					resolved.put(table, original.withNames(names));
 				}
 			}
 		var candidate = new TransferNameMappingIO.Configuration(1, resolved);
@@ -318,8 +322,9 @@ final class TransferNameMappingPanel extends JPanel {
 		columns.setRowCount(0);
 		configuration.tables().forEach((source, mapping) -> {
 			tables.addRow(new String[] { source, mapping.targetTable() });
-			mapping.columns().forEach((from, to) -> columns.addRow(new String[] { source, from, to }));
+			mapping.names().forEach((from, to) -> columns.addRow(new String[] { source, from, to }));
 		});
+		retained = Map.copyOf(configuration.tables());
 		refreshColumnTables();
 	}
 
@@ -375,11 +380,12 @@ final class TransferNameMappingPanel extends JPanel {
 		}
 		var result = new LinkedHashMap<String, TransferNameMappingIO.TableMapping>();
 		// Displayed same-name columns need no override in the shared YAML.
-		mappedColumns.values().forEach(mapping -> new TransferNameMappingIO.TableMapping(null, mapping));
+		mappedColumns.values().forEach(mapping -> TransferNameMappingIO.TableMapping.names(null, mapping));
 		mappedColumns.values()
 				.forEach(mapping -> mapping.entrySet().removeIf(entry -> entry.getKey().equals(entry.getValue())));
 		targets.forEach((source, target) -> result.put(source,
-				new TransferNameMappingIO.TableMapping(target, mappedColumns.get(source))));
+				retained.getOrDefault(source, new TransferNameMappingIO.TableMapping(null, null))
+						.withTargetTable(target).withNames(mappedColumns.getOrDefault(source, Map.of()))));
 		var configuration = new TransferNameMappingIO.Configuration(1, result);
 		var io = new TransferNameMappingIO();
 		return io.validate(io.format(configuration));

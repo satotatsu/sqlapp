@@ -67,6 +67,11 @@ public final class InheritCollection extends
 	}
 
 	@Override
+	protected void elementNameChanged() {
+		structureChanged();
+	}
+
+	@Override
 	protected void renew() {
 		if (getParent()!=null&&getParent().getParent() != null) {
 			for (int i = 0; i < inner.size(); i++) {

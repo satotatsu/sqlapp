@@ -80,7 +80,7 @@ public class IntervalMonthConverter extends AbstractConverter<IntervalMonth> {
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof IntervalMonthConverter)) {

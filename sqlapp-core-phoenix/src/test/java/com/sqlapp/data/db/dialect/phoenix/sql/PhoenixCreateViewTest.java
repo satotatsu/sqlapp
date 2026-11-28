@@ -9,6 +9,24 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.*;
 
 class PhoenixCreateViewTest {
+	@Test
+	void requiresNativeDdlForViewOptionsAndKeepsItThroughXml() throws Exception {
+		for (var dialect : java.util.List.of(DialectHolder.defaultDialect, DialectHolder.defaultDialect5_3_1)) {
+			for (String option : java.util.List.of("phoenix.viewType", PhoenixDdlOptions.DEFAULT_COLUMN_FAMILY,
+					PhoenixDdlOptions.UPDATE_CACHE_FREQUENCY, PhoenixDdlOptions.TRANSACTIONAL)) {
+				final var view = view();
+				view.getSpecifics().put(option, "configured");
+				final var registry = dialect.createSqlFactoryRegistry();
+				assertThrows(UnsupportedOperationException.class, () -> registry.createSql(view, SqlType.CREATE));
+				view.setDefinition("CREATE VIEW \"Sales\".extended (id INTEGER PRIMARY KEY, extra VARCHAR)\n"
+						+ "DEFAULT_COLUMN_FAMILY='details'");
+				final View restored = SchemaUtils.readXml(new java.io.StringReader(view.asXml()));
+				assertEquals(String.join("\n", view.getDefinition()),
+						registry.createSql(restored, SqlType.CREATE).get(0).getSqlText());
+			}
+		}
+	}
+
 	private View view() {
 		final var view = new View("extended");
 		view.setSchemaName("Sales");

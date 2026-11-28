@@ -26,8 +26,11 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.BooleanConverter;
+import com.sqlapp.data.converter.StandardIntervalConverter;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.FloatType;
+import com.sqlapp.data.db.datatype.StandardIntervalCodec;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.metadata.OracleCatalogReader;
 import com.sqlapp.data.db.dialect.oracle.sql.OracleSqlFactoryRegistry;
@@ -38,6 +41,7 @@ import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.CharacterSemantics;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
@@ -49,6 +53,12 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class Oracle extends Dialect {
+	@Override
+	protected com.sqlapp.data.db.dialect.ColumnMigration.Result convertColumnForMigration(
+			final com.sqlapp.data.schemas.Column source) {
+		return migrateNativeTimestamp(source, 6, false, "SYSTIMESTAMP");
+	}
+
 	/**
 	 * serialVersionUID
 	 */
@@ -242,13 +252,15 @@ public class Oracle extends Dialect {
 		getDbDataTypes().addTimestampWithTimeZone(type -> {
 			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6).setOctetSize(13);
 		});
-		// INTERVAL YAER TO MONTH
+		// INTERVAL YEAR TO MONTH
 		getDbDataTypes().addIntervalYearToMonth(type -> {
-			type.setDefaultPrecision(2);
+			type.setDefaultPrecision(2).setMaxPrecision(9);
+			configureInterval(type);
 		});
 		// INTERVAL DAY TO SECOND
 		getDbDataTypes().addIntervalDayToSecond(type -> {
 			type.setMaxPrecision(9).setDefaultPrecision(2).setMaxScale(9).setDefaultScale(6);
+			configureInterval(type);
 		});
 		// ROWID
 		getDbDataTypes().addRowId(type -> {
@@ -285,6 +297,11 @@ public class Oracle extends Dialect {
 		return "oracle";
 	}
 
+	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new OracleDefaultExpressionSupport(this);
+	}
+
 	/**
 	 * 現在日付(時刻部分を切り捨てたDATE)の取得関数
 	 */
@@ -308,6 +325,25 @@ public class Oracle extends Dialect {
 		} else {
 			return "select " + sequenceName + ".nextval";
 		}
+	}
+
+	private void configureInterval(DbDataType<?> type) {
+		type.setColumnTypeMatcher(new StandardIntervalCodec(type.getDataType(), 2, 6).columnTypeMatcher());
+		var converter = new StandardIntervalConverter(type.getDataType());
+		type.setConverter(converter).setFormatter(converter)
+				.setJdbcTypeHandler(new OracleIntervalJdbcTypeHandler(type.getDataType()));
+		String qualifier = type.getDataType().name().substring("INTERVAL_".length()).replace('_', ' ');
+		type.setLiteral("INTERVAL '", "' " + qualifier);
+	}
+
+	@Override
+	public String getSqlValueDefinition(Column column, Object value) {
+		var type = column.getDataType();
+		if (type == DataType.INTERVAL_YEAR_TO_MONTH || type == DataType.INTERVAL_DAY_TO_SECOND) {
+			var handler = (OracleIntervalJdbcTypeHandler) getDbDataTypes().getDbTypeStrict(type).getJdbcTypeHandler();
+			return handler.literal(value, column);
+		}
+		return super.getSqlValueDefinition(column, value);
 	}
 
 	@Override

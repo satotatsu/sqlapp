@@ -14,6 +14,7 @@ class NullsOrderTest {
 			assertEquals(order.getSqlValue(), order.getDisplayName());
 		}
 	}
+
 	@Test
 	void retainsBothOrdersThroughExistingSchemaXml() throws Exception {
 		for (var order : NullsOrder.values()) {

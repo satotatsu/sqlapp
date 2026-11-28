@@ -49,17 +49,15 @@ public class JdbcColumnPrivilegeReader extends ColumnPrivilegeReader {
 	}
 
 	@Override
-	protected List<ColumnPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ColumnPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ResultSet rs = null;
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
 			rs = databaseMetaData.getColumnPrivileges(
-					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,emptyToNull(getTableName(context))
-					,emptyToNull(getColumnName(context)));
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					emptyToNull(getTableName(context)), emptyToNull(getColumnName(context)));
 			List<ColumnPrivilege> result = list();
 			while (rs.next()) {
 				ColumnPrivilege columnPrivilege = createColumnPrivilege(rs);
@@ -73,8 +71,7 @@ public class JdbcColumnPrivilegeReader extends ColumnPrivilegeReader {
 		}
 	}
 
-	protected ColumnPrivilege createColumnPrivilege(ResultSet rs)
-			throws SQLException {
+	protected ColumnPrivilege createColumnPrivilege(ResultSet rs) throws SQLException {
 		String catalogName = getString(rs, "TABLE_CAT");
 		String schemaName = getString(rs, "TABLE_SCHEM");
 		String objectName = getString(rs, TABLE_NAME);

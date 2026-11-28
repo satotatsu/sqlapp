@@ -50,15 +50,15 @@ public class JdbcProcedureReader extends ProcedureReader {
 	}
 
 	@Override
-	protected List<Procedure> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Procedure> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ExResultSet rs = null;
 		try {
 			final DatabaseMetaData databaseMetaData = connection.getMetaData();
-			rs = new ExResultSet(databaseMetaData.getProcedures(CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName()))));
+			rs = new ExResultSet(databaseMetaData.getProcedures(
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName()))));
 			final List<Procedure> result = list();
 			while (rs.next()) {
 				final Procedure obj = createProcedure(rs);

@@ -29,9 +29,18 @@ class AutoCloseIteratorTest {
 			}
 		};
 		final class CloseableIterator implements Iterator<Integer>, AutoCloseable {
-			@Override public boolean hasNext() { return source.hasNext(); }
-			@Override public Integer next() { return source.next(); }
-			@Override public void close() throws Exception {
+			@Override
+			public boolean hasNext() {
+				return source.hasNext();
+			}
+
+			@Override
+			public Integer next() {
+				return source.next();
+			}
+
+			@Override
+			public void close() throws Exception {
 				closes.incrementAndGet();
 				throw closeFailure;
 			}

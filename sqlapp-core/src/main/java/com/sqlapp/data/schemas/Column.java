@@ -32,10 +32,13 @@ import java.util.stream.Collectors;
 import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.converter.ConvertObject;
+import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.converter.DefaultConverter;
 import com.sqlapp.data.converter.Formatter;
+import com.sqlapp.data.converter.IntervalColumnConverter;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.MetaType;
 import com.sqlapp.data.schemas.properties.CheckProperty;
 import com.sqlapp.data.schemas.properties.HiddenProperty;
 import com.sqlapp.data.schemas.properties.MaskingFunctionProperty;
@@ -146,6 +149,10 @@ public final class Column extends AbstractColumn<Column>
 	public String getDomainSchemaName() { return getDomain() == null ? null : getDomain().getSchemaName(); }
 
 	public Column setDomainName(String name) {
+		// Naming the domain already set keeps its definition (data type, length...).
+		if (domain != null && name != null && name.equals(domain.getName())) {
+			return this;
+		}
 		String schema = getDomainSchemaName();
 		domain = name == null ? null : new Domain(name).setSchemaName(schema);
 		domainColumn = null;
@@ -154,6 +161,9 @@ public final class Column extends AbstractColumn<Column>
 	}
 
 	public Column setDomainSchemaName(String schema) {
+		if (domain != null && java.util.Objects.equals(schema, domain.getSchemaName())) {
+			return this;
+		}
 		String name = getDomainName();
 		domain = new Domain(name).setSchemaName(schema);
 		domainColumn = null;
@@ -218,10 +228,18 @@ public final class Column extends AbstractColumn<Column>
 	@SuppressWarnings("rawtypes")
 	public ConvertObject getConverter() {
 		if (converter == null) {
+			if (getDialect() != null) {
+				converter = getDialect().getColumnValueConverter(this);
+			}
+		}
+		if (converter == null) {
 			if (this.getArrayDimension() > 0) {
 				converter = new DefaultConverter();
 			} else if (this.getDataType() != null) {
 				converter = Converters.getDefault().getConverter(this.getDataType().getDefaultClass());
+				if (this.getDataType().getMetaTtype() == MetaType.INTERVAL) {
+					converter = new IntervalColumnConverter((Converter<?>) converter);
+				}
 			}
 			if (converter == null) {
 				converter = new DefaultConverter();
@@ -233,8 +251,16 @@ public final class Column extends AbstractColumn<Column>
 	@SuppressWarnings("rawtypes")
 	public Formatter getFormatter() {
 		if (formatter == null) {
+			if (getDialect() != null) {
+				formatter = getDialect().getColumnValueConverter(this);
+			}
+		}
+		if (formatter == null) {
 			if (this.getDataType() != null) {
 				formatter = Converters.getDefault().getConverter(this.getDataType().getDefaultClass());
+				if (this.getDataType().getMetaTtype() == MetaType.INTERVAL) {
+					formatter = new IntervalColumnConverter((Converter<?>) formatter);
+				}
 			}
 			if (formatter == null) {
 				formatter = new DefaultConverter();

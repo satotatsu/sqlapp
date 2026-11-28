@@ -21,9 +21,7 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.CommonUtils.replace;
 import static com.sqlapp.util.CommonUtils.trim;
-import static com.sqlapp.util.CommonUtils.unwrap;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -74,8 +72,8 @@ public class SqlServer2005ColumnReader extends SqlServer2000ColumnReader {
 		Column column = super.createColumn(rs);
 		column.setFormula(getString(rs, "formula"));
 		column.setFormulaPersisted(rs.getBoolean("formula_persisted"));
-		String check_definition = replace(trim(unwrap(getString(rs, "check_definition"), '(', ')')),
-				"[" + column.getName() + "]", column.getName());
+		String check_definition = SqlServerUtils.replaceNames(
+				trim(SqlServerUtils.unwrapParentheses(getString(rs, "check_definition"))), column.getName());
 		String check_constraint_name = getString(rs, "check_constraint_name");
 		if (!isEmpty(check_definition)) {
 			CheckConstraint checkConstraint = new CheckConstraint(check_constraint_name, check_definition);
@@ -89,6 +87,8 @@ public class SqlServer2005ColumnReader extends SqlServer2000ColumnReader {
 			setSpecifics(rs, "is_not_for_replication", column);
 		}
 		setSpecifics(rs, "xmlschema", column);
+		if (rs.contains("default_name"))
+			setSpecifics(rs, "default_name", column);
 		return column;
 	}
 }

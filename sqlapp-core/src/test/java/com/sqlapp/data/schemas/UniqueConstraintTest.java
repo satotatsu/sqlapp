@@ -30,9 +30,10 @@ public class UniqueConstraintTest extends AbstractDbObjectTest<UniqueConstraint>
 		Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
 		org.junit.jupiter.api.Assertions.assertFalse(restored.getColumns().get("value").isNotNull());
 	}
+
 	@org.junit.jupiter.api.Test
 	public void preservesDisabledKeysAndNullableColumnsThroughTableXml() throws Exception {
-		for (boolean primary : new boolean[] {true, false}) {
+		for (boolean primary : new boolean[] { true, false }) {
 			Table table = new Table("items");
 			Column column = new Column("id").setDataType(com.sqlapp.data.db.datatype.DataType.INT).setNullable(true);
 			table.getColumns().add(column);
@@ -58,12 +59,14 @@ public class UniqueConstraintTest extends AbstractDbObjectTest<UniqueConstraint>
 		table.getConstraints().add(constraint);
 		org.junit.jupiter.api.Assertions.assertFalse(column.isNotNull());
 		Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
-		org.junit.jupiter.api.Assertions.assertFalse(restored.getConstraints().getNotNullConstraints().get(0).isEnable());
+		org.junit.jupiter.api.Assertions
+				.assertFalse(restored.getConstraints().getNotNullConstraints().get(0).isEnable());
 		org.junit.jupiter.api.Assertions.assertFalse(restored.getColumns().get("id").isNotNull());
 	}
+
 	@org.junit.jupiter.api.Test
 	public void preservesIncludesThroughXmlCloneAndDifference() throws Exception {
-		for (boolean primary : new boolean[] {true, false}) {
+		for (boolean primary : new boolean[] { true, false }) {
 			UniqueConstraint key = new UniqueConstraint("covering_key", primary);
 			key.addColumn("id");
 			key.getIncludes().add("Payload Value");

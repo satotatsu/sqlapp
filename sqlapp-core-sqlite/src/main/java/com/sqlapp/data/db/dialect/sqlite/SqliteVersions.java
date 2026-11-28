@@ -232,6 +232,11 @@ public final class SqliteVersions {
 		}
 
 		@Override
+		public boolean supportsIntegrityCheckTable() {
+			return true;
+		}
+
+		@Override
 		public boolean supportsDropColumn() {
 			return true;
 		}

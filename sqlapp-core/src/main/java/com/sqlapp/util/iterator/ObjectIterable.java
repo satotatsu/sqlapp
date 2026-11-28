@@ -21,12 +21,12 @@ package com.sqlapp.util.iterator;
 
 import java.util.Iterator;
 
-class ObjectIterable<T> implements Iterable<T>{
+class ObjectIterable<T> implements Iterable<T> {
 
 	private final Iterator<T> iterator;
-	
-	ObjectIterable(Iterator<T> iterator){
-		this.iterator=iterator;
+
+	ObjectIterable(Iterator<T> iterator) {
+		this.iterator = iterator;
 	}
 
 	@Override

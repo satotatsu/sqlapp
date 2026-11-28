@@ -11,18 +11,30 @@ import com.sqlapp.data.schemas.*;
 import com.sqlapp.util.SqlBuilder;
 
 class RowComparisonOperatorFallbackTest {
-	private final Dialect dialect = new Dialect(() -> null) { };
+	private final Dialect dialect = new Dialect(() -> null) {
+	};
+
 	private Table table() {
 		Table table = new Table("target");
-		for (String name : List.of("a key", "b key", "c key")) table.getColumns().add(new Column(name).setDataType(DataType.INT));
+		for (String name : List.of("a key", "b key", "c key"))
+			table.getColumns().add(new Column(name).setDataType(DataType.INT));
 		return table;
 	}
+
 	private Row row(Table table) {
-		Row row = table.newRow(); row.put("a key", 1); row.put("b key", 2); row.put("c key", 3); return row;
+		Row row = table.newRow();
+		row.put("a key", 1);
+		row.put("b key", 2);
+		row.put("c key", 3);
+		return row;
 	}
-	@Test void inclusiveComparisonsAreStrictUntilTheLastComponent() {
-		for (var operator : List.of(RowComparisonOperator.GREATER_THAN_OR_EQUAL, RowComparisonOperator.LESS_THAN_OR_EQUAL)) {
-			Table table = table(); Row row = row(table);
+
+	@Test
+	void inclusiveComparisonsAreStrictUntilTheLastComponent() {
+		for (var operator : List.of(RowComparisonOperator.GREATER_THAN_OR_EQUAL,
+				RowComparisonOperator.LESS_THAN_OR_EQUAL)) {
+			Table table = table();
+			Row row = row(table);
 			var holder = new SqlSignature.ColumnsHolder(new LinkedHashSet<>(table.getColumns()), List.of(row));
 			var sql = new SqlBuilder(dialect);
 			var parameters = operator.addOperator(dialect, holder, row, null, sql);
@@ -31,11 +43,15 @@ class RowComparisonOperatorFallbackTest {
 			assertTrue(sql.toString().contains("\"b key\" " + strict + " ?"), sql.toString());
 			assertTrue(sql.toString().contains("\"c key\" " + strict + "= ?"), sql.toString());
 			assertEquals(1, sql.toString().split(strict + "=", -1).length - 1);
-			assertEquals(List.of(1, 1, 2, 1, 2, 3), parameters.getBindParameters().stream().map(p -> p.getValue()).toList());
+			assertEquals(List.of(1, 1, 2, 1, 2, 3),
+					parameters.getBindParameters().stream().map(p -> p.getValue()).toList());
 		}
 	}
-	@Test void equalityBindsEveryComponentWithAnd() {
-		Table table = table(); Row row = row(table);
+
+	@Test
+	void equalityBindsEveryComponentWithAnd() {
+		Table table = table();
+		Row row = row(table);
 		var holder = new SqlSignature.ColumnsHolder(new LinkedHashSet<>(table.getColumns()), List.of(row));
 		var sql = new SqlBuilder(dialect);
 		var parameters = RowComparisonOperator.EQUAL.addOperator(dialect, holder, row, null, sql);
@@ -44,8 +60,11 @@ class RowComparisonOperatorFallbackTest {
 		assertEquals(2, sql.toString().split("AND", -1).length - 1);
 		assertEquals(List.of(1, 2, 3), parameters.getBindParameters().stream().map(p -> p.getValue()).toList());
 	}
-	@Test void aSingleColumnRetainsTheInclusiveOperator() {
-		Table table = table(); Row row = row(table);
+
+	@Test
+	void aSingleColumnRetainsTheInclusiveOperator() {
+		Table table = table();
+		Row row = row(table);
 		var holder = new SqlSignature.ColumnsHolder(java.util.Set.of(table.getColumns().get(0)), List.of(row));
 		var sql = new SqlBuilder(dialect);
 		var parameters = RowComparisonOperator.GREATER_THAN_OR_EQUAL.addOperator(dialect, holder, row, null, sql);

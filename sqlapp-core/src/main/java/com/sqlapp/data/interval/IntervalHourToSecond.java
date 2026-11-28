@@ -97,9 +97,10 @@ public class IntervalHourToSecond extends IntervalDayToSecond {
 		if (interval == null) {
 			return null;
 		}
-		IntervalHourToSecond result = new IntervalHourToSecond(interval.getHoursFull(), interval.getMinutes(),
-				interval.getSeconds(), interval.getNanos());
-		if (!interval.isPositive()) {
+		final Interval value = interval.toInterval();
+		IntervalHourToSecond result = new IntervalHourToSecond(value.getHoursFull(), value.getMinutes(),
+				value.getSeconds(), value.getNanos());
+		if (!value.isPositive()) {
 			result.scale(-1);
 		}
 		return result;
@@ -146,14 +147,7 @@ public class IntervalHourToSecond extends IntervalDayToSecond {
 		builder.append(":");
 		builder.append(this.getMinutes());
 		builder.append(":");
-		if (this.getNanos() > 0) {
-			synchronized (secondsFormat) {
-				double val = (double) this.getNanos() / NANO_LIMIT + this.getSeconds();
-				builder.append(secondsFormat.format(val));
-			}
-		} else {
-			builder.append(this.getSeconds());
-		}
+		builder.append(formatSeconds(this.getSeconds()));
 		builder.append("");
 		return builder.toString();
 	}

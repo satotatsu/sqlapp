@@ -76,4 +76,15 @@ class SqlServerComputedColumnTest {
 			assertFalse(sql.contains("Total"), "version=" + version + " " + sql);
 		}
 	}
+
+	@Test
+	void persistedComputedColumnKeepsNullabilityAndCheck() {
+		var table = table(true);
+		var column = table.getColumns().get("Total").setNotNull(true).setCheck("Total >= 0");
+		var registry = dialect(16).createSqlFactoryRegistry();
+		String sql = text(registry.createSql(table, SqlType.CREATE));
+		assertTrue(sql.contains("PERSISTED NOT NULL CHECK"), sql);
+		column.setFormulaPersisted(false);
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(table, SqlType.CREATE));
+	}
 }

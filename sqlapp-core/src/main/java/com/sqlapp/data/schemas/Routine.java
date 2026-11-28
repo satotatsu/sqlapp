@@ -92,13 +92,19 @@ public abstract class Routine<T extends Routine<T>> extends
 
 	@Override
 	public T setSpecificName(String specificName) {
+		assignSpecificName(specificName);
+		nameChanged();
+		return instance();
+	}
+
+	private void assignSpecificName(String specificName) {
 		if (specificName == null) {
 			this.specificName = specificName;
-			return instance();
+			return;
 		}
 		if (getName() != null && (specificName.equals(getName()) || specificName.startsWith(getName() + "("))) {
 			this.specificName = specificName;
-			return instance();
+			return;
 		}
 		boolean quoted = false;
 		int separator = -1;
@@ -114,12 +120,12 @@ public abstract class Routine<T extends Routine<T>> extends
 			this.setSchemaName(specificName.substring(0, separator));
 			this.specificName = specificName.substring(separator + 1);
 		} else this.specificName = specificName;
-		return instance();
 	}
 
 	/** Sets an unqualified, already resolved identifier from metadata or Schema XML. */
 	public T setSpecificNameLiteral(String specificName) {
 		this.specificName = specificName;
+		nameChanged();
 		return instance();
 	}
 

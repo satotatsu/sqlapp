@@ -179,6 +179,7 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends DbData
 	public long getLength(final Long length) {
 		long ret = this.getDefaultLength() != null ? this.getDefaultLength().longValue() : 0;
 		if (length != null) {
+			ret = length.longValue();
 			if (this.getMaxLength() != null) {
 				ret = this.getMaxLength().longValue() > length.longValue() ? length.longValue() : this.getMaxLength();
 			}

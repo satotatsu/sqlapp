@@ -94,6 +94,37 @@ import com.sqlapp.util.SqlBuilder;
  */
 public class Dialect implements Serializable, Comparable<Dialect> {
 	/**
+	 * Maps native MySQL-family TIMESTAMP to this dialect's registered instant type.
+	 * A null default expression leaves current-time defaults for manual review.
+	 */
+	protected final ColumnMigration.Result migrateNativeTimestamp(final Column source,
+			final int maxPrecision, final boolean fixedPrecision, final String currentTimeDefault) {
+		if (source.getDataType() != DataType.TIMESTAMPVERSION
+				|| !"TIMESTAMP".equalsIgnoreCase(source.getDataTypeName())) {
+			return ColumnMigration.noRule(source, this);
+		}
+		return ColumnMigration.mapNativeTimestamp(source, this, maxPrecision, fixedPrecision, currentTimeDefault);
+	}
+
+	/**
+	 * Target-specific type rules used only by explicit column migration. Without
+	 * a rule the result reports that no rule exists.
+	 */
+	protected ColumnMigration.Result convertColumnForMigration(final Column source) {
+		return ColumnMigration.noRule(source, this);
+	}
+
+	/**
+	 * Recognition and rendering of column default expressions for migration
+	 * between dialects.
+	 *
+	 * @return default expression support of this dialect
+	 */
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new com.sqlapp.data.db.dialect.defaultvalue.StandardDefaultExpressionSupport(this);
+	}
+
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -6651943701544804926L;
@@ -213,6 +244,14 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return getDbDataTypes().getDbType(column.getDataType(), column.getLength());
 	}
 
+	/**
+	 * Optional default row converter/formatter for a dialect's value representation.
+	 * Explicit Column converters take precedence. Null preserves the shared default.
+	 */
+	public com.sqlapp.data.converter.Converter<?> getColumnValueConverter(final Column column) {
+		return null;
+	}
+
 	public boolean setDbType(final int sqlType, final String productDataType, final Long lengthOrPrecision,
 			final Integer scale, final DataTypeLengthProperties<?> column) {
 		return setDbType(DataType.valueOf(sqlType), productDataType, lengthOrPrecision, scale, column);
@@ -281,10 +320,12 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		Optional<TypeInformation> optional = getDbDataTypes().matchTypeInformation(productDataType, lengthOrPrecision);
 		if (optional.isPresent()) {
 			TypeInformation typeInformation = optional.get();
-			if (typeInformation.getLength().isEmpty()) {
+			if (typeInformation.getLength().isEmpty()
+					|| (lengthOrPrecision != null && typeInformation.isSetDefaultLength())) {
 				typeInformation.setLength(lengthOrPrecision);
 			}
-			if (typeInformation.getScale().isEmpty()) {
+			if (typeInformation.getScale().isEmpty()
+					|| (scale != null && typeInformation.isSetDefaultScale())) {
 				typeInformation.setScale(scale);
 			}
 			return optional;
@@ -337,7 +378,9 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 
 	private String normalize(String dataTypeName) {
 		String text = trim(dataTypeName);
-		if (com.sqlapp.data.schemas.SchemaUtils.isQuotedQualifiedTypeName(text)) return text;
+		if (text != null && text.matches("(?is)(STRUCT|MAP|UNION)\\s*\\(.*")) return text;
+		if (com.sqlapp.data.schemas.SchemaUtils.isQuotedQualifiedTypeName(text)
+				|| com.sqlapp.data.schemas.SchemaUtils.isQuotedUserTypeName(text)) return text;
 		text = CommonUtils.unwrap(text, '"');
 		return text.replaceAll("\s+", " ");
 	}
@@ -564,6 +607,11 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * allocated before a multi-row INSERT. */
 	public boolean supportsSequencePreallocation() {
 		return false;
+	}
+
+	/** Maximum number of sequence values requested by a single JDBC query. */
+	public int getSequenceQueryBatchSize() {
+		return Integer.MAX_VALUE;
 	}
 
 	/** Expands values returned by a dialect-specific sequence reservation. */
@@ -850,13 +898,13 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		if (isEmpty(target)) {
 			return false;
 		}
-		if (target.charAt(0) == getOpenQuote() && target.charAt(target.length() - 1) == getCloseQuote()) {
+		if (target.length() >= 2 && target.charAt(0) == getOpenQuote() && target.charAt(target.length() - 1) == getCloseQuote()) {
 			return true;
 		}
 		return false;
 	}
 
-	private final Pattern quatePattern = Pattern.compile("[a-z0-9_$]+", Pattern.CASE_INSENSITIVE);
+	private final Pattern quatePattern = Pattern.compile("[a-z_$][a-z0-9_$]*", Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * クォートの必要性の判定
@@ -889,7 +937,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
-	 * クォートします
+	 * 必要な識別子をクォートし、内部の終了引用符をエスケープします。
+	 * 既にクォートされている識別子はそのまま返します。
 	 * 
 	 * @param target
 	 * @return クォートした結果
@@ -909,19 +958,21 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 
 	protected String doQuote(final String target) {
 		final StringBuilder builder = new StringBuilder(target.length() + 2);
-		builder.append(getOpenQuote()).append(target).append(getCloseQuote());
+		final String close = String.valueOf(getCloseQuote());
+		builder.append(getOpenQuote()).append(target.replace(close, close + close)).append(getCloseQuote());
 		return builder.toString();
 	}
 
 	/**
-	 * クォートを解除します
+	 * 外側の引用符を一組だけ除去し、二重化された終了引用符を復元します。
 	 * 
 	 * @param target
 	 * @return クォートを解除した結果
 	 */
 	public String unQuote(final String target) {
 		if (isQuoted(target)) {
-			return CommonUtils.unwrap(target, this.getCloseQuote(), this.getCloseQuote());
+			final String close = String.valueOf(getCloseQuote());
+			return target.substring(1, target.length() - 1).replace(close + close, close);
 		} else {
 			return target;
 		}
@@ -1436,7 +1487,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @return 文字列
 	 */
 	public String toText(final Collection<SplitResult> results) {
-		return toText(results, result -> result.getTextType().isComment(), result -> result.getText());
+		return toText(results, result -> result.getTextType() != null && result.getTextType().isComment(),
+				result -> result.getText());
 	}
 
 	/**
@@ -1446,37 +1498,49 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @return 文字列
 	 */
 	public String toTextFromSqlOperation(final Collection<SqlOperation> results) {
-		return toText(results, result -> result.getSqlType().isComment(), result -> result.getSqlText());
+		return toText(results, result -> result.getSqlType() != null && result.getSqlType().isComment(),
+				result -> result.getSqlText());
 	}
 
+	/**
+	 * Renders statements as a script that this dialect's splitter can split
+	 * again: an optional delimiter switch, the statement, its terminator (';'
+	 * unless the dialect switches delimiters) and an optional delimiter reset.
+	 * Comments and blank text are written as they are.
+	 */
 	private <X> String toText(final Collection<X> sqls, Predicate<X> commentPredicate,
 			Function<X, String> sqlTextFunc) {
-		if (sqls.size() == 0) {
-			X obj = CommonUtils.first(sqls);
-			String sqlText = sqlTextFunc.apply(obj);
-			return sqlText;
-		}
 		final StringBuilder builder = new StringBuilder();
+		if (sqls == null) {
+			return "";
+		}
 		for (final X result : sqls) {
-			String sqlText = sqlTextFunc.apply(result);
-			if (!commentPredicate.test(result) && !CommonUtils.isBean(sqlText)) {
-				SqlTerminator sqlTerminator = createSqlDelimiter(sqlText);
-				if (!CommonUtils.isEmpty(sqlTerminator.getStartStatementTerminator())) {
-					builder.append(sqlTerminator.getStartStatementTerminator());
-					builder.append("\n");
-				}
-				builder.append(sqlText);
-				builder.append("\n");
-				if (!CommonUtils.isEmpty(sqlTerminator.getEndStatementTerminator())) {
-					builder.append(sqlTerminator.getEndStatementTerminator());
-					builder.append("\n");
-				} else {
-					builder.append(sqlTerminator.getEndStatementTerminator());
-					builder.append("\n");
-				}
-			} else {
-				builder.append(sqlText);
-				builder.append("\n");
+			if (result == null) {
+				continue;
+			}
+			final String sqlText = sqlTextFunc.apply(result);
+			if (sqlText == null) {
+				continue;
+			}
+			if (commentPredicate.test(result) || CommonUtils.isBlank(sqlText)) {
+				builder.append(sqlText).append('\n');
+				continue;
+			}
+			final SqlTerminator sqlTerminator = createSqlDelimiter(sqlText);
+			final String start = sqlTerminator.getStartStatementTerminator();
+			final String terminator = CommonUtils.isBlank(sqlTerminator.getTerminator()) ? ";"
+					: sqlTerminator.getTerminator().strip();
+			final String end = sqlTerminator.getEndStatementTerminator();
+			final String statement = sqlText.stripTrailing();
+			if (!CommonUtils.isBlank(start)) {
+				builder.append(start).append('\n');
+			}
+			builder.append(statement).append('\n');
+			if (!(";".equals(terminator) && statement.endsWith(";"))) {
+				builder.append(terminator).append('\n');
+			}
+			if (!CommonUtils.isBlank(end) && !end.strip().equals(terminator)) {
+				builder.append(end).append('\n');
 			}
 		}
 		return builder.toString();

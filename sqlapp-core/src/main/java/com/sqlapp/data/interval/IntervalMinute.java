@@ -65,8 +65,9 @@ public class IntervalMinute extends Interval{
     	if (interval==null){
     		return null;
     	}
-    	IntervalMinute result=new IntervalMinute(interval.getMinutesFull());
-    	if (!interval.isPositive()){
+		final Interval value = interval.toInterval();
+		IntervalMinute result=new IntervalMinute(value.getMinutesFull());
+		if (!value.isPositive()){
     		result.scale(-1);
     	}
     	return result;

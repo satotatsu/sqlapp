@@ -19,14 +19,12 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * 矩形
  *
  */
-public final class Box extends AbstractMultiPoint<Point> implements ToUpperDimensionType<Box3D>{
+public final class Box extends AbstractMultiPoint<Point>{
 
     /**
 	 * serialVersionUID
@@ -97,17 +95,6 @@ public final class Box extends AbstractMultiPoint<Point> implements ToUpperDimen
 		return 2;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.geometric.ToUpperDimensionType#toUpperDimension()
-	 */
-	@Override
-	public Box3D toUpperDimension() {
-		Point3D[] points=new Point3D[this.points.length];
-		for(int i=0;i<points.length;i++){
-			points[i]=this.points[i].toUpperDimension();
-		}
-		return new Box3D(points[0], points[1]);
-	}
 	
 	
 	/* (non-Javadoc)
@@ -115,12 +102,26 @@ public final class Box extends AbstractMultiPoint<Point> implements ToUpperDimen
 	 */
 	@Override
 	public Box setValue(String text) {
-		text=text.replace("(", "").replace(")", "");
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
-		this.setPoint(vals);
+		this.setPointText(text, false);
 		return this;
 	}
+
+	/**
+	 * 2点のみ設定できます。
+	 */
+	@Override
+	protected int getMinPointSize() {
+		return 2;
+	}
+
+	/**
+	 * 2点のみ設定できます。
+	 */
+	@Override
+	protected int getMaxPointSize() {
+		return 2;
+	}
+
 	
 	/**
 	 * Line型に変換します

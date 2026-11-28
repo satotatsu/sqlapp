@@ -16,7 +16,7 @@ public class SqliteCreateIndexFactory extends AbstractCreateIndexFactory<SqliteS
 
 	@Override
 	public void addObjectDetail(Index index, Table table, SqliteSqlBuilder builder) {
-		String storedKeys = index.getSpecifics().get("sqlite.index.keys");
+		String storedKeys = com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.retainedIndexKeys(index);
 		if (getDialect() instanceof com.sqlapp.data.db.dialect.sqlite.Sqlite sqlite) {
 			if (index.getWhere() != null && !index.getWhere().isBlank() && !sqlite.supportsPartialIndexes())
 				throw new IllegalArgumentException("SQLite partial indexes require SQLite 3.8.0 or later");
@@ -29,7 +29,7 @@ public class SqliteCreateIndexFactory extends AbstractCreateIndexFactory<SqliteS
 		// index qualifier selects the database; ON must remain unqualified.
 		boolean qualify = getOptions().isDecorateSchemaName() || index.getSchemaName() != null;
 		builder.name(index, qualify).on().name(table, false).space()._add("(");
-		String keys = index.getSpecifics().get("sqlite.index.keys");
+		String keys = com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.retainedIndexKeys(index);
 		if (keys != null && !keys.isBlank()) {
 			builder._add(keys);
 		} else {

@@ -12,6 +12,12 @@ import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 /** Firebird 4.0 types, retaining the compatible 3.0 metadata readers. */
 public class Firebird40 extends Firebird30 {
 	@Override
+	protected com.sqlapp.data.db.dialect.ColumnMigration.Result convertColumnForMigration(
+			final com.sqlapp.data.schemas.Column source) {
+		return migrateNativeTimestamp(source, 4, true, null);
+	}
+
+	@Override
 	public com.sqlapp.data.db.metadata.CatalogReader getCatalogReader() {
 		return new com.sqlapp.data.db.dialect.firebird.metadata.Firebird40CatalogReader(this);
 	}

@@ -117,8 +117,7 @@ class SpannerIndexMigrationTest {
 			target.getColumns().remove("b");
 			final Table restored = SchemaUtils.readXml(new java.io.StringReader(target.asXml()));
 			final var operations = registry.createSql(original.diff(restored), SqlType.ALTER);
-			final String alter = "ALTER " + (type == IndexType.Vector ? "VECTOR INDEX" : "INDEX")
-					+ " `Sales`.`idx`";
+			final String alter = "ALTER " + (type == IndexType.Vector ? "VECTOR INDEX" : "INDEX") + " `Sales`.`idx`";
 			assertEquals(2, operations.size());
 			assertEquals(alter + " DROP STORED COLUMN `b`", operations.get(0).getSqlText());
 			assertTrue(operations.get(1).getSqlText().contains("DROP COLUMN `b`"));
@@ -142,7 +141,8 @@ class SpannerIndexMigrationTest {
 		index.getSpecifics().put(SpannerCreateIndexFactory.SPANNER_IS_MANAGED, true);
 		final var target = original.clone();
 		target.getIndexes().getFirst().getIncludes().add("b");
-		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(target), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
 	}
 
 	@Test

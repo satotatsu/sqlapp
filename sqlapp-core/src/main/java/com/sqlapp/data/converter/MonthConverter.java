@@ -48,7 +48,31 @@ public class MonthConverter extends EnumConverter<Month> {
 			return Month.from((TemporalAccessor) value);
 		} else if (value instanceof CharSequence && value.toString().matches("[+-]?[0-9]+")) {
 			return Month.of(Integer.parseInt(value.toString()));
+		} else if (value instanceof CharSequence) {
+			final Month byName = byName(value.toString().trim());
+			if (byName != null) {
+				return byName;
+			}
 		}
 		return super.convertObject(value);
+	}
+
+	/**
+	 * English and Japanese full or short names, case-insensitive ("MONDAY",
+	 * "mon", "月曜日" / "NOVEMBER", "Nov", "11月").
+	 */
+	private static Month byName(final String text) {
+		for (final Month candidate : Month.values()) {
+			for (final java.util.Locale locale : new java.util.Locale[] { java.util.Locale.ENGLISH,
+					java.util.Locale.JAPANESE }) {
+				for (final java.time.format.TextStyle style : new java.time.format.TextStyle[] {
+						java.time.format.TextStyle.FULL, java.time.format.TextStyle.SHORT }) {
+					if (candidate.getDisplayName(style, locale).equalsIgnoreCase(text)) {
+						return candidate;
+					}
+				}
+			}
+		}
+		return null;
 	}
 }

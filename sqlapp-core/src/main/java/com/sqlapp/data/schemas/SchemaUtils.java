@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
@@ -562,7 +563,7 @@ public class SchemaUtils {
 		object.validate();
 	}
 
-	private static final Map<Class<?>, Set<Class<?>>> CLASSES_CACHE = CommonUtils.map();
+	private static final Map<Class<?>, Set<Class<?>>> CLASSES_CACHE = new ConcurrentHashMap<>();
 
 	/**
 	 * DROP可能なクラスを取得します
@@ -1076,7 +1077,7 @@ public class SchemaUtils {
 		return builder.toString();
 	}
 
-	private static Map<Class<?>, Set<ISchemaProperty>> ALL_SCHEMA_PROPERTIES_SET = CommonUtils.map();
+	private static final Map<Class<?>, Set<ISchemaProperty>> ALL_SCHEMA_PROPERTIES_SET = new ConcurrentHashMap<>();
 
 	public static Set<ISchemaProperty> getAllSchemaProperties(final Class<?> clazz) {
 		Set<ISchemaProperty> set = ALL_SCHEMA_PROPERTIES_SET.get(clazz);
@@ -1086,6 +1087,7 @@ public class SchemaUtils {
 			set = CommonUtils.linkedSet(schemaProperties.size() + schemaObjectProperties.size());
 			set.addAll(schemaProperties);
 			set.addAll(schemaObjectProperties);
+			set = Collections.unmodifiableSet(set);
 			if (!set.isEmpty()) {
 				ALL_SCHEMA_PROPERTIES_SET.put(clazz, set);
 			}
@@ -1093,7 +1095,7 @@ public class SchemaUtils {
 		return set;
 	}
 
-	private static Map<Class<?>, Set<ISchemaProperty>> SCHEMA_PROPERTIES_SET = CommonUtils.map();
+	private static final Map<Class<?>, Set<ISchemaProperty>> SCHEMA_PROPERTIES_SET = new ConcurrentHashMap<>();
 
 	public static Set<ISchemaProperty> getSchemaProperties(final Class<?> clazz) {
 		Set<ISchemaProperty> set = SCHEMA_PROPERTIES_SET.get(clazz);
@@ -1104,6 +1106,7 @@ public class SchemaUtils {
 					set.add(prop);
 				}
 			}
+			set = Collections.unmodifiableSet(set);
 			if (!set.isEmpty()) {
 				SCHEMA_PROPERTIES_SET.put(clazz, set);
 			}
@@ -1111,16 +1114,33 @@ public class SchemaUtils {
 		return set;
 	}
 
+	private static final Map<Class<?>, Set<ISchemaProperty>> SETTABLE_SCHEMA_PROPERTIES_SET = new ConcurrentHashMap<>();
+
+	/**
+	 * Copies the schema properties that the target can accept from the source.
+	 * Properties the target cannot set were no-ops before, so they are skipped.
+	 *
+	 * @return the properties applied to the target
+	 */
 	public static Set<ISchemaProperty> copySchemaProperties(final Object from, final Object to) {
-		final Set<ISchemaProperty> set = getSchemaProperties(from.getClass());
-		for (final ISchemaProperty prop : SchemaProperties.values()) {
-			final Object value = prop.getCloneValue(from);
-			prop.setValue(to, value);
+		Set<ISchemaProperty> set = SETTABLE_SCHEMA_PROPERTIES_SET.get(to.getClass());
+		if (set == null) {
+			final Set<ISchemaProperty> settable = CommonUtils.linkedSet();
+			for (final ISchemaProperty prop : SchemaProperties.values()) {
+				if (prop.isSetterInstanceof(to)) {
+					settable.add(prop);
+				}
+			}
+			set = Collections.unmodifiableSet(settable);
+			SETTABLE_SCHEMA_PROPERTIES_SET.put(to.getClass(), set);
+		}
+		for (final ISchemaProperty prop : set) {
+			prop.setValue(to, prop.getCloneValue(from));
 		}
 		return set;
 	}
 
-	private static Map<Class<?>, Set<ISchemaProperty>> SCHEMA_OBJECT_PROPERTIES_SET = CommonUtils.map();
+	private static final Map<Class<?>, Set<ISchemaProperty>> SCHEMA_OBJECT_PROPERTIES_SET = new ConcurrentHashMap<>();
 
 	public static Set<ISchemaProperty> getSchemaObjectProperties(final Class<?> clazz) {
 		Set<ISchemaProperty> set = SCHEMA_OBJECT_PROPERTIES_SET.get(clazz);
@@ -1131,6 +1151,7 @@ public class SchemaUtils {
 					set.add(prop);
 				}
 			}
+			set = Collections.unmodifiableSet(set);
 			if (!set.isEmpty()) {
 				SCHEMA_OBJECT_PROPERTIES_SET.put(clazz, set);
 			}
@@ -1267,7 +1288,12 @@ public class SchemaUtils {
 	 * @return 正規化した後の値
 	 */
 	public static String normalizeDataType(String value) {
-		if (isQuotedQualifiedTypeName(value)) {
+		// Structured type expressions contain field identifiers and, potentially,
+		// quoted names/literals. Scalar type-name normalization is not safe there.
+		if (value != null && value.stripLeading().matches("(?is)(STRUCT|MAP|UNION)\\s*\\(.*")) {
+			return trim(value);
+		}
+		if (isQuotedQualifiedTypeName(value) || isQuotedUserTypeName(value)) {
 			return trim(value);
 		}
 		value = trim(value).replaceAll("\s+", " ");
@@ -1325,6 +1351,15 @@ public class SchemaUtils {
 			}
 		}
 		return builder.toString();
+	}
+
+	/** Preserves a quoted, unqualified user type while retaining builtin type aliases. */
+	public static boolean isQuotedUserTypeName(String value) {
+		if (value == null) return false;
+		String text = trim(value);
+		if (!text.matches("\"(?:[^\"]|\"\")*\"")) return false;
+		String name = text.substring(1, text.length() - 1).replace("\"\"", "\"");
+		return com.sqlapp.data.db.datatype.DataType.toType(name) == com.sqlapp.data.db.datatype.DataType.OTHER;
 	}
 
 	/** Returns whether a type name contains quoted identifiers and an unquoted qualification dot. */

@@ -98,6 +98,81 @@ public final class TransferStagedReplacement {
 	}
 
 	/**
+	 * States after which the target rows are known: the replacement did not start,
+	 * rolled back, or committed with only the stage cleanup failing. The retained
+	 * staging tables then hold nothing that the target needs.
+	 */
+	public static final java.util.Set<State> SETTLED_STATES = java.util.EnumSet.of(State.NOT_STARTED,
+			State.STAGING_FAILED, State.STAGE_VERIFIED, State.ROLLED_BACK, State.COMMITTED_STAGE_CLEANUP_FAILED);
+
+	/**
+	 * @param state          recorded state of the earlier replacement
+	 * @param recordedTarget whether the connection reaches the database the
+	 *                       replacement ran against; nothing is dropped otherwise
+	 * @param droppedStages  staging tables dropped; recorded stages that no longer
+	 *                       exist are not listed
+	 */
+	public record Release(State state, boolean recordedTarget, List<String> droppedStages) {
+		public Release {
+			droppedStages = List.copyOf(droppedStages);
+		}
+	}
+
+	/**
+	 * Drops the staging tables retained by an earlier staged replacement whose
+	 * outcome is settled, so the same job can run again. On another database
+	 * nothing is dropped. Retained stages of an unconfirmed commit or rollback are
+	 * refused, as are staging names that do not follow from the recorded job
+	 * fingerprint. Only the recorded staging names are dropped; nothing else from
+	 * the report is executed.
+	 */
+	public static Release releaseSettledStage(Path resultReport, DataSource target) {
+		var settled = SavedStagingComparison.readSettled(resultReport);
+		var targets = settled.targets();
+		for (int i = 0; i < targets.size(); i++) {
+			var expected = "SQLAPP_STG_" + hash(settled.jobFingerprint()).substring(0, 16) + "_" + (i + 1);
+			if (!expected.equals(targets.get(i).stageTable()))
+				throw new TransferSchemaPreparation.ValidationException(
+						"The recorded staging tables do not follow from the recorded job.");
+		}
+		try (var connection = target.getConnection()) {
+			if (!settled.targetIdentity().equals(
+					com.sqlapp.data.db.command.migration.schema.MigrationPlanCommand.databaseIdentity(connection)))
+				return new Release(settled.state(), false, List.of());
+			var retained = new ArrayList<Target>();
+			for (var table : targets.reversed()) {
+				try (var tables = connection.getMetaData().getTables(table.catalog(), table.schema(),
+						table.stageTable(), null)) {
+					if (tables.next())
+						retained.add(table);
+				}
+			}
+			if (retained.isEmpty())
+				return new Release(settled.state(), true, List.of());
+			if (!SETTLED_STATES.contains(settled.state()))
+				throw new TransferSchemaPreparation.ValidationException(
+						"The earlier staged replacement is " + settled.state() + ": " + settled.state().summary());
+			connection.setReadOnly(false);
+			connection.setAutoCommit(true);
+			var dialect = TransferJobPreparationService.dialect(connection);
+			var dropped = new ArrayList<String>();
+			for (var table : retained) {
+				var stage = new Table(table.stageTable()).setSchemaName(table.schema()).setCatalogName(table.catalog());
+				for (String drop : sql(dialect, stage, SqlType.DROP))
+					executeSql(connection, drop);
+				dropped.add(table.stageTable());
+			}
+			return new Release(settled.state(), true, dropped);
+		} catch (TransferSchemaPreparation.ValidationException failure) {
+			throw failure;
+		} catch (Exception failure) {
+			var diagnostic = TransferFailureDiagnostic.capture(failure);
+			throw new TransferSchemaPreparation.ValidationException(
+					"Could not drop the retained staging tables. " + diagnostic.technicalDetails());
+		}
+	}
+
+	/**
 	 * Reads a saved result and its sibling review and plan artifacts for read-only
 	 * comparison.
 	 */
@@ -230,7 +305,7 @@ public final class TransferStagedReplacement {
 					TransferJobConfiguration.SchemaMode.CREATE_MISSING, cfg.sourceSchema(),
 					plan.targets().getFirst().schema(), "names.yaml", cfg.chunkSize(), true,
 					TransferJobConfiguration.DataMode.JDBC_DIRECT, null, cfg.compatibilityPolicy(), false, null,
-					cfg.insertMethod(), null);
+					cfg.insertMethod(), null, cfg.generatedKeyCounters(), cfg.defaultConversion());
 			var io = new TransferJobConfigurationIO();
 			Path job = directory.resolve("transfer.yaml");
 			io.write(job, io.format(staged), null);
@@ -367,7 +442,8 @@ public final class TransferStagedReplacement {
 			execution.phase = Phase.VERIFICATION;
 			try (var source = bindings.source().getConnection(); var stable = bindings.target().getConnection()) {
 				TransferConnections.requestReadOnly(source);
-				source.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+				// A snapshot of the source; DuckDB offers it as REPEATABLE READ.
+				TransferConnections.useStableReadIsolation(source);
 				source.setAutoCommit(false);
 				TransferConnections.requestReadOnly(stable);
 				stable.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
@@ -389,8 +465,20 @@ public final class TransferStagedReplacement {
 				stable.rollback();
 			}
 			cleanupStages(bindings.target(), plan, execution);
-			return outcome(current, Phase.COMPLETE, execution.verified, execution.schema, null, plan, execution.state,
-					copied, execution.rows, execution.cleaned, null);
+			final var done = outcome(current, Phase.COMPLETE, execution.verified, execution.schema, null, plan,
+					execution.state, copied, execution.rows, execution.cleaned, null);
+			// The replacement is committed; a counter failure must not be reported as a
+			// staging-cleanup problem.
+			try {
+				return withCounters(done, TransferGeneratedKeySynchronization.synchronize(current.job().configuration(),
+						original, bindings.target()));
+			} catch (Exception failure) {
+				throw new CounterFailure(outcome(current, Phase.FINALIZATION, execution.verified, execution.schema,
+						TransferFailureDiagnostic.capture(failure, false), plan, execution.state, copied,
+						execution.rows, execution.cleaned, null));
+			}
+		} catch (CounterFailure failure) {
+			throw failed(failure.outcome);
 		} catch (Exception | LinkageError failure) {
 			if (execution.state == State.COMMITTED)
 				execution.state = State.COMMITTED_STAGE_CLEANUP_FAILED;
@@ -553,6 +641,24 @@ public final class TransferStagedReplacement {
 		return sql.lines().map(line -> "-- " + line).collect(java.util.stream.Collectors.joining("\n"));
 	}
 
+	/** Carries the committed outcome past the generic failure handling. */
+	private static final class CounterFailure extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		private final transient Outcome outcome;
+
+		CounterFailure(Outcome outcome) {
+			super("Generated-key counter synchronization failed after commit.", null, false, false);
+			this.outcome = outcome;
+		}
+	}
+
+	private static Outcome withCounters(Outcome outcome,
+			List<com.sqlapp.jdbc.bulk.GeneratedKeyCounters.Result> counters) {
+		return new Outcome(outcome.prepared(), outcome.phase(), outcome.copyResult(), outcome.verificationResult(),
+				outcome.completedTasks(), outcome.committedProgress(), outcome.stoppedTaskId(),
+				outcome.schemaPreparation(), outcome.failureDiagnostic(), outcome.staging(), counters);
+	}
+
 	private static Outcome outcome(TransferJobPreparationService.Prepared current, Phase phase,
 			BulkMigrationJobVerificationResult verified, TransferSchemaPreparation.Progress schema,
 			TransferFailureDiagnostic diagnostic, TargetPlan plan, State state, Outcome copied, Map<String, Long> rows,
@@ -566,8 +672,8 @@ public final class TransferStagedReplacement {
 	}
 
 	static BulkMigrationJobPlan resolve(BulkMigrationJobConfigurationEditorIO.Snapshot dataJob, Connection source) {
-		return new BulkMigrationJobConfigurationResolver()
-				.resolveJob(dataJob.file().toFile(), source, dataJob.fingerprint(), 1_048_576L, 16_777_216L).plan();
+		return TransferIntervalProjection.restore(new BulkMigrationJobConfigurationResolver()
+				.resolveJob(dataJob.file().toFile(), source, dataJob.fingerprint(), 1_048_576L, 16_777_216L).plan());
 	}
 
 	private static BulkMigrationJobTask task(BulkMigrationJobPlan plan, String id) {

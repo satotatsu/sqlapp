@@ -22,8 +22,7 @@ package com.sqlapp.data.converter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -39,7 +38,11 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 	private static final long serialVersionUID = -6320671871245038472L;
 	private final Class<T> clazz;
 
-	private ConcurrentMap<String, Map<Class<?>, Method>> methodCache = new ConcurrentHashMap<String, Map<Class<?>, Method>>();
+	/**
+	 * static methods found per method name and argument type (empty when absent).
+	 * Rebuilt lazily after deserialization because Method is not Serializable.
+	 */
+	private transient volatile ConcurrentMap<String, ConcurrentMap<Class<?>, Optional<Method>>> methodCache;
 	/**
 	 * 空文字をnullのenumに変換する
 	 */
@@ -103,22 +106,27 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 		return (T) value;
 	}
 
-	private Method getStaticMethod(String methodName, Class<?> arg) {
-		Map<Class<?>, Method> map = methodCache.get(methodName);
-		if (map == null) {
-			map = new HashMap<Class<?>, Method>();
-			Map<Class<?>, Method> org = methodCache.put(methodName, map);
-			if (org != null) {
-				map = org;
+	private ConcurrentMap<String, ConcurrentMap<Class<?>, Optional<Method>>> getMethodCache() {
+		ConcurrentMap<String, ConcurrentMap<Class<?>, Optional<Method>>> cache = methodCache;
+		if (cache == null) {
+			synchronized (this) {
+				cache = methodCache;
+				if (cache == null) {
+					cache = new ConcurrentHashMap<>();
+					methodCache = cache;
+				}
 			}
 		}
-		Method method = map.get(arg);
-		if (method != null) {
-			return method;
-		}
-		if (map.containsKey(arg)) {
-			return null;
-		}
+		return cache;
+	}
+
+	private Method getStaticMethod(String methodName, Class<?> arg) {
+		return getMethodCache().computeIfAbsent(methodName, k -> new ConcurrentHashMap<>())
+				.computeIfAbsent(arg, k -> Optional.ofNullable(findStaticMethod(methodName, k))).orElse(null);
+	}
+
+	private Method findStaticMethod(String methodName, Class<?> arg) {
+		Method method;
 		try {
 			method = clazz.getMethod(methodName, arg);
 			if (method != null) {
@@ -129,12 +137,9 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 				}
 			}
 		} catch (SecurityException e) {
-			throw new RuntimeException(e);
+			throw new ConverterException("Cannot access " + clazz.getName() + "." + methodName, e);
 		} catch (NoSuchMethodException e) {
 			method = null;
-		}
-		synchronized (map) {
-			map.put(arg, method);
 		}
 		return method;
 	}
@@ -150,12 +155,12 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 	private <T> T invoke(Method method, Object value) {
 		try {
 			return (T) method.invoke(null, value);
-		} catch (IllegalArgumentException e) {
-			throw new RuntimeException(e);
-		} catch (IllegalAccessException e) {
-			throw new RuntimeException(e);
+		} catch (IllegalArgumentException | IllegalAccessException e) {
+			throw new ConverterException("Cannot convert to " + clazz.getName() + ": " + value, e);
 		} catch (InvocationTargetException e) {
-			throw new RuntimeException(e);
+			// for example valueOf("UNKNOWN"): report the enum and the value, not the reflection
+			final Throwable cause = e.getCause() != null ? e.getCause() : e;
+			throw new ConverterException("Cannot convert to " + clazz.getName() + ": " + value, cause);
 		}
 	}
 

@@ -40,6 +40,15 @@ public class Mariadb extends MySql {
 		super(nextVersionDialectSupplier);
 	}
 
+	static MySql configureNumeric(final Supplier<? extends MySql> factory) {
+		return createNumericTinyInt1Dialect(factory);
+	}
+
+	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new MariadbDefaultExpressionSupport(this);
+	}
+
 	@Override
 	public String getProductName() {
 		return "MariaDB";

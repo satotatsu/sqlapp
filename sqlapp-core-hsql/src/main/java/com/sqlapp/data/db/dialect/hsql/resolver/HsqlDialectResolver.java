@@ -81,7 +81,15 @@ public class HsqlDialectResolver extends ProductNameDialectResolver {
 				}
 				return DialectHolder.defaultDialect2_0_0;
 			}
-			return DialectHolder.defaultDialect;
+			if (majorVersion <= 0) {
+				// No HSQLDB release has major version 0: callers pass 0.0 when the
+				// version is unknown, so use the oldest supported dialect.
+				return DialectHolder.defaultDialect2_0_0;
+			}
+			// HSQLDB 1.x lacks LOCALTIME/LOCALTIMESTAMP, the 2.x INFORMATION_SCHEMA,
+			// generated keys and VALUES table constructors used by this dialect.
+			throw new IllegalArgumentException("Unsupported HSQLDB version: " + majorVersion + "." + minorVersion
+					+ ". HSQLDB 2.0 or later is required.");
 		}
 
 	}

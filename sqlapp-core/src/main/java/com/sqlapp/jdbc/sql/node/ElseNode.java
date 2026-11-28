@@ -32,6 +32,9 @@ public class ElseNode extends CommentNode implements Cloneable {
 		if (this.getExpression() != null) {
 			sqlParameters.addSql(this.getExpression());
 		}
+		for (Node child : getChildNodes()) {
+			child.eval(context, sqlParameters);
+		}
 		return true;
 	}
 

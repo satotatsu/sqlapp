@@ -44,6 +44,7 @@ public class SqlServer2014TableReader extends SqlServer2012TableReader {
 		Boolean bool = this.getBoolean(rs, "is_memory_optimized");
 		if (bool != null && bool.booleanValue()) {
 			table.setTableType(TableType.Memory);
+			setSpecifics(rs, "is_memory_optimized", table);
 			setSpecifics(rs, "durability", table);
 		}
 		return table;

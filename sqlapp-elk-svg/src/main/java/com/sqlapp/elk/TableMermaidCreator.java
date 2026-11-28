@@ -34,7 +34,10 @@ import java.util.function.Predicate;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
-/** Writes Mermaid ER source from the shared Schema model, without running a layout engine. */
+/**
+ * Writes Mermaid ER source from the shared Schema model, without running a
+ * layout engine.
+ */
 public class TableMermaidCreator {
 
 	private final NameMode nameMode;
@@ -47,7 +50,10 @@ public class TableMermaidCreator {
 		this.nameMode = Objects.requireNonNull(nameMode, "nameMode");
 	}
 
-	/** Generates columns, foreign keys and structural relationships within the selection. */
+	/**
+	 * Generates columns, foreign keys and structural relationships within the
+	 * selection.
+	 */
 	public String generate(Collection<Table> tables) {
 		return generate(tables, table -> column -> true);
 	}
@@ -97,8 +103,8 @@ public class TableMermaidCreator {
 				if (column.isForeignKey()) {
 					keys.add("FK");
 				}
-				if (table.getConstraints().getUniqueConstraints().stream().anyMatch(key -> !key.isPrimaryKey()
-						&& key.getColumns().stream().anyMatch(ref -> Objects.equals(ref.getName(), column.getName())))) {
+				if (table.getConstraints().getUniqueConstraints().stream().anyMatch(key -> !key.isPrimaryKey() && key
+						.getColumns().stream().anyMatch(ref -> Objects.equals(ref.getName(), column.getName())))) {
 					keys.add("UK");
 				}
 				if (!keys.isEmpty()) {
@@ -130,10 +136,11 @@ public class TableMermaidCreator {
 				boolean required = !fk.getColumns().isEmpty() && fk.getColumns().stream().allMatch(Column::isNotNull);
 				boolean unique = !fk.getColumns().isEmpty() && !table.getConstraints()
 						.getUniqueConstraints(fk.getColumns().toArray(Column[]::new)).isEmpty();
-				boolean identifying = !fk.getColumns().isEmpty() && fk.getColumns().stream().allMatch(Column::isPrimaryKey);
-				result.append("    ").append(parent).append(required ? " ||" : " |o")
-						.append(identifying ? "--" : "..").append(unique ? "o| " : "o{ ")
-						.append(ids.get(table)).append(" : \"").append(escape(fk.getName())).append("\"\n");
+				boolean identifying = !fk.getColumns().isEmpty()
+						&& fk.getColumns().stream().allMatch(Column::isPrimaryKey);
+				result.append("    ").append(parent).append(required ? " ||" : " |o").append(identifying ? "--" : "..")
+						.append(unique ? "o| " : "o{ ").append(ids.get(table)).append(" : \"")
+						.append(escape(fk.getName())).append("\"\n");
 			}
 		}
 		boolean structuralLegend = false;
@@ -160,8 +167,8 @@ public class TableMermaidCreator {
 
 	private static boolean appendStructuralLegend(StringBuilder result, boolean written) {
 		if (!written) {
-			result.append("    %% inherits / partition of describe table structure, not foreign keys.\n")
-					.append("    %% Their endpoint markers describe table-level multiplicities, not row cardinalities.\n");
+			result.append("    %% inherits / partition of describe table structure, not foreign keys.\n").append(
+					"    %% Their endpoint markers describe table-level multiplicities, not row cardinalities.\n");
 		}
 		return true;
 	}

@@ -22,10 +22,56 @@ package com.sqlapp.iterable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
 class VirtualThreadIterableTest {
+
+	@Test
+	void closeStopsProducerWithFullQueue() throws Exception {
+		assertCloseStopsProducer(true, false);
+	}
+
+	@Test
+	void closeStopsTerminalNotificationWithFullQueue() throws Exception {
+		assertCloseStopsProducer(false, false);
+		assertCloseStopsProducer(false, true);
+	}
+
+	private void assertCloseStopsProducer(boolean secondValue, boolean failure) throws Exception {
+		final AtomicReference<Thread> producer = new AtomicReference<>();
+		final CountDownLatch full = new CountDownLatch(1);
+		final AtomicInteger finalizations = new AtomicInteger();
+		final var iterator = new VirtualThreadIterable<Integer>(values -> {
+			producer.set(Thread.currentThread());
+			values.accept(1);
+			full.countDown();
+			if (secondValue) {
+				values.accept(2);
+			}
+			if (failure) {
+				throw new IllegalStateException("producer failure");
+			}
+		}, finalizations::incrementAndGet, 1).iterator();
+		try {
+			assertTrue(full.await(5, TimeUnit.SECONDS));
+		} finally {
+			((AutoCloseable) iterator).close();
+		}
+		producer.get().join(5000);
+		assertFalse(producer.get().isAlive());
+		assertEquals(1, finalizations.get());
+		assertFalse(iterator.hasNext());
+		((AutoCloseable) iterator).close();
+		assertEquals(1, finalizations.get());
+	}
 
 	@Test
 	void test() {

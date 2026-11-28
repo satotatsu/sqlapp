@@ -22,7 +22,8 @@ SELECT
   , CASE WHEN (c.status & 128) = 128 THEN 1 ELSE 0 END AS is_identity
   , NULL AS ident_seed
   , NULL AS ident_increment
-  , NULL AS ident_current
+  , CASE WHEN (c.status & 128) = 128 AND so.type = 'U'
+      THEN CONVERT(NUMERIC(38,0), next_identity(su.name + '.' + so.name)) END AS ident_current
   , CAST(NULL AS VARCHAR(255)) AS remarks
 FROM syscolumns c
 INNER JOIN sysobjects so

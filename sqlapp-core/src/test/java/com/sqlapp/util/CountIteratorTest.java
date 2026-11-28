@@ -20,12 +20,46 @@
 package com.sqlapp.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.NoSuchElementException;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.iterable.CountIterable;
 
 class CountIteratorTest {
+
+	@Test
+	void repeatedChecksDoNotAdvanceAndNextWorksWithoutChecks() {
+		final var iterator = new CountIterable<Long>(5, 7, value -> value).iterator();
+		assertTrue(iterator.hasNext());
+		assertTrue(iterator.hasNext());
+		assertEquals(5L, iterator.next());
+		assertEquals(6L, iterator.next());
+		assertFalse(iterator.hasNext());
+		assertFalse(iterator.hasNext());
+		assertThrows(NoSuchElementException.class, iterator::next);
+	}
+
+	@Test
+	void emptyAndReversedRangesAreExhausted() {
+		for (long start : new long[] { 0, 1 }) {
+			final var iterator = new CountIterable<Long>(start, 0, value -> value).iterator();
+			assertFalse(iterator.hasNext());
+			assertThrows(NoSuchElementException.class, iterator::next);
+		}
+	}
+
+	@Test
+	void upperLongBoundaryDoesNotWrapAround() {
+		final var iterator = new CountIterable<Long>(Long.MAX_VALUE - 1, Long.MAX_VALUE, value -> value).iterator();
+		assertEquals(Long.MAX_VALUE - 1, iterator.next());
+		assertFalse(iterator.hasNext());
+		assertThrows(NoSuchElementException.class, iterator::next);
+	}
 
 	@Test
 	void test() {

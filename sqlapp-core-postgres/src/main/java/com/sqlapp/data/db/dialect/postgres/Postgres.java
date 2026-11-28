@@ -26,32 +26,20 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.BooleanConverter;
-import com.sqlapp.data.converter.Converter;
-import com.sqlapp.data.converter.IntervalDayConverter;
-import com.sqlapp.data.converter.IntervalDayToHourConverter;
-import com.sqlapp.data.converter.IntervalDayToMinuteConverter;
-import com.sqlapp.data.converter.IntervalDayToSecondConverter;
-import com.sqlapp.data.converter.IntervalHourConverter;
-import com.sqlapp.data.converter.IntervalHourToMinuteConverter;
-import com.sqlapp.data.converter.IntervalHourToSecondConverter;
-import com.sqlapp.data.converter.IntervalMinuteConverter;
-import com.sqlapp.data.converter.IntervalMinuteToSecondConverter;
-import com.sqlapp.data.converter.IntervalMonthConverter;
-import com.sqlapp.data.converter.IntervalSecondConverter;
-import com.sqlapp.data.converter.IntervalYearConverter;
-import com.sqlapp.data.converter.IntervalYearToMonthConverter;
-import com.sqlapp.data.converter.PipeConverter;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.DefaultJdbcTypeHandler;
 import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 import com.sqlapp.data.db.datatype.NumericType;
 import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
 import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.RegexColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.ColumnMigration;
 import com.sqlapp.data.db.dialect.postgres.converter.FromPGBoxConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.FromPGCircleConverter;
-import com.sqlapp.data.db.dialect.postgres.converter.FromPGIntervalConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.FromPGLineConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.FromPGLsegConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.FromPGPathConverter;
@@ -59,7 +47,6 @@ import com.sqlapp.data.db.dialect.postgres.converter.FromPGPointConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.FromPGPolygonConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGBoxConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGCircleConverter;
-import com.sqlapp.data.db.dialect.postgres.converter.ToPGIntervalConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGLineConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGLsegConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGPathConverter;
@@ -71,15 +58,12 @@ import com.sqlapp.data.db.dialect.postgres.sql.PostgresSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresJdbcHandler;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlSplitter;
-import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.datatype.DbDataType;
-import com.sqlapp.data.db.datatype.util.RegexColumnTypeMatcher;
-import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.IdentityGenerationType;
+import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
@@ -89,6 +73,41 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * 
  */
 public class Postgres extends Dialect {
+	@Override
+	protected ColumnMigration.Result convertColumnForMigration(final Column source) {
+		if (source.getDataType() != DataType.TIMESTAMPVERSION
+				|| !"TIMESTAMP".equalsIgnoreCase(source.getDataTypeName())) {
+			return super.convertColumnForMigration(source);
+		}
+		final long precision = source.getLength() == null ? 0 : source.getLength();
+		if (precision < 0 || precision > 6) {
+			return new ColumnMigration.Result(null, java.util.List.of("Unsupported TIMESTAMP precision: " + precision));
+		}
+		final var issues = new java.util.ArrayList<String>();
+		final var candidate = source.clone().setDataType(DataType.TIMESTAMP_WITH_TIMEZONE)
+				.setDataTypeName("TIMESTAMPTZ").setLength(precision).setDefaultValue(null).setOnUpdate(null);
+		final String defaultValue = source.getDefaultValue();
+		if (defaultValue != null && !defaultValue.isBlank()) {
+			if (defaultValue.strip().matches("(?i)CURRENT_TIMESTAMP(?:\\s*\\(\\s*[0-6]?\\s*\\))?")) {
+				final String expression = defaultValue.strip();
+				final int opening = expression.indexOf('(');
+				final String digits = opening < 0 ? ""
+						: expression.substring(opening + 1, expression.length() - 1).strip();
+				candidate.setDefaultValue(
+						digits.isEmpty() || Long.parseLong(digits) == precision ? "statement_timestamp()"
+								: "CAST(statement_timestamp() AS TIMESTAMPTZ(" + digits + "))");
+			} else if ("NULL".equalsIgnoreCase(defaultValue.strip())) {
+				candidate.setDefaultValue("NULL");
+			} else {
+				issues.add("Review TIMESTAMP DEFAULT: " + defaultValue);
+			}
+		}
+		if (source.getOnUpdate() != null && !source.getOnUpdate().isBlank()) {
+			issues.add("PostgreSQL requires a trigger or application logic for ON UPDATE: " + source.getOnUpdate());
+		}
+		return new ColumnMigration.Result(candidate, issues);
+	}
+
 	/**
 	 * Returns {@code default} for {@code GENERATED BY DEFAULT AS IDENTITY} columns.
 	 * Returns {@code null} for {@code GENERATED ALWAYS AS IDENTITY} and serial
@@ -326,111 +345,115 @@ public class Postgres extends Dialect {
 		});
 		// INTERVAL
 		getDbDataTypes().addInterval(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
 			enableArray(type);
 		});
 		// INTERVAL YEAR
 		getDbDataTypes().addIntervalYear(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL YEAR").setJdbcTypeHandler(getIntervalConverter(new IntervalYearConverter()));
+			type.setCreateFormat("INTERVAL YEAR");
 			enableArray(type);
 		});
 		// INTERVAL MONTH
 		getDbDataTypes().addIntervalMonth(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL MONTH")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalMonthConverter()));
+			type.setCreateFormat("INTERVAL MONTH");
 			enableArray(type);
 		});
 		// INTERVAL DAY
 		getDbDataTypes().addIntervalDay(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL DAY").setJdbcTypeHandler(getIntervalConverter(new IntervalDayConverter()));
+			type.setCreateFormat("INTERVAL DAY");
 			enableArray(type);
 		});
 		// INTERVAL HOUR
 		getDbDataTypes().addIntervalHour(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL HOUR").setJdbcTypeHandler(getIntervalConverter(new IntervalHourConverter()));
+			type.setCreateFormat("INTERVAL HOUR");
 			enableArray(type);
 		});
 		// INTERVAL MINUTE
 		getDbDataTypes().addIntervalMinute(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL MINUTE")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteConverter()));
+			type.setCreateFormat("INTERVAL MINUTE");
 			enableArray(type);
 		});
 		// INTERVAL SECOND
 		getDbDataTypes().addIntervalSecond(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL SECOND")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalSecondConverter()));
+			type.setCreateFormat("INTERVAL SECOND");
 			enableArray(type);
 		});
 		// INTERVAL YEAR TO MONTH
 		getDbDataTypes().addIntervalYearToMonth(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL YEAR TO MONTH")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalYearToMonthConverter()));
+			type.setCreateFormat("INTERVAL YEAR TO MONTH");
 			enableArray(type);
 		});
 		// INTERVAL DAY TO HOUR
 		getDbDataTypes().addIntervalDayToHour(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL DAY TO HOUR")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToHourConverter()));
+			type.setCreateFormat("INTERVAL DAY TO HOUR");
 			enableArray(type);
 		});
 		// INTERVAL DAY TO MINUTE
 		getDbDataTypes().addIntervalDayToMinute(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL DAY TO MINUTE")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToMinuteConverter()));
+			type.setCreateFormat("INTERVAL DAY TO MINUTE");
 			enableArray(type);
 		});
 		// INTERVAL DAY TO SECOND
 		getDbDataTypes().addIntervalDayToSecond(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
 			type.setDefaultScale(null);
-			type.setCreateFormat("INTERVAL DAY TO SECOND")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToSecondConverter()));
+			type.setCreateFormat("INTERVAL DAY TO SECOND");
 			enableArray(type);
 		});
 		// INTERVAL HOUR TO MINUTE
 		getDbDataTypes().addIntervalHourToMinute(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL HOUR TO MINUTE")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToMinuteConverter()));
+			type.setCreateFormat("INTERVAL HOUR TO MINUTE");
 			enableArray(type);
 		});
 		// INTERVAL HOUR TO SECOND
 		getDbDataTypes().addIntervalHourToSecond(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL HOUR TO SECOND")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToSecondConverter()));
+			type.setCreateFormat("INTERVAL HOUR TO SECOND");
 			enableArray(type);
 		});
 
 		// INTERVAL MINUTE TO SECOND
 		getDbDataTypes().addIntervalMinuteToSecond(type -> {
+			configureInterval(type);
 			type.setDefaultPrecision(null);
 			registerIntervalMatcher(type);
-			type.setCreateFormat("INTERVAL MINUTE TO SECOND")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteToSecondConverter()));
+			type.setCreateFormat("INTERVAL MINUTE TO SECOND");
 			enableArray(type);
 		});
 		// INET
@@ -488,16 +511,42 @@ public class Postgres extends Dialect {
 		//
 	}
 
-	/**
-	 * Postgres固有のIntervalのコンバータを取得するためのメソッド
-	 * 
-	 * @param resultSetConveter PGInterval から変換した後に適用するコンバータ
-	 */
-	private JdbcTypeHandler getIntervalConverter(final Converter<?> resultSetConveter) {
-		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(java.sql.JDBCType.OTHER);
-		converter.setResultSetconverter(new PipeConverter(new FromPGIntervalConverter(), resultSetConveter));
-		converter.setStatementConverter(new ToPGIntervalConverter());
-		return converter;
+	private static void configureInterval(final DbDataType<?> type) {
+		final var converter = new com.sqlapp.data.db.dialect.postgres.converter.FromPGIntervalConverter();
+		type.setJdbcTypeHandler(new PostgresIntervalJdbcTypeHandler(type.getDataType()));
+		type.setConverter(converter);
+		type.setFormatter(converter);
+		type.setLiteral("INTERVAL '", "'");
+	}
+
+	@Override
+	public String getSqlValueDefinition(final Column column, final Object value) {
+		if (column.getDataType() != null && column.getArrayDimension() > 0
+				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
+			var scalar = column.clone().setArrayDimension(0);
+			return value == null ? "NULL"
+					: com.sqlapp.data.db.datatype.IntervalArrays.literal(value,
+							com.sqlapp.data.db.datatype.IntervalArrays.dimensions(value),
+							leaf -> getSqlValueDefinition(scalar, leaf)) + "::interval"
+							+ "[]".repeat(column.getArrayDimension());
+		}
+		if (value != null && column.getDataType() != null && column.getArrayDimension() == 0
+				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
+			final var interval = PostgresIntervalCodec.decode(value);
+			if (interval != null)
+				PostgresIntervalCodec.encode(interval, column);
+			if (interval != null && PostgresIntervalBinary.required(interval)) {
+				var chunk = java.time.Duration.ofHours(Integer.MAX_VALUE);
+				if (interval.timePart().isNegative())
+					chunk = chunk.negated();
+				var first = new com.sqlapp.data.interval.IntervalValue(interval.months(), interval.days(), chunk);
+				var second = new com.sqlapp.data.interval.IntervalValue(0, 0, interval.timePart().minus(chunk));
+				return "(" + super.getSqlValueDefinition(column, first) + " + "
+						+ super.getSqlValueDefinition(column, second) + ")";
+			}
+			return super.getSqlValueDefinition(column, interval);
+		}
+		return super.getSqlValueDefinition(column, value);
 	}
 
 	/**
@@ -681,6 +730,11 @@ public class Postgres extends Dialect {
 	}
 
 	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new PostgresDefaultExpressionSupport(this);
+	}
+
+	@Override
 	public boolean supportsFunctionOverload() {
 		return true;
 	}
@@ -773,6 +827,22 @@ public class Postgres extends Dialect {
 		final StringBuilder builder = new StringBuilder(target.length() + 2);
 		builder.append(getOpenQuote()).append(target.replace("\"", "\"\"")).append(getCloseQuote());
 		return builder.toString();
+	}
+
+	/**
+	 * バックスラッシュを含む値は、{@code standard_conforming_strings} の設定に依存しないエスケープ文字列
+	 * {@code E'...'} として出力します。
+	 */
+	@Override
+	public String toStringLiteral(final String value) {
+		if (value == null) {
+			return null;
+		}
+		checkStringLiteral(value);
+		if (value.indexOf('\\') >= 0) {
+			return "E'" + value.replace("\\", "\\\\").replace("'", "''") + "'";
+		}
+		return "'" + value.replace("'", "''") + "'";
 	}
 
 	@Override

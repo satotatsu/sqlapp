@@ -72,6 +72,37 @@ class PhoenixIndexReaderTest {
 	}
 
 	@Test
+	void rejectsInvalidHeadersBeforeReadingIndexColumns() {
+		for (String field : List.of("index_name", "table_name", "salt_buckets")) {
+			final var reader = new Reader();
+			final var header = identity(null, "idx");
+			header.put("table_name", "events");
+			header.put(field, field.equals("salt_buckets") ? 257L : " ");
+			reader.headers.add(header);
+			assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+			assertEquals(1, reader.queries);
+		}
+	}
+
+	@Test
+	void rejectsAnOrdinalSharedByAKeyAndAnInclude() {
+		final var reader = new Reader();
+		final var header = identity(null, "idx");
+		header.put("table_name", "events");
+		reader.headers.add(header);
+		for (String name : List.of(":id", "F:value")) {
+			final var column = identity(null, "idx");
+			column.put("ordinal_position", 1);
+			column.put("column_name", name);
+			if (name.startsWith("F:"))
+				column.put("column_family", "F");
+			reader.columns.add(column);
+		}
+		assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+		assertEquals(2, reader.queries);
+	}
+
+	@Test
 	void readsFortyIndexesInTwoQueriesAndRetainsKeysIncludesAndPlacementThroughXml() throws Exception {
 		final var reader = new Reader();
 		for (String tenant : List.of("a", "b"))
@@ -82,6 +113,8 @@ class PhoenixIndexReaderTest {
 				header.put("index_state", "a");
 				if (i % 2 == 0)
 					header.put("salt_buckets", 16L);
+				else if (i % 4 == 1)
+					header.put("salt_buckets", 0L);
 				reader.headers.add(header);
 				for (int ordinal : new int[] { 3, 1, 2 }) {
 					var column = identity(tenant, "idx" + i);
@@ -113,6 +146,8 @@ class PhoenixIndexReaderTest {
 			assertTrue(sql.matches("(?s).*INCLUDE \\(\\s*F\\.\"payload\"\\s*\\).*"), sql);
 			assertEquals("LOCAL".equals(index.getSpecifics().get("phoenix.indexType")),
 					sql.startsWith("CREATE LOCAL INDEX"), sql);
+			if (sql.startsWith("CREATE LOCAL INDEX"))
+				assertFalse(sql.contains("SALT_BUCKETS"), sql);
 		}
 	}
 
@@ -166,8 +201,8 @@ class PhoenixIndexReaderTest {
 	}
 
 	@Test
-	void rejectsMissingAndUnrepresentableKeys() {
-		for (String name : new String[] { null, ":UPPER(value)" }) {
+	void preservesOpaqueKeysWithoutGeneratingMisleadingDdl() throws Exception {
+		for (String name : new String[] { null, ":UPPER(value:part)" }) {
 			final var reader = new Reader();
 			var header = identity("a", "idx");
 			header.put("table_name", "t");
@@ -178,7 +213,20 @@ class PhoenixIndexReaderTest {
 				column.put("ordinal_position", 1);
 				reader.columns.add(column);
 			}
-			assertThrows(RuntimeException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+			if (name == null) {
+				assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+				continue;
+			}
+			final var version = new ProductVersionInfo().setMajorVersion(5);
+			final var index = reader.doGetAll(null, new ParametersContext(), version).get(0);
+			assertEquals(2, reader.queries);
+			final var table = new Table("t");
+			table.getIndexes().add(index);
+			final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			final var restoredIndex = restored.getIndexes().get(0);
+			assertEquals(name, restoredIndex.getColumns().get(0).getName());
+			final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
+			assertThrows(UnsupportedOperationException.class, () -> registry.createSql(restoredIndex, SqlType.CREATE));
 		}
 	}
 }

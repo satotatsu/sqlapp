@@ -16,10 +16,22 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.Column;
 
 /** Shared value binding for SQL operations and portable bulk writes. */
 public final class JdbcParameterBinder {
 	private JdbcParameterBinder() {
+	}
+
+	/** Binds with Schema metadata when available, without duplicating dialect conversion. */
+	public static void bindColumn(final PreparedStatement statement, final Dialect dialect,
+			final Column column, final int index, final Object value) throws SQLException {
+		if (column != null && dialect != null && column.getDataType() != null) {
+			dialect.getDbDataTypes().getDbType(column.getDataType()).getJdbcTypeHandler()
+					.setObject(statement, index, value, column);
+		} else {
+			bind(statement, dialect, column == null ? null : column.getDataType(), index, value);
+		}
 	}
 
 	/**

@@ -22,12 +22,13 @@ package com.sqlapp.util.iterator;
 import java.io.Serializable;
 import java.util.Iterator;
 
-import static com.sqlapp.util.CommonUtils.*;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 
-import com.sqlapp.util.CommonUtils;
+import com.sqlapp.data.interval.Interval;
 import com.sqlapp.util.ToStringBuilder;
 
-public abstract class AbstractObjectIterator<T, S> implements Iterator<T>, Serializable, Cloneable{
+public abstract class AbstractObjectIterator<T, S> implements Iterator<T>, Serializable, Cloneable {
 	/**
 	 * serialVersionUID
 	 */
@@ -37,30 +38,38 @@ public abstract class AbstractObjectIterator<T, S> implements Iterator<T>, Seria
 	protected final S step;
 	protected T current;
 	protected T next;
-	protected boolean first=true;
-	protected long count=1;
+	protected boolean first = true;
+	protected long count = 1;
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ(秒単位)
+	 * @param end   終了
+	 * @param step  ステップ(秒単位)
 	 */
-	public AbstractObjectIterator(final T start, final T end, final S step){
-		assert (start!=null);
-		assert (end!=null);
-		assert (step!=null);
-		this.start=start;
-		this.end=end;
-		this.step=step;
-		this.current=start;
-		this.next=getNext();
+	public AbstractObjectIterator(final T start, final T end, final S step) {
+		assert (start != null);
+		assert (end != null);
+		Objects.requireNonNull(step, "step");
+		if ((step instanceof Integer integer && integer == 0) || (step instanceof Interval interval
+				&& interval.getMonthsFull() == 0 && interval.getSecondsFull() == 0 && interval.getNanos() == 0)) {
+			throw new IllegalArgumentException("step must not be 0.");
+		}
+		this.start = start;
+		this.end = end;
+		this.step = step;
+		this.current = start;
+		this.next = getNext();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#toString()
 	 */
-	public String toString(){
-		ToStringBuilder builder=new ToStringBuilder(this.getClass());
+	public String toString() {
+		ToStringBuilder builder = new ToStringBuilder(this.getClass());
 		builder.add("start", start);
 		builder.add("end", end);
 		builder.add("step", step);
@@ -72,58 +81,67 @@ public abstract class AbstractObjectIterator<T, S> implements Iterator<T>, Seria
 	public void remove() {
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
-		return CommonUtils.hashCode(this.start, this.end, this.step, this.current);
+	public int hashCode() {
+		return Objects.hash(getClass(), start, end, step, current, next, first, count);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#next()
 	 */
 	@Override
 	public T next() {
-		if (first){
-			first=false;
-		} else{
-			this.current=this.next;
-			this.next=getNext();
+		if (!hasNext()) {
+			throw new NoSuchElementException();
+		}
+		if (first) {
+			first = false;
+		} else {
+			this.current = this.next;
+			this.next = getNext();
 		}
 		count++;
 		return this.current;
 	}
 
 	protected abstract T getNext();
-	
-	/* (non-Javadoc)
+
+	@SuppressWarnings("unchecked")
+	final boolean hasNextInDirection(final boolean ascending) {
+		final Comparable<? super T> candidate = (Comparable<? super T>) (first ? start : next);
+		if (!first) {
+			final int progress = candidate.compareTo(current);
+			if (ascending ? progress <= 0 : progress >= 0) {
+				return false;
+			}
+		}
+		final int boundary = candidate.compareTo(end);
+		return ascending ? boundary < 0 : boundary > 0;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==null){
-			return false;
-		}
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof AbstractObjectIterator)){
-			return true;
-		}
-		AbstractObjectIterator<?,?> cst=(AbstractObjectIterator<?,?>)obj;
-		if (eq(cst.start, this.start)){
+		if (obj == null || obj.getClass() != getClass()) {
 			return false;
 		}
-		if (eq(cst.end, this.end)){
-			return false;
-		}
-		if (eq(cst.step, this.step)){
-			return false;
-		}
-		if (eq(cst.current, this.current)){
-			return false;
-		}
-		return true;
+		final AbstractObjectIterator<?, ?> other = (AbstractObjectIterator<?, ?>) obj;
+		return first == other.first && count == other.count && Objects.equals(start, other.start)
+				&& Objects.equals(end, other.end) && Objects.equals(step, other.step)
+				&& Objects.equals(current, other.current) && Objects.equals(next, other.next);
 	}
 }

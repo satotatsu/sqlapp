@@ -86,38 +86,56 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	}
 
 	public void setCaseSensitive(final boolean caseSensitive) {
-		if (this.caseSensitive != caseSensitive) {
-			renew();
-			final int size = this.size();
-			for (int i = 0; i < size; i++) {
-				this.get(i).setCaseSensitive(caseSensitive);
-			}
+		if (this.caseSensitive == caseSensitive) {
+			return;
 		}
 		this.caseSensitive = caseSensitive;
+		// The cached maps compare keys in the previous mode; recreate them lazily.
+		this.nameMap = null;
+		this.specificNameMap = null;
+		final int size = this.size();
+		for (int i = 0; i < size; i++) {
+			this.get(i).setCaseSensitive(caseSensitive);
+		}
 	}
 
 	protected Map<String, T> getNameMap() {
 		if (nameMap == null) {
-			if (caseSensitive) {
-				nameMap = map(this.size());
-			} else {
-				nameMap = caseInsensitiveMap(this.size() * 4 / 3 + 1);
-			}
-			renew();
+			rebuildNameMaps();
 		}
 		return nameMap;
 	}
 
 	protected Map<String, T> getSpecificNameMap() {
 		if (specificNameMap == null) {
-			if (caseSensitive) {
-				specificNameMap = map(this.size() * 4 / 3 + 1);
-			} else {
-				specificNameMap = new CaseInsensitiveMap<T>(this.size() * 4 / 3 + 1);
-			}
-			renew();
+			rebuildNameMaps();
 		}
 		return specificNameMap;
+	}
+
+	/**
+	 * Creates both lookup maps and fills them with a single renew().
+	 */
+	private void rebuildNameMaps() {
+		final int capacity = this.size() * 4 / 3 + 1;
+		if (caseSensitive) {
+			nameMap = map(capacity);
+			specificNameMap = map(capacity);
+		} else {
+			nameMap = caseInsensitiveMap(capacity);
+			specificNameMap = new CaseInsensitiveMap<T>(capacity);
+		}
+		renew();
+	}
+
+	/**
+	 * Drops the lookups and rebuilds them on the next lookup, so renaming many
+	 * elements costs a single rebuild instead of a full renew per rename.
+	 */
+	@Override
+	protected void elementNameChanged() {
+		this.nameMap = null;
+		this.specificNameMap = null;
 	}
 
 	/**
@@ -235,14 +253,22 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @see java.util.ArrayList#add(java.lang.Object)
 	 */
+	/**
+	 * Adds the element unless the predicate or {@link #beforeAdd} rejects it. An
+	 * element with the same name, class and ID as an existing element is merged
+	 * into that element instead of being inserted.
+	 *
+	 * @return {@code true} when the element was inserted as a new element
+	 */
 	@Override
 	public boolean add(final T e) {
 		if (!getAddDbObjectPredicate().test(this, e)) {
 			return false;
 		}
-		final boolean bool = false;
-		beforeAdd(e);
-		addSimple(e);
+		if (!beforeAdd(e)) {
+			return false;
+		}
+		final boolean added = addSimple(e);
 		initializeSchemaInfo(e);
 		if (this.isValidateAtChange()) {
 			renew();
@@ -250,7 +276,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		afterAdd(e);
 		e.validate();
 		validate();
-		return bool;
+		return added;
 	}
 
 	/**
@@ -307,10 +333,12 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		} else {
 			org = this.get(e.getSpecificName());
 		}
-		if (org != null && org.getClass().equals(e.getClass())) {
+		if (org != null && org.getClass().equals(e.getClass()) && eq(org.getId(), e.getId())) {
 			e.cloneProperties(org);
 		} else {
 			this.inner.add(index, e);
+			this.getNameMap().put(e.getName(), e);
+			this.getSpecificNameMap().put(e.getSpecificName(), e);
 		}
 		setElementParent(e);
 	}
@@ -325,7 +353,9 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		if (!getAddDbObjectPredicate().test(this, element)) {
 			return;
 		}
-		beforeAdd(element);
+		if (!beforeAdd(element)) {
+			return;
+		}
 		addSimple(index, element);
 		initializeSchemaInfo(element);
 		if (this.isValidateAtChange()) {
@@ -341,34 +371,23 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @see java.util.ArrayList#addAll(java.util.Collection)
 	 */
+	/**
+	 * Adds the elements accepted by the predicate and {@link #beforeAdd}.
+	 *
+	 * @return {@code true} when at least one new element was inserted
+	 */
 	@Override
 	public boolean addAll(final Collection<? extends T> c) {
 		if (this == c) {
 			return false;
 		}
-		for (final T t : c) {
-			if (!getAddDbObjectPredicate().test(this, t)) {
-				continue;
-			}
-			beforeAdd(t);
-			setElementParent(t);
-			initializeSchemaInfo(t);
+		final List<T> accepted = prepareAddAll(c);
+		boolean changed = false;
+		for (final T t : accepted) {
+			changed |= addSimple(t);
 		}
-		for (final T t : c) {
-			if (!getAddDbObjectPredicate().test(this, t)) {
-				continue;
-			}
-			addSimple(t);
-		}
-		renew();
-		for (final T t : c) {
-			if (!getAddDbObjectPredicate().test(this, t)) {
-				continue;
-			}
-			afterAdd(t);
-		}
-		validate();
-		return true;
+		completeAddAll(accepted);
+		return changed;
 	}
 
 	/*
@@ -376,31 +395,53 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @see java.util.ArrayList#addAll(int, java.util.Collection)
 	 */
+	/**
+	 * Inserts the elements accepted by the predicate and {@link #beforeAdd} at the
+	 * specified position, preserving their order. Elements merged into an existing
+	 * element do not occupy a position.
+	 *
+	 * @return {@code true} when at least one new element was inserted
+	 */
 	@Override
 	public boolean addAll(final int index, final Collection<? extends T> c) {
+		if (index < 0 || index > this.size()) {
+			throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + this.size());
+		}
+		final List<T> accepted = prepareAddAll(this == c ? new java.util.ArrayList<T>(c) : c);
+		int cursor = index;
+		for (final T t : accepted) {
+			// addSimple keeps the subclass naming and merge rules; move only a newly
+			// appended element to its requested position.
+			if (addSimple(t)) {
+				this.inner.add(cursor++, this.inner.remove(this.inner.size() - 1));
+			}
+		}
+		completeAddAll(accepted);
+		return cursor != index;
+	}
+
+	private List<T> prepareAddAll(final Collection<? extends T> c) {
+		final List<T> accepted = list(c.size());
 		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
-			beforeAdd(t);
+			if (!beforeAdd(t)) {
+				continue;
+			}
 			setElementParent(t);
 			initializeSchemaInfo(t);
+			accepted.add(t);
 		}
-		for (final T t : c) {
-			if (!getAddDbObjectPredicate().test(this, t)) {
-				continue;
-			}
-			addSimple(t);
-		}
+		return accepted;
+	}
+
+	private void completeAddAll(final List<T> accepted) {
 		renew();
-		for (final T t : c) {
-			if (!getAddDbObjectPredicate().test(this, t)) {
-				continue;
-			}
+		for (final T t : accepted) {
 			afterAdd(t);
 		}
 		validate();
-		return true;
 	}
 
 	/*
@@ -434,7 +475,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 */
 	public boolean containsAll(final String... names) {
 		for (int i = 0; i < names.length; i++) {
-			if (!getNameMap().containsKey(names[i])) {
+			if (!contains(names[i])) {
 				return false;
 			}
 		}
@@ -464,6 +505,9 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	}
 
 	public boolean contains(final T o) {
+		if (o == null) {
+			return false;
+		}
 		if (this.getSpecificNameMap().containsKey(o.getSpecificName())) {
 			return true;
 		}
@@ -481,16 +525,37 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		if (o instanceof String) {
 			return this.contains((String) o);
 		}
-		return contains((T) o);
+		if (o instanceof AbstractNamedObject) {
+			return contains((T) o);
+		}
+		return false;
 	}
 
 	public boolean remove(final String o) {
 		final T obj = this.get(o);
-		this.beforeRemove(obj);
-		final boolean bool = this.inner.remove(obj);
-		renew();
-		this.afterRemove(obj);
-		return bool;
+		if (obj == null) {
+			return false;
+		}
+		final int size = this.inner.size();
+		for (int i = 0; i < size; i++) {
+			if (this.inner.get(i) == obj) {
+				removeAt(i);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@Override
+	protected void structureChanged() {
+		if (this.isValidateAtChange()) {
+			renew();
+		} else {
+			// renew() is deferred; name lookups must not return removed or replaced
+			// elements meanwhile, so rebuild them lazily.
+			this.nameMap = null;
+			this.specificNameMap = null;
+		}
 	}
 
 	/**
@@ -531,7 +596,9 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 
 	@Override
 	public AbstractNamedObjectCollection<T> clone() {
-		return cast(super.clone());
+		final AbstractNamedObjectCollection<T> clone = cast(super.clone());
+		clone.setCaseSensitive(this.caseSensitive);
+		return clone;
 	}
 
 	/*
@@ -546,9 +613,6 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		}
 		if (equalsHandler.referenceEquals(this, obj)) {
 			return true;
-		}
-		if (!(obj instanceof AbstractNamedObjectCollection<?>)) {
-			return false;
 		}
 		@SuppressWarnings("unchecked")
 		final AbstractNamedObjectCollection<T> val = (AbstractNamedObjectCollection<T>) obj;
@@ -624,7 +688,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	@SuppressWarnings("unchecked")
 	protected void cloneProperties(final AbstractNamedObjectCollection<T> obj) {
 		final int size = this.size();
-		obj.caseSensitive = this.caseSensitive;
+		obj.setCaseSensitive(this.caseSensitive);
 		for (int i = 0; i < size; i++) {
 			obj.add((T) this.get(i).clone());
 		}

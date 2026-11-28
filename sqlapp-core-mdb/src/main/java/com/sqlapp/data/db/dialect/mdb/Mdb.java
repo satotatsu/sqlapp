@@ -91,6 +91,12 @@ public class Mdb extends Dialect {
 		getDbDataTypes().addNClob("MEMO", LEN_1GB, type -> {
 			type.setCreateFormat("MEMO").setDefaultValueLiteral("''");
 		});
+		// Access Binary(n) is stored with variable length; UCanAccess reports it as
+		// BINARY or VARBINARY.
+		getDbDataTypes().addVarBinary("BINARY", 510, type -> {
+			type.addColumnTypeMatcher("VARBINARY");
+			type.setLiteral("0x", "");
+		});
 		// BLOB
 		getDbDataTypes().addBlob("OLE", LEN_2GB, type -> {
 			type.setColumnTypeMatcher("OLE", "OLEOBJECT");
@@ -100,12 +106,14 @@ public class Mdb extends Dialect {
 		getDbDataTypes().addBoolean(type -> {
 			type.addColumnTypeMatcher("LOGICAL", "LOGICAL1", "YESNO");
 		});
-		// SByte
-		getDbDataTypes().addTinyInt("BYTE", type -> {
+		// Access Byte is unsigned (0-255). Signed TINYINT is not registered, so it
+		// falls back to SHORT through its upper surrogate.
+		getDbDataTypes().addUTinyInt("BYTE", type -> {
 		});
 		// Int16
-		getDbDataTypes().addSmallInt("SHORT", type -> {
-			type.addColumnTypeMatcher("INTEGER2", "SMALLINT");
+		// UCanAccess rejects SHORT in DDL; SMALLINT creates Access Integer.
+		getDbDataTypes().addSmallInt("SMALLINT", type -> {
+			type.addColumnTypeMatcher("SHORT", "INTEGER2");
 		});
 		// Int32
 		getDbDataTypes().addInt("LONG", type -> {
@@ -117,11 +125,14 @@ public class Mdb extends Dialect {
 			type.setCreateFormat("DECIMAL(19,0)");
 		});
 		// Serial
-		getDbDataTypes().addSerial("AUTOINCREMENT", type -> {
+		getDbDataTypes().addSerial("COUNTER", type -> {
+			type.addColumnTypeMatcher("AUTOINCREMENT");
 		});
 		// GUID
-		getDbDataTypes().addUUID("UNIQUEIDENTIFIER", type -> {
-			type.setLiteral("'", "'").setDefaultValueLiteral("NEWID()");
+		// UCanAccess rejects UNIQUEIDENTIFIER in DDL; GUID is the Access name.
+		getDbDataTypes().addUUID("GUID", type -> {
+			type.addColumnTypeMatcher("UNIQUEIDENTIFIER");
+			type.setLiteral("'", "'").setDefaultValueLiteral("GenGUID()");
 		});
 		// Single
 		getDbDataTypes().addReal("SINGLE", type -> {
@@ -129,7 +140,9 @@ public class Mdb extends Dialect {
 		});
 		// Double
 		getDbDataTypes().addDouble(type -> {
-			type.addColumnTypeMatcher("FLOAT", "FLOAT8", "IEEEDOUBLE", "NUMBER", "NUMERIC");
+			// Jet DDL treats NUMERIC as a DOUBLE synonym, but UCanAccess reports Access
+			// Decimal columns as NUMERIC. Matching NUMERIC here would lose precision.
+			type.addColumnTypeMatcher("FLOAT", "FLOAT8", "IEEEDOUBLE", "NUMBER");
 		});
 		// Date
 		getDbDataTypes().addDateTime("DATETIME", type -> {
@@ -280,6 +293,7 @@ public class Mdb extends Dialect {
 	/**
 	 * インデックス名のテーブルスコープ
 	 */
+	@Override
 	public boolean supportsIndexNameTableScope() {
 		return true;
 	}
@@ -297,18 +311,5 @@ public class Mdb extends Dialect {
 	@Override
 	public MdbSqlBuilder createSqlBuilder() {
 		return new MdbSqlBuilder(this);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.DbDialect#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
 	}
 }

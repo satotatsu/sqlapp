@@ -18,6 +18,25 @@ public final class TransferGeneratedKeyChecks {
 	private TransferGeneratedKeyChecks() {
 	}
 
+	/**
+	 * Counter checks that remain after synchronization: none when the transfer
+	 * synchronizes counters on a target that supports it, otherwise
+	 * {@link #required(BulkMigrationJobPlan)}.
+	 *
+	 * @param synchronizes whether this transfer path synchronizes counters after
+	 *                     the copy
+	 */
+	static List<String> required(BulkMigrationJobPlan plan, com.sqlapp.data.db.dialect.Dialect target,
+			TransferJobConfiguration configuration, boolean synchronizes) {
+		if (synchronizes
+				&& configuration
+						.effectiveGeneratedKeyCounters() == TransferJobConfiguration.GeneratedKeyCounterMode.SYNCHRONIZE
+				&& com.sqlapp.jdbc.bulk.GeneratedKeyCounters.supported(target,
+						configuration.explicitGeneratedKeyCounters()))
+			return List.of();
+		return required(plan);
+	}
+
 	static List<String> required(BulkMigrationJobPlan plan) {
 		final var result = new ArrayList<String>();
 		for (var task : plan.getTasks()) {

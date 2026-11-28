@@ -136,6 +136,7 @@ public class FirebirdColumnReader extends ColumnReader {
 				obj.setLength(characterLength);
 			}
 		}
+		FirebirdUtils.setBinaryIfOctets(obj);
 		if (domainName != null && !domainName.startsWith("RDB$")) {
 			var domain = new com.sqlapp.data.schemas.Domain(domainName).setDataType(obj.getDataType())
 					.setDataTypeName(obj.getDataTypeName()).setLength(obj.getLength()).setScale(obj.getScale())

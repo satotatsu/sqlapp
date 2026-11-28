@@ -54,6 +54,11 @@ public class SqlServerNumberColumnTypeMatcher implements ColumnTypeMatcher, Colu
 	}
 
 	@Override
+	public ColumnTypeMatcher copy() {
+		return new SqlServerNumberColumnTypeMatcher(internalMatcher.copy());
+	}
+
+	@Override
 	public ColumnTypeMatcher getInternal() {
 		return internalMatcher;
 	}

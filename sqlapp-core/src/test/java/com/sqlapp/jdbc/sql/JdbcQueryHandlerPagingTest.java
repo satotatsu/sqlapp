@@ -14,25 +14,35 @@ class JdbcQueryHandlerPagingTest {
 	private static class Capture extends JdbcQueryHandler {
 		List<Object> bindings;
 		boolean scroll;
-		Capture(SqlNode node) { super(node, null); }
-		@Override protected StatementSqlParametersHolder createStatement(Connection connection, Object context, Integer limit) {
-			var parameters = getNode().eval(context);
-			createStatement(connection, parameters, limit);
-			return new StatementSqlParametersHolder(null, parameters);
+
+		Capture(SqlNode node) {
+			super(node, null);
 		}
-		@Override protected PreparedStatement createStatement(Connection connection, SqlParameterCollection parameters, Integer limit) {
-			bindings = parameters.getBindParameters().stream().flatMap(p -> p.stream()).map(p -> p.getValue()).toList();
+
+		// Capture actual statement selection, after the context hook evaluates SQL.
+		@Override
+		protected PreparedStatement getStatement(Connection connection, SqlParameterCollection parameters, Integer limit) {
 			return null;
 		}
-		@Override protected PreparedStatement createStatementScrollInsensitive(Connection connection, SqlParameterCollection parameters) {
-			scroll = true;
-			return createStatement(connection, parameters, null);
+
+		@Override
+		protected List<BindParameter> setBind(PreparedStatement statement, SqlParameterCollection parameters) {
+			List<BindParameter> values = parameters.getBindParameters().stream().flatMap(BindParameterHolder::stream).toList();
+			bindings = values.stream().map(BindParameter::getValue).toList();
+			return values;
 		}
-		@Override protected StatementSqlParametersHolder createStatementScrollInsensitive(Connection connection, ParametersContext context) {
+
+		@Override
+		protected PreparedStatement createStatementScrollInsensitive(Connection connection, SqlParameterCollection parameters) {
 			scroll = true;
-			return createStatement(connection, context, null);
+			setBind(null, parameters);
+			return null;
 		}
-		@Override protected void executeQueryCallback(Connection connection, PreparedStatement statement, Integer limit, Integer offset) { }
+
+		@Override
+		protected void executeQueryCallback(Connection connection, PreparedStatement statement, Integer limit,
+				Integer offset) {
+		}
 	}
 
 	private Capture handler(String sql) {
@@ -80,6 +90,17 @@ class JdbcQueryHandlerPagingTest {
 			handler.execute(null, parameters, 2, 1);
 			assertTrue(handler.scroll);
 		}
+	}
+
+	@Test
+	void includedNativeParametersReceiveZeroLimitBeforeExpansion() throws Exception {
+		MapSqlRegistry registry = new MapSqlRegistry();
+		registry.put("page", "LIMIT /*_row*/1 OFFSET /*_offset*/0");
+		registry.put("query", "SELECT 1 /*include 'page'*/");
+		Capture handler = new Capture(registry.get("query"));
+		handler.execute(null, new ParametersContext(), 0, 1);
+		assertEquals(List.of(0, 1), handler.bindings);
+		assertFalse(handler.scroll);
 	}
 
 	@Test

@@ -36,6 +36,12 @@ public class H2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	}
 
 	@Override
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+		registerSqlFactory(Sequence.class, com.sqlapp.data.schemas.State.Modified, SqlType.ALTER);
+	}
+
+	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		registerSqlFactory(Table.class, SqlType.CREATE, H2CreateTableFactory.class);
@@ -54,6 +60,7 @@ public class H2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(com.sqlapp.data.schemas.Constant.class, SqlType.CREATE, H2CreateConstantFactory.class);
 		//
 		registerSqlFactory(Sequence.class, SqlType.CREATE, H2CreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.ALTER, H2AlterSequenceFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, H2SequenceNextValuesFactory.class);
 		registerSqlFactory(Domain.class, SqlType.CREATE, H2CreateDomainFactory.class);
 		registerSqlFactory(Domain.class, SqlType.DROP, H2DropDomainFactory.class);

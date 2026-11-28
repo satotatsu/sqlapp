@@ -10,8 +10,8 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
- * Firebird20 covers both 2.0 and 2.1; only 2.1+ catalogs contain relation
- * types.
+ * Reads relation types from 2.1 catalogs. The server version, when known,
+ * decides, so a Firebird20 dialect connected to 2.1 still reads them.
  */
 public class Firebird20TableReader extends FirebirdTableReader {
 	protected Firebird20TableReader(Dialect dialect) {
@@ -20,7 +20,7 @@ public class Firebird20TableReader extends FirebirdTableReader {
 
 	@Override
 	protected SqlNode getSqlSqlNode(ProductVersionInfo version) {
-		boolean relationTypes = getDialect().compareTo(DialectHolder.defaultDialect25) >= 0;
+		boolean relationTypes = getDialect().compareTo(DialectHolder.defaultDialect21) >= 0;
 		if (version != null && version.getMajorVersion() != null) {
 			int major = version.getMajorVersion();
 			Integer minor = version.getMinorVersion();

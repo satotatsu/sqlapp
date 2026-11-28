@@ -40,8 +40,19 @@ public final class TransferSchemaPreparation {
 			TableAction action) {
 	}
 
+	/**
+	 * Planned Schema SQL.
+	 *
+	 * @param defaults structured results of column DEFAULT conversion for the
+	 *                 planned SQL; warnings carry the same findings as text
+	 */
 	public record Plan(String fingerprint, List<Statement> statements, List<String> warnings,
-			List<TablePreparation> tables) {
+			List<TablePreparation> tables, List<TransferDefaultConversion> defaults) {
+		public Plan(String fingerprint, List<Statement> statements, List<String> warnings,
+				List<TablePreparation> tables) {
+			this(fingerprint, statements, warnings, tables, List.of());
+		}
+
 		public Plan(String fingerprint, List<Statement> statements, List<String> warnings) {
 			this(fingerprint, statements, warnings, List.of());
 		}
@@ -54,6 +65,7 @@ public final class TransferSchemaPreparation {
 			statements = List.copyOf(statements);
 			warnings = List.copyOf(warnings);
 			tables = tables == null ? List.of() : List.copyOf(tables);
+			defaults = defaults == null ? List.of() : List.copyOf(defaults);
 		}
 	}
 
@@ -127,6 +139,14 @@ public final class TransferSchemaPreparation {
 			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
 			TransferNameMappingProjection.Projection projection, String generatedKeyColumn, boolean structuralOnly,
 			boolean stagingBuffer) throws Exception {
+		return plan(connection, sourceSchema, data, mode, policy, projection, generatedKeyColumn, structuralOnly,
+				stagingBuffer, null);
+	}
+
+	static Plan plan(Connection connection, Schema sourceSchema, BulkMigrationJobPlan data,
+			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
+			TransferNameMappingProjection.Projection projection, String generatedKeyColumn, boolean structuralOnly,
+			boolean stagingBuffer, TransferJobConfiguration.DefaultConversion defaultConversion) throws Exception {
 		if (projection != null) {
 			final var warnings = new ArrayList<String>();
 			if (projection.renamedIdentifiers() && !stagingBuffer
@@ -138,16 +158,63 @@ public final class TransferSchemaPreparation {
 							task.getEffectiveTargetTable()))
 					.toList();
 			final var base = plan(connection, projection.schema(), selections, data.getFingerprint(), mode, policy,
-					data, generatedKeyColumn, structuralOnly);
+					data, generatedKeyColumn, structuralOnly, defaultConversion);
+			checkContracts(connection, projection, data, base.tables());
 			warnings.addAll(base.warnings());
-			return withTables(result(base.fingerprint(), base.statements(), warnings, mode), base.tables());
+			return withDefaults(
+					withTables(result(base.fingerprint(), base.statements(), warnings, mode), base.tables()),
+					base.defaults());
 		}
 		return plan(connection, sourceSchema,
 				data.getTasks().stream()
 						.map(task -> new Selection(task.getTaskId(), task.getEffectiveSourceTable(),
 								task.getEffectiveTargetTable()))
 						.toList(),
-				data.getFingerprint(), mode, policy, data, generatedKeyColumn, structuralOnly);
+				data.getFingerprint(), mode, policy, data, generatedKeyColumn, structuralOnly, defaultConversion);
+	}
+
+	/**
+	 * Stops before any write when an existing target table cannot accept every row
+	 * of a declared contract unchanged. New tables are created from the contract
+	 * and need no check; APPLY_DIFFERENCES changes the table to the contract.
+	 */
+	private static void checkContracts(Connection connection, TransferNameMappingProjection.Projection projection,
+			BulkMigrationJobPlan data, List<TablePreparation> tables) throws Exception {
+		final var existing = new HashSet<String>();
+		tables.stream().filter(table -> table.action() == TableAction.USE_EXISTING)
+				.forEach(table -> existing.add(table.taskId()));
+		final var checked = data.getTasks().stream().filter(task -> existing.contains(task.getTaskId())
+				&& projection.contract(task.getEffectiveSourceTable().getName())).toList();
+		if (checked.isEmpty())
+			return;
+		final var dialect = TransferJobPreparationService.dialect(connection);
+		final var schemas = new HashMap<String, Schema>();
+		final var problems = new ArrayList<String>();
+		for (var task : checked) {
+			final var target = task.getEffectiveTargetTable();
+			final var schema = schemas.computeIfAbsent(Objects.toString(target.getSchemaName(), ""), name -> {
+				try {
+					return TransferJobPreparationService.readSchema(connection, dialect, target.getSchemaName());
+				} catch (Exception e) {
+					throw new IllegalStateException(e);
+				}
+			});
+			final var actual = schema.getTables().stream().filter(table -> table.getName().equals(target.getName()))
+					.findFirst()
+					.or(() -> schema.getTables().stream()
+							.filter(table -> table.getName().equalsIgnoreCase(target.getName())).findFirst())
+					.orElse(null);
+			if (actual == null)
+				continue;
+			final var declared = projection.bySourceName().get(task.getEffectiveSourceTable().getName());
+			for (var problem : TransferTargetContract.violations(declared, actual))
+				problems.add(diagnosticName(target.getName()) + "." + problem);
+		}
+		if (!problems.isEmpty())
+			throw new ValidationException(
+					"Existing target tables do not accept every row of their declared contract unchanged: "
+							+ String.join("; ", problems)
+							+ ". Nothing was written. Change the target tables or the declared columns, or load into a new table.");
 	}
 
 	/**
@@ -181,6 +248,13 @@ public final class TransferSchemaPreparation {
 		return plan(connection, sourceSchema, tasks, fingerprint, mode, policy, null, generatedKeyColumn);
 	}
 
+	static Plan schemaOnly(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
+			TransferJobConfiguration.CompatibilityPolicy policy, TransferJobConfiguration.SchemaMode mode,
+			String generatedKeyColumn, TransferJobConfiguration.DefaultConversion defaultConversion) throws Exception {
+		return plan(connection, sourceSchema, tasks, fingerprint, mode, policy, null, generatedKeyColumn, false,
+				defaultConversion);
+	}
+
 	private static Plan plan(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
 			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
 			BulkMigrationJobPlan data, String generatedKeyColumn) throws Exception {
@@ -190,14 +264,20 @@ public final class TransferSchemaPreparation {
 	private static Plan plan(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
 			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
 			BulkMigrationJobPlan data, String generatedKeyColumn, boolean structuralOnly) throws Exception {
+		return plan(connection, sourceSchema, tasks, fingerprint, mode, policy, data, generatedKeyColumn,
+				structuralOnly, null);
+	}
+
+	private static Plan plan(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
+			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
+			BulkMigrationJobPlan data, String generatedKeyColumn, boolean structuralOnly,
+			TransferJobConfiguration.DefaultConversion defaultConversion) throws Exception {
 		final var warnings = new ArrayList<String>();
 		if (!Objects.equals(sourceSchema.getProductName(), connection.getMetaData().getDatabaseProductName()))
 			compatibility(policy, warnings,
 					"Source and target products differ. DDL/types are generated from the shared Schema with the target dialect; vendor semantics require review and testing.");
-		// Counter state is independent of table creation and row-copy verification.
-		if (data != null)
-			for (String check : TransferGeneratedKeyChecks.required(data))
-				compatibility(policy, warnings, check);
+		// Generated-key counter checks depend on the transfer path and are added by
+		// the callers (TransferGeneratedKeyChecks).
 		if (mode == TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING) {
 			if (structuralOnly)
 				BulkMigrationTargetValidator.validateStructure(connection, data);
@@ -280,12 +360,20 @@ public final class TransferSchemaPreparation {
 		for (var task : tasks)
 			remapped.put(task.getEffectiveSourceTable().getName(), task.getEffectiveSourceTable().clone()
 					.setCatalogName(first.getCatalogName()).setSchemaName(first.getSchemaName()));
+		for (var task : tasks)
+			for (var column : remapped.get(task.getEffectiveSourceTable().getName()).getColumns()) {
+				var targetColumn = task.getEffectiveTargetTable().getColumns().get(column.getName());
+				if (targetColumn != null && column.getDataType() != null
+						&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL)
+					TransferIntervalProjection.copyType(targetColumn, column);
+			}
 		final var statements = new ArrayList<Statement>();
 		final var preparedTasks = mode == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES ? tasks : missing;
 		for (var task : preparedTasks) {
 			final var source = task.getEffectiveSourceTable();
 			ordinary(source, policy, warnings);
 			final var target = remapped.get(source.getName());
+			target.getSpecifics().remove(TransferIntervalProjection.SNAPSHOT);
 			if (mode == TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY
 					&& (target.getPrimaryKeyConstraint() == null
 							|| target.getPrimaryKeyConstraint().getColumns().isEmpty())) {
@@ -327,9 +415,14 @@ public final class TransferSchemaPreparation {
 				fk.getRelatedColumns().addAll(columns);
 			}
 		}
+		final var defaults = TransferDefaultConversions.apply(
+				TransferDefaultConversions.sourceDialect(sourceSchema, defaultConversion), dialect, tasks,
+				preparedTasks, remapped, data != null, policy, defaultConversion, warnings);
 		if (mode == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES)
-			return withTables(TransferSchemaDifferencePreparation.plan(connection, tasks, remapped, registry,
-					fingerprint, warnings, policy), tablePreparations(tasks, existing, mode, data != null));
+			return withDefaults(
+					withTables(TransferSchemaDifferencePreparation.plan(connection, tasks, remapped, registry,
+							fingerprint, warnings, policy), tablePreparations(tasks, existing, mode, data != null)),
+					defaults);
 		// Access and other table-local namespaces may repeat a constraint name.
 		// Give repeated names stable target identities; retain source metadata.
 		final var constraintNames = new HashMap<String, Integer>();
@@ -381,8 +474,8 @@ public final class TransferSchemaPreparation {
 				statements.add(new Statement(task.getTaskId(), operation.getSqlText()));
 			}
 		}
-		return withTables(result(fingerprint, statements, warnings, mode),
-				tablePreparations(tasks, existing, mode, data != null));
+		return withDefaults(withTables(result(fingerprint, statements, warnings, mode),
+				tablePreparations(tasks, existing, mode, data != null)), defaults);
 	}
 
 	private static List<TablePreparation> tablePreparations(List<Selection> tasks, Set<String> existing,
@@ -404,7 +497,17 @@ public final class TransferSchemaPreparation {
 		return new Plan(
 				"sha256:" + com.sqlapp.util.MessageDigests.SHA256
 						.checksumAsString(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
-				plan.statements(), plan.warnings(), tables);
+				plan.statements(), plan.warnings(), tables, plan.defaults());
+	}
+
+	/**
+	 * Attaches default conversion results. The fingerprint is unchanged: the
+	 * conversions are already reflected in the planned SQL and warnings.
+	 */
+	static Plan withDefaults(Plan plan, List<TransferDefaultConversion> defaults) {
+		if (defaults.isEmpty() && plan.defaults().isEmpty())
+			return plan;
+		return new Plan(plan.fingerprint(), plan.statements(), plan.warnings(), plan.tables(), defaults);
 	}
 
 	private static String targetObjectName(Table table, String originalName, String prefix, Set<String> reserved)
@@ -448,7 +551,7 @@ public final class TransferSchemaPreparation {
 
 	static void mappingExpressions(TransferJobConfiguration.CompatibilityPolicy policy, List<String> warnings) {
 		compatibility(policy, warnings, TransferSchemaChangeChecks.MAPPING_EXPRESSIONS
-				+ " Table/column names are mapped; SQL expressions, checks, defaults and predicates remain verbatim. Review Schema SQL and adjust source expressions where necessary.");
+				+ " Table/column names are mapped; SQL expressions, checks and predicates remain verbatim, and defaults keep their source text except where translated for another product. Review Schema SQL and adjust source expressions where necessary.");
 	}
 
 	private static void ordinary(Table table, TransferJobConfiguration.CompatibilityPolicy policy,

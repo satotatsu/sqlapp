@@ -67,8 +67,11 @@ public class FirebirdDialectResolver extends ProductNameDialectResolver {
 			} else if (majorVersion >= 3) {
 				return DialectHolder.defaultDialect30;
 			} else if (majorVersion >= 2) {
-				if (minorVersion < 5) {
+				if (minorVersion < 1) {
 					return DialectHolder.defaultDialect20;
+				}
+				if (minorVersion < 5) {
+					return DialectHolder.defaultDialect21;
 				}
 				return DialectHolder.defaultDialect25;
 			}

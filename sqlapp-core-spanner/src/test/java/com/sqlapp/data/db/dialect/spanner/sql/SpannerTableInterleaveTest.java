@@ -51,8 +51,7 @@ class SpannerTableInterleaveTest {
 				.endsWith("SET ON DELETE CASCADE"));
 		final var ambiguous = original.clone();
 		ambiguous.getSpecifics().remove(SpannerCreateTableFactory.ON_DELETE_ACTION);
-		assertThrows(IllegalArgumentException.class,
-				() -> registry.createSql(original.diff(ambiguous), SqlType.ALTER));
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(original.diff(ambiguous), SqlType.ALTER));
 		changed.getSpecifics().put(SpannerCreateTableFactory.PARENT_TABLE_NAME, "OtherParent");
 		assertThrows(UnsupportedOperationException.class,
 				() -> registry.createSql(original.diff(changed), SqlType.ALTER));
@@ -64,8 +63,8 @@ class SpannerTableInterleaveTest {
 		original.getSpecifics().put(SpannerCreateTableFactory.INTERLEAVE_TYPE, "IN");
 		final var changed = original.clone();
 		changed.getSpecifics().put(SpannerCreateTableFactory.ON_DELETE_ACTION, "CASCADE");
-		assertThrows(UnsupportedOperationException.class, () -> DialectHolder.defaultDialect
-				.createSqlFactoryRegistry().createSql(original.diff(changed), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class, () -> DialectHolder.defaultDialect.createSqlFactoryRegistry()
+				.createSql(original.diff(changed), SqlType.ALTER));
 	}
 
 	@Test
@@ -104,10 +103,12 @@ class SpannerTableInterleaveTest {
 		target.getSpecifics().put(SpannerCreateTableFactory.INTERLEAVE_TYPE, "IN");
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		target.getSpecifics().put(SpannerCreateTableFactory.PARENT_TABLE_NAME, "OtherParent");
-		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(target), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
 		target.getSpecifics().put(SpannerCreateTableFactory.PARENT_TABLE_NAME, "Parent");
 		target.getColumns().add(new Column("value").setDataType(DataType.BIGINT));
-		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(target), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
 	}
 
 	@Test

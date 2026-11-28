@@ -33,6 +33,10 @@ import com.sqlapp.util.SeparatedStringBuilder;
 
 /**
  * VALUES 句で利用する複数のバインド変数のノード
+ * <p>
+ * Without explicit bind directives, the body is sample SQL and all table columns
+ * are bound from each source row. Use explicit bind directives to select
+ * individual columns.
  * 
  * @author satoh
  *
@@ -67,6 +71,9 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 		final List<Row> rows = getRowList(context);
 		final ColumnCollection columns = sqlParameters.getTable().getColumns();
 		final int size = rows.size();
+		if (size == 0) {
+			throw new IllegalArgumentException("VALUES requires at least one source row");
+		}
 		boolean hasRowNo = hasRowNo(rows);
 		final String questionText;
 		if (hasRowNo) {
@@ -74,7 +81,7 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 		} else {
 			questionText = getQuestionText(columns.size());
 		}
-		final BindParameterHolder holder = new BindParameterHolder();
+		final BindParameterHolder holder = new BindParameterHolder(size);
 		if (supportsValues) {
 			SeparatedStringBuilder builder = new SeparatedStringBuilder("\n, ");
 			builder.setStart("\n" + this.getExpression() + "\n  ");

@@ -11,7 +11,7 @@ public class SpannerDropSequenceFactory extends AbstractDropSequenceFactory<Span
 	protected void addDropObject(final Sequence sequence, final SpannerSqlBuilder builder) {
 		if (sequence.getName() == null || sequence.getName().isBlank())
 			throw new IllegalArgumentException("Spanner DROP SEQUENCE requires a name");
-		builder.drop().sequence().ifExists(getOptions().isDropIfExists())
-				.name(sequence, getOptions().isDecorateSchemaName());
+		builder.drop().sequence().ifExists(getOptions().isDropIfExists()).name(sequence,
+				getOptions().isDecorateSchemaName());
 	}
 }

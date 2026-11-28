@@ -21,6 +21,11 @@ final class PhoenixJdbcHeaders {
 
 	static List<Table> read(Connection connection, String catalog, String schema, String name, boolean views,
 			ReaderOptions options) {
+		return read(connection, catalog, schema, name, views, options, null);
+	}
+
+	static List<Table> read(Connection connection, String catalog, String schema, String name, boolean views,
+			ReaderOptions options, ProductVersionInfo version) {
 		final List<Table> result = new ArrayList<>();
 		final Set<List<String>> identities = new HashSet<>();
 		try (var rs = new ExResultSet(connection.getMetaData().getTables(CommonUtils.emptyToNull(catalog),
@@ -43,12 +48,22 @@ final class PhoenixJdbcHeaders {
 							"Invalid Phoenix SALT_BUCKETS metadata for " + table.getName() + ": " + salt);
 				if (salt != null && salt > 0)
 					table.getSpecifics().put(PhoenixDdlOptions.SALT_BUCKETS, salt);
-				final Boolean immutable = rs.getBooleanValue("IMMUTABLE_ROWS");
+				final Boolean immutable = booleanValue(rs, "IMMUTABLE_ROWS");
 				if (immutable != null)
 					table.getSpecifics().put(PhoenixDdlOptions.IMMUTABLE_ROWS, immutable);
-				final Boolean tenant = rs.getBooleanValue("MULTI_TENANT");
+				final Boolean tenant = booleanValue(rs, "MULTI_TENANT");
 				if (tenant != null)
 					table.getSpecifics().put(PhoenixDdlOptions.MULTI_TENANT, tenant);
+				final Boolean transactional = booleanValue(rs, "TRANSACTIONAL");
+				if (transactional != null) {
+					table.getSpecifics().put(PhoenixDdlOptions.TRANSACTIONAL, transactional);
+				}
+				final String provider = rs.getString("TRANSACTION_PROVIDER");
+				if (provider != null) {
+					if (provider.isBlank())
+						throw new IllegalStateException("Blank Phoenix TRANSACTION_PROVIDER metadata");
+					table.getSpecifics().put(PhoenixDdlOptions.TRANSACTION_PROVIDER, provider);
+				}
 				if (views) {
 					table.getSpecifics().put("phoenix.viewMetadataOnly", true);
 					final String type = rs.getString("VIEW_TYPE");
@@ -65,6 +80,22 @@ final class PhoenixJdbcHeaders {
 		} catch (SQLException e) {
 			throw new IllegalStateException("Could not read Phoenix table/view headers", e);
 		}
+		if (!views) {
+			try {
+				PhoenixDefaultFamilyReader.read(connection, result, version);
+			} catch (SQLException e) {
+				throw new IllegalStateException("Could not read Phoenix table properties from SYSTEM.CATALOG", e);
+			}
+		}
 		return result;
+	}
+
+	private static Boolean booleanValue(ExResultSet rs, String field) throws SQLException {
+		final String value = rs.getString(field);
+		if (value == null)
+			return null;
+		if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false"))
+			throw new IllegalStateException("Invalid Phoenix " + field + " metadata: " + value);
+		return Boolean.valueOf(value);
 	}
 }

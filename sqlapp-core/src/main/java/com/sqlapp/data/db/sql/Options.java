@@ -37,6 +37,8 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 public class Options extends AbstractBean {
+	/** Internal typed-reader context; ordinary generated SELECT SQL keeps native column types. */
+	private boolean jdbcRead;
 	/**
 	 * COMMIT
 	 */
@@ -84,6 +86,7 @@ public class Options extends AbstractBean {
 	@Override
 	public Options clone() {
 		final Options clone = new Options();
+		clone.setJdbcRead(jdbcRead);
 		clone.setOutputCommit(outputCommit);
 		clone.setQuateObjectName(quateObjectName);
 		clone.setQuateColumnName(quateColumnName);

@@ -19,14 +19,12 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * POINT型
  *
  */
-public class Point extends AbstractPoint2D implements ToUpperDimensionType<Point3D>{
+public class Point extends AbstractPoint2D{
     /** serialVersionUID */
 	private static final long serialVersionUID = 3280634501061893212L;
 
@@ -76,13 +74,6 @@ public class Point extends AbstractPoint2D implements ToUpperDimensionType<Point
 	}
 
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.geometric.ToUpperDimensionType#toUpperDimension()
-	 */
-	@Override
-	public Point3D toUpperDimension() {
-		return new Point3D(this.getX(), this.getY(), 0d);
-	}
 	
 	/**
 	 * java.awt.Pointへ変換します
@@ -97,9 +88,7 @@ public class Point extends AbstractPoint2D implements ToUpperDimensionType<Point
 	 */
 	@Override
 	public Point setValue(String text) {
-		text=CommonUtils.unwrap(text, "(", ")");
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
+		final double[] vals = GeometryTextParser.parsePoint(text, 2, "Point");
 		this.setX(vals[0]);
 		this.setY(vals[1]);
 		return this;

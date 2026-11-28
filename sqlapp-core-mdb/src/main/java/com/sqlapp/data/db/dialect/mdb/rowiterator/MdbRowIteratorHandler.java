@@ -82,7 +82,7 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 		protected void set(final io.github.spannm.jackcess.Row source, final Row row) {
 			row.setDataSourceInfo(file.toString());
 			row.setDataSourceDetailInfo(tableName);
-			row.setDataSourceRowNumber(count);
+			row.setDataSourceRowNumber(count + 1);
 			for (final Column column : table.getColumns()) {
 				put(row, column, normalizeValue(column, source.get(column.getName())));
 			}
@@ -91,6 +91,10 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 		private Object normalizeValue(final Column column, final Object value) {
 			if (value == null || value instanceof byte[]) {
 				return value;
+			}
+			if (value instanceof Byte b) {
+				// Jackcess returns Access Byte (unsigned 0-255) as a signed Java Byte.
+				return (short) Byte.toUnsignedInt(b);
 			}
 			if (value instanceof io.github.spannm.jackcess.complex.ComplexValueForeignKey) {
 				throw new UnsupportedOperationException(

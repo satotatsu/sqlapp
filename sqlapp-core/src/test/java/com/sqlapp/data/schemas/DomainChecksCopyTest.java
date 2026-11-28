@@ -8,9 +8,11 @@ class DomainChecksCopyTest {
 	@Test
 	void mergingExistingDomainReplacesChecksWithoutDuplicatesOrStaleEntries() {
 		var schema = new Schema("APP");
-		var original = new Domain("D"); original.getChecks().add(new DomainCheckConstraint("C", "VALUE>0"));
+		var original = new Domain("D");
+		original.getChecks().add(new DomainCheckConstraint("C", "VALUE>0"));
 		schema.getDomains().add(original);
-		var incoming = original.clone(); incoming.getChecks().get("C").setExpression("VALUE>1");
+		var incoming = original.clone();
+		incoming.getChecks().get("C").setExpression("VALUE>1");
 		incoming.getChecks().add(new DomainCheckConstraint("SECOND", "VALUE<10"));
 		schema.getDomains().addAll(java.util.List.of(incoming));
 		assertEquals(2, schema.getDomains().get("D").getChecks().size());

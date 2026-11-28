@@ -2385,6 +2385,7 @@ public enum DataType {
 		classTypeMap.put(LocalDate.class, DataType.DATE);
 		classTypeMap.put(LocalTime.class, DataType.TIME);
 		classTypeMap.put(LocalDateTime.class, DataType.DATETIME);
+		classTypeMap.put(com.sqlapp.data.interval.IntervalValue.class, DataType.INTERVAL);
 	}
 
 	protected boolean isJdbcBaseType() {

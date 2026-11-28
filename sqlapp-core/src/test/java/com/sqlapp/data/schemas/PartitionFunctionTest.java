@@ -54,7 +54,6 @@ public class PartitionFunctionTest extends AbstractDbObjectTest<PartitionFunctio
 		this.testDiffString(diff);
 	}
 
-
 	@org.junit.jupiter.api.Test
 	void sqlNullBoundarySurvivesNumericValidationAndXml() throws Exception {
 		PartitionFunction function = new PartitionFunction("F").setDataType(com.sqlapp.data.db.datatype.DataType.INT);
@@ -67,7 +66,8 @@ public class PartitionFunctionTest extends AbstractDbObjectTest<PartitionFunctio
 
 	@org.junit.jupiter.api.Test
 	void quotedNullRemainsAStringBoundary() {
-		PartitionFunction function = new PartitionFunction("F").setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR);
+		PartitionFunction function = new PartitionFunction("F")
+				.setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR);
 		function.getValues().addAll("'NULL'", "NULL", "'a'");
 		function.validate();
 		org.junit.jupiter.api.Assertions.assertEquals("NULL", function.getValues().get(0));

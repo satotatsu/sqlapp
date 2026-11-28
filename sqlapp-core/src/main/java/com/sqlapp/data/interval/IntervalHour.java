@@ -57,9 +57,10 @@ public class IntervalHour extends Interval{
     	if (interval==null){
     		return null;
     	}
-    	IntervalHour result=new IntervalHour((interval.getDays()*HOUR_LIMIT
-    			+interval.getHours()));
-    	if (!interval.isPositive()){
+		final Interval value = interval.toInterval();
+		IntervalHour result=new IntervalHour((value.getDays()*HOUR_LIMIT
+				+value.getHours()));
+		if (!value.isPositive()){
     		result.scale(-1);
     	}
     	return result;
@@ -106,7 +107,7 @@ public class IntervalHour extends Interval{
     	if (!this.isPositive()){
         	builder.append("-");
     	}
-    	builder.append((this.getDays()*HOUR_LIMIT+this.getHours()));
+		builder.append((this.getHoursFull()));
     	builder.append("");
     	return builder.toString();
     }

@@ -32,6 +32,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.exceptions.MissingWhereClauseKeyException;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.BindParameterHolder;
 import com.sqlapp.util.CommonUtils;
@@ -139,12 +140,24 @@ public class SqlSignature {
 	}
 
 	public void setColumnSelectionStrategy(ColumnSelectionStrategy columnSelectionStrategy) {
+		setColumnSelectionStrategy(columnSelectionStrategy, true);
+	}
+
+	/** Select available key columns, allowing keyless condition-based operations. */
+	void setColumnSelectionStrategy(ColumnSelectionStrategy columnSelectionStrategy, boolean required) {
 		this.columnSelectionStrategy = columnSelectionStrategy;
 		if (columnSelectionStrategy != null) {
 			reCalculate();
 			this.selectedColumnsHolder = columnSelectionStrategy.get(this);
 			if (this.selectedColumnsHolder == ColumnsHolder.EMPTY_COLUMN_HOLDER) {
-				this.selectedColumnsHolder = columnSelectionStrategy.getWithoutCheck(this);
+				try {
+					this.selectedColumnsHolder = columnSelectionStrategy.getWithoutCheck(this);
+				} catch (MissingWhereClauseKeyException e) {
+					if (required) {
+						throw e;
+					}
+					this.selectedColumnsHolder = ColumnsHolder.EMPTY_COLUMN_HOLDER;
+				}
 			}
 		}
 	}
@@ -382,7 +395,7 @@ public class SqlSignature {
 
 		public BindParameterHolder addInParameters(final Dialect dialect, final List<Row> rows, String prefix,
 				final SqlBuilder builder) {
-			final BindParameterHolder holder = new BindParameterHolder();
+			final BindParameterHolder holder = new BindParameterHolder(rows.size());
 			if (getKeyColumns().size() == 1) {
 				Column column = CommonUtils.first(getKeyColumns());
 				addName(column, prefix, builder);

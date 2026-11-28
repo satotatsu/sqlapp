@@ -37,6 +37,12 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 		validateOptions(options);
 		final BulkOption effective = options == null ? BulkOption.defaults() : options;
 		final List<Column> columns = writableColumns(table, effective);
+		for (var column : columns) {
+			var type = typedDbDataType(column);
+			if (type != null && type.getJdbcTypeHandler() instanceof com.sqlapp.data.db.datatype.IntervalTypeHandler interval
+					&& !interval.supportsJdbcBinding(column))
+				throw new IllegalArgumentException("Column " + column.getName() + " requires NATIVE transport; JDBC_BATCH cannot bind this interval declaration");
+		}
 		final int batchSize = effective.getBatchSize() == null
 				? DEFAULT_BATCH_SIZE : effective.getBatchSize();
 		if (batchSize <= 0) {
@@ -56,12 +62,12 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 				statement.addBatch();
 				pending++;
 				if (pending == batchSize) {
-					affected = addCount(affected, count(statement.executeBatch()));
+					affected = addCount(affected, countBatchRows(statement.executeBatch()));
 					pending = 0;
 				}
 			}
 			if (pending > 0) {
-				affected = addCount(affected, count(statement.executeBatch()));
+				affected = addCount(affected, countBatchRows(statement.executeBatch()));
 			}
 			return affected;
 		} catch (SQLException | RuntimeException | Error e) {
@@ -148,20 +154,24 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 		if (dbDataType == null) {
 			JdbcParameterBinder.bind(statement, dialect, null, index, value);
 		} else {
-			dbDataType.getJdbcTypeHandler().setObject(statement, index, value);
+			dbDataType.getJdbcTypeHandler().setObject(statement, index, value, column);
 		}
 	}
 
 	private DbDataType<?> typedDbDataType(final Column column) {
 		final DataType type = column.getDataType();
-		if (type == null || type.isOther() || type.isDomain() || column.getArrayDimension() > 0) {
+		if (type == null || type.isOther() || type.isDomain()) {
 			return null;
 		}
 		final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
+		if (column.getArrayDimension() > 0 && dbDataType != null
+				&& !(dbDataType.getJdbcTypeHandler() instanceof com.sqlapp.data.db.datatype.IntervalTypeHandler))
+			return null;
 		return dbDataType == null || dbDataType.getJdbcTypeHandler() == null ? null : dbDataType;
 	}
 
-	private long count(final int[] counts) throws SQLException {
+	/** Returns the affected row count from a successful JDBC batch result. */
+	protected long countBatchRows(final int[] counts) throws SQLException {
 		long affected = 0;
 		for (final int value : counts) {
 			if (value == Statement.EXECUTE_FAILED) {

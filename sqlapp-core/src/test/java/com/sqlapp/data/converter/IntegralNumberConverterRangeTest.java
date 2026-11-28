@@ -80,8 +80,8 @@ class IntegralNumberConverterRangeTest {
 		assertOutOfRange(() -> longConverter.convertObject("99999999999999999999"), "Long", null);
 	}
 
-	private static void assertOutOfRange(final org.junit.jupiter.api.function.Executable executable,
-			final String type, final String value) {
+	private static void assertOutOfRange(final org.junit.jupiter.api.function.Executable executable, final String type,
+			final String value) {
 		final ConverterException e = assertThrows(ConverterException.class, executable);
 		assertTrue(e.getMessage().startsWith("Value out of range for " + type + ": "), e.getMessage());
 		if (value != null) {

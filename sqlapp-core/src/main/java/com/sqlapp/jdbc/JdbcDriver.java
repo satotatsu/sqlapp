@@ -27,46 +27,41 @@ import com.sqlapp.exceptions.JdbcDriverNotFoundException;
 public enum JdbcDriver {
 	DB2("jdbc:db2:(.*)", "com.ibm.db2.jcc.DB2Driver"),
 	DB2iseries("jdbc:as400:(.*)", "com.ibm.as400.access.AS400JDBCDriver"),
-	Derby("jdbc:derby:(//.*)","org.apache.derby.jdbc.ClientDriver40"),
-	DerbyEmbedded("jdbc:derby:(.*)","org.apache.derby.jdbc.EmbeddedDriver"),
-	Firebird("jdbc:firebirdsql:(.*)", "org.firebirdsql.jdbc.FBDriver"),
-	H2("jdbc:h2:(.*)", "org.h2.Driver"),
-	HiRDB("jdbc:hitachi:hirdb:(.*)","JP.co.Hitachi.soft.HiRDB.JDBC.HiRDBDriver"),
-	HSQLDB("jdbc:hsqldb:(.*)", "org.hsqldb.jdbcDriver"),
-	jTDS("jdbc:jtds:(.*)","net.sourceforge.jtds.jdbc.Driver"),
+	Derby("jdbc:derby:(//.*)", "org.apache.derby.jdbc.ClientDriver40"),
+	DerbyEmbedded("jdbc:derby:(.*)", "org.apache.derby.jdbc.EmbeddedDriver"),
+	Firebird("jdbc:firebirdsql:(.*)", "org.firebirdsql.jdbc.FBDriver"), H2("jdbc:h2:(.*)", "org.h2.Driver"),
+	HiRDB("jdbc:hitachi:hirdb:(.*)", "JP.co.Hitachi.soft.HiRDB.JDBC.HiRDBDriver"),
+	HSQLDB("jdbc:hsqldb:(.*)", "org.hsqldb.jdbcDriver"), jTDS("jdbc:jtds:(.*)", "net.sourceforge.jtds.jdbc.Driver"),
 	MariaDB("jdbc:mariadb:(.*)", "org.mariadb.jdbc.Driver"),
 	MySQL("jdbc:mysql:(.*)", "com.mysql.cj.jdbc.Driver", "com.mysql.jdbc.Driver"),
-	MSSqlserver("jdbc:sqlserver:(.*)","com.microsoft.sqlserver.jdbc.SQLServerDriver"),
-	MSSqlserverWeblogic("jdbc:weblogic:mssqlserver4:(.*)","weblogic.jdbc.mssqlserver4.Driver"),
+	MSSqlserver("jdbc:sqlserver:(.*)", "com.microsoft.sqlserver.jdbc.SQLServerDriver"),
+	MSSqlserverWeblogic("jdbc:weblogic:mssqlserver4:(.*)", "weblogic.jdbc.mssqlserver4.Driver"),
 	OJDBC("jdbc:odbc:(.*)", "sun.jdbc.odbc.JdbcOdbcDriver"),
 	Oracle("jdbc:oracle:(.*)", "oracle.jdbc.driver.OracleDriver"),
 	Phoenix("jdbc:phoenix:(.*)", "org.apache.phoenix.queryserver.client.Driver"),
 	Postgres("jdbc:postgresql:(.*)", "org.postgresql.Driver", "postgresql.Driver"),
-	SAPHANA("jdbc:sap:(.*)", "com.sap.db.jdbc.Driver"),
-	SQLite("jdbc:sqlite:(.*)", "org.sqlite.JDBC"),
-	Sybase("jdbc:sybase:(.*)", "com.sybase.jdbc3.jdbc.SybDriver", "com.sybase.jdbc2.jdbc.SybDriver", "com.sybase.jdbc.SybDriver"),
+	SAPHANA("jdbc:sap:(.*)", "com.sap.db.jdbc.Driver"), SQLite("jdbc:sqlite:(.*)", "org.sqlite.JDBC"),
+	Sybase("jdbc:sybase:(.*)", "com.sybase.jdbc3.jdbc.SybDriver", "com.sybase.jdbc2.jdbc.SybDriver",
+			"com.sybase.jdbc.SybDriver"),
 	Teradata("jdbc:teradata:(.*)", "com.teradata.jdbc.TeraDriver"),
-	Virtica("jdbc:vertica:(.*)","com.vertica.jdbc.Driver"),
-	;
-	
-	private JdbcDriver(String url, String... driverClassName){
-		this.urlPattern=Pattern.compile(url);
-		this.driverClassName=driverClassName;
+	Virtica("jdbc:vertica:(.*)", "com.vertica.jdbc.Driver"),;
+
+	private JdbcDriver(String url, String... driverClassName) {
+		this.urlPattern = Pattern.compile(url);
+		this.driverClassName = driverClassName;
 	}
-	
-	
+
 	private final Pattern urlPattern;
 
 	private final String[] driverClassName;
 
-	private boolean match(String url){
-		Matcher matcher=urlPattern.matcher(url);
+	private boolean match(String url) {
+		Matcher matcher = urlPattern.matcher(url);
 		return matcher.matches();
 	}
-	
-	
-	public String DriverClassName(){
-		for(String name:driverClassName){
+
+	public String DriverClassName() {
+		for (String name : driverClassName) {
 			try {
 				Class.forName(name);
 				return name;
@@ -75,9 +70,9 @@ public enum JdbcDriver {
 		}
 		return null;
 	}
-	
-	public String DriverClassName(ClassLoader classLoader){
-		for(String name:driverClassName){
+
+	public String DriverClassName(ClassLoader classLoader) {
+		for (String name : driverClassName) {
 			try {
 				Class.forName(name, true, classLoader);
 				return name;
@@ -93,35 +88,35 @@ public enum JdbcDriver {
 	 * @param url
 	 */
 	public static String getDriverClassNameByUrl(String url) {
-		if (url==null){
+		if (url == null) {
 			return null;
 		}
 		for (JdbcDriver enm : values()) {
 			if (enm.match(url)) {
-				String driverClassName=enm.DriverClassName();
-				if (driverClassName==null){
-					throw new JdbcDriverNotFoundException("Driver not found. url="+url);
+				String driverClassName = enm.DriverClassName();
+				if (driverClassName == null) {
+					throw new JdbcDriverNotFoundException("Driver not found. url=" + url);
 				}
 				return driverClassName;
 			}
 		}
 		return null;
 	}
-	
+
 	/**
 	 * URLからJDBCドライバークラスを取得します
 	 * 
 	 * @param url
 	 */
 	public static String getDriverClassNameByUrl(String url, ClassLoader classLoader) {
-		if (url==null){
+		if (url == null) {
 			return null;
 		}
 		for (JdbcDriver enm : values()) {
 			if (enm.match(url)) {
-				String driverClassName=enm.DriverClassName(classLoader);
-				if (driverClassName==null){
-					throw new RuntimeException("Driver not found. url="+url);
+				String driverClassName = enm.DriverClassName(classLoader);
+				if (driverClassName == null) {
+					throw new RuntimeException("Driver not found. url=" + url);
 				}
 				return driverClassName;
 			}

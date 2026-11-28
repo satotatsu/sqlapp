@@ -57,6 +57,11 @@ public class SpannerArrayColumnTypeMatcher implements ColumnTypeMatcher, ColumnT
 	}
 
 	@Override
+	public ColumnTypeMatcher copy() {
+		return new SpannerArrayColumnTypeMatcher(internalMatcher.copy());
+	}
+
+	@Override
 	public ColumnTypeMatcher getInternal() {
 		return internalMatcher;
 	}

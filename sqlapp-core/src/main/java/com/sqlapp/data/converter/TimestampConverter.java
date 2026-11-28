@@ -46,7 +46,7 @@ public class TimestampConverter extends AbstractDateConverter<Timestamp, Timesta
 	private static final long serialVersionUID = 4338676657516409581L;
 
 	private static final Pattern TIMESTAMP_PATTERN = Pattern
-			.compile("[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]+");
+			.compile("[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]+");
 
 	@Override
 	public Timestamp convertObject(Object value) {

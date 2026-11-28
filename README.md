@@ -1,8 +1,21 @@
 # sqlapp
 
-sqlapp helps Java teams understand a database, review schema changes, and move
-related data with verification. It connects these workflows through one shared
-Schema model, with Java APIs and the `com.sqlapp.db` Gradle plugin.
+**Database Migration, Schema Management and Data Engineering Framework**
+
+sqlapp connects schema inspection, change review, verified data movement and
+SQL-based data processing through one shared Schema model. Start with the
+`com.sqlapp.db` Gradle plugin, embed Java APIs, or review migration plans in the
+[Swing migration assistant](sqlapp-swing/README.md).
+
+[Official documentation](https://satotatsu.github.io/sqlapp/) ·
+[日本語](README.ja.md) ·
+[Live demos](https://satotatsu.github.io/sqlapp/demos.html) ·
+[Supported databases and evidence](docs/compatibility.md)
+
+The site describes the current repository. See the
+[Plugin Portal](https://plugins.gradle.org/plugin/com.sqlapp.db) for published
+versions. Version `0.80.0` is the current source version, not a verified Portal
+release; current APIs must not be assumed to exist in older releases.
 
 ## What you can do
 
@@ -150,7 +163,7 @@ Replace the JDBC driver version and connection values for your environment.
 ```groovy
 plugins {
     id 'java'
-    id 'com.sqlapp.db' version '0.80.0'
+    id 'com.sqlapp.db' version '<sqlapp-version>'
 }
 
 repositories {
@@ -158,7 +171,7 @@ repositories {
 }
 
 dependencies {
-    runtimeOnly 'com.sqlapp:sqlapp-core-postgres:0.80.0'
+    runtimeOnly 'com.sqlapp:sqlapp-core-postgres:<sqlapp-version>'
     runtimeOnly 'org.postgresql:postgresql:<jdbc-driver-version>'
 }
 
@@ -209,8 +222,8 @@ application. Gradle:
 
 ```groovy
 dependencies {
-    implementation 'com.sqlapp:sqlapp-core:0.80.0'
-    runtimeOnly 'com.sqlapp:sqlapp-core-postgres:0.80.0'
+    implementation 'com.sqlapp:sqlapp-core:<sqlapp-version>'
+    runtimeOnly 'com.sqlapp:sqlapp-core-postgres:<sqlapp-version>'
     runtimeOnly 'org.postgresql:postgresql:<jdbc-driver-version>'
 }
 ```
@@ -222,12 +235,12 @@ Maven:
   <dependency>
     <groupId>com.sqlapp</groupId>
     <artifactId>sqlapp-core</artifactId>
-    <version>0.80.0</version>
+    <version>sqlapp-version</version>
   </dependency>
   <dependency>
     <groupId>com.sqlapp</groupId>
     <artifactId>sqlapp-core-postgres</artifactId>
-    <version>0.80.0</version>
+    <version>sqlapp-version</version>
     <scope>runtime</scope>
   </dependency>
 </dependencies>

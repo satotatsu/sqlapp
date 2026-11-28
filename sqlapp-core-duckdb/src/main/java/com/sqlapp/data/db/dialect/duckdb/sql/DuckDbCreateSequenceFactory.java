@@ -15,6 +15,26 @@ import com.sqlapp.data.schemas.Sequence;
  */
 public class DuckDbCreateSequenceFactory extends AbstractCreateSequenceFactory<DuckDbSqlBuilder> {
 
+	/**
+	 * DuckDB cannot restart a sequence, so it is created at its next value
+	 * ({@code lastValue}) directly.
+	 */
+	@Override
+	protected void addCreateObject(final Sequence obj, final DuckDbSqlBuilder builder) {
+		if (obj.getLastValue() == null) {
+			super.addCreateObject(obj, builder);
+			return;
+		}
+		final Sequence next = obj.clone();
+		next.setStartValue(obj.getLastValue());
+		super.addCreateObject(next, builder);
+	}
+
+	@Override
+	protected boolean appliesNextValueInCreate() {
+		return true;
+	}
+
 	@Override
 	protected void addIfNotExists(final Sequence obj, final DuckDbSqlBuilder builder) {
 		builder.ifNotExists(getOptions().isCreateIfNotExists());

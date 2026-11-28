@@ -48,7 +48,7 @@ public final class DuckDbVersions {
 		}
 	}
 
-	/** DuckDB 1.4: MERGE INTO. Also used for DuckDB 1.5 and 2.x. */
+	/** DuckDB 1.4: MERGE INTO. Also used for DuckDB 1.5. */
 	public static class DuckDb14 extends DuckDb12 {
 		private static final long serialVersionUID = 1L;
 
@@ -58,6 +58,20 @@ public final class DuckDbVersions {
 
 		@Override
 		public boolean supportsMerge() {
+			return true;
+		}
+	}
+
+	/** DuckDB 2.0: ALTER TABLE ... ADD UNIQUE. */
+	public static class DuckDb20 extends DuckDb14 {
+		private static final long serialVersionUID = 1L;
+
+		protected DuckDb20(final Supplier<Dialect> next) {
+			super(next);
+		}
+
+		@Override
+		public boolean supportsAlterTableAddUnique() {
 			return true;
 		}
 	}

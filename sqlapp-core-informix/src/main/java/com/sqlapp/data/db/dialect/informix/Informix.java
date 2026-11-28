@@ -142,8 +142,17 @@ public class Informix extends Dialect {
 		getDbDataTypes().addMoney("MONEY", type -> {
 		});
 		getDbDataTypes().addIntervalYearToMonth(type -> {
+			type.setDefaultPrecision(4).setMaxPrecision(9);
+			type.setJdbcTypeHandler(new InformixIntervalJdbcTypeHandler(type.getDataType()));
+			var converter = new com.sqlapp.data.converter.StandardIntervalConverter(type.getDataType());
+			type.setConverter(converter).setFormatter(converter);
 		});
 		getDbDataTypes().addIntervalDayToSecond(type -> {
+			type.setDefaultPrecision(2).setMaxPrecision(9).setDefaultScale(5).setMaxScale(5);
+			type.setCreateFormat("INTERVAL DAY(", ") TO FRACTION(", ")");
+			type.setJdbcTypeHandler(new InformixIntervalJdbcTypeHandler(type.getDataType()));
+			var converter = new com.sqlapp.data.converter.StandardIntervalConverter(type.getDataType());
+			type.setConverter(converter).setFormatter(converter);
 		});
 	}
 
@@ -261,6 +270,33 @@ public class Informix extends Dialect {
 	}
 
 	@Override
+	public com.sqlapp.data.db.dialect.util.SqlSplitter createSqlSplitter() {
+		return new com.sqlapp.data.db.dialect.informix.util.InformixSqlSplitter(this);
+	}
+
+	@Override
+	public boolean supportsSequence() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsSequencePreallocation() {
+		return true;
+	}
+
+	@Override
+	public int getSequenceQueryBatchSize() {
+		return 100;
+	}
+
+	@Override
+	public String getSequenceNextValString(final String sequenceName) {
+		if (sequenceName == null || sequenceName.isBlank())
+			throw new IllegalArgumentException("Informix sequence name is required");
+		return "SELECT " + sequenceName + ".NEXTVAL FROM TABLE(SET{1})";
+	}
+
+	@Override
 	public int hashCode() {
 		return getProductName().hashCode();
 	}
@@ -283,4 +319,13 @@ public class Informix extends Dialect {
 	public boolean isDdlRollbackable() {
 		return true;
 	}
+
+	@Override
+	public String getSqlValueDefinition(com.sqlapp.data.schemas.Column column, Object value) {
+		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL_YEAR_TO_MONTH
+				|| column.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL_DAY_TO_SECOND)
+			return new InformixIntervalJdbcTypeHandler(column.getDataType()).literal(value, column);
+		return super.getSqlValueDefinition(column, value);
+	}
+
 }

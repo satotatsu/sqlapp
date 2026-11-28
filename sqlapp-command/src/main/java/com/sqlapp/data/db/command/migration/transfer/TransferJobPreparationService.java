@@ -105,6 +105,12 @@ public final class TransferJobPreparationService {
 				validateInsertMethod(targetDialect, configuration);
 			phase = "resolving source Schema metadata";
 			final Schema schema = readSchema(from, sourceDialect, configuration.sourceSchema());
+			// Preflight reads update scan counters on PostgreSQL. These are observations,
+			// not schema/data definitions, and must not invalidate the pinned transfer.
+			schema.applyAll(object -> {
+				if (object instanceof com.sqlapp.data.schemas.properties.StatisticsProperty<?> statistics)
+					statistics.getStatistics().clear();
+			});
 			if (stagingBuffer)
 				prepareStagingSchema(schema, snapshot.fingerprint());
 			final String targetSchema = configuration.targetSchema() == null
@@ -204,32 +210,59 @@ public final class TransferJobPreparationService {
 					TransferNameMappingIO.pinDataJob(new YamlConverter().toJsonString(definition), mapping),
 					bulk.fingerprint());
 			phase = "resolving target table identities in the generated bulk configuration";
-			final var resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
+			var resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
+			var intervalPlan = TransferIntervalProjection.prepare(to, resolved.plan(), sourceDialect,
+					configuration.schemaMode(), configuration
+							.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE);
+			if (TransferIntervalProjection.capture(schema, intervalPlan, to)) {
+				AtomicMigrationFile.write(xml, temporary -> {
+					try (var writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
+						schema.writeXml(writer);
+					} catch (javax.xml.stream.XMLStreamException failure) {
+						throw new IOException("Unable to capture interval projection", failure);
+					}
+				});
+				definition.put("schemaFingerprint",
+						BoundedMigrationFile.sha256(xml, 16_777_216L, "maxSchemaBytes", "Schema"));
+				bulk = bulkIO.write(bulk.file(),
+						TransferNameMappingIO.pinDataJob(new YamlConverter().toJsonString(definition), mapping),
+						bulk.fingerprint());
+				resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
+				intervalPlan = TransferIntervalProjection.restore(resolved.plan());
+			}
 			phase = "validating target tables, columns, primary keys and empty-target conditions";
-			final var compatibility = TransferSchemaPreparation.plan(to, schema, resolved.plan(),
+			final var compatibility = TransferSchemaPreparation.plan(to, schema, intervalPlan,
 					configuration.schemaMode(), configuration.compatibilityPolicy(), projection,
 					configuration.effectiveGeneratedKeyColumn(),
 					configuration
 							.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE,
-					stagingBuffer);
+					stagingBuffer, configuration.defaultConversion());
 			final var copyWarnings = new ArrayList<>(compatibility.warnings());
+			// Counter state is independent of table creation and row-copy verification.
+			if (intervalPlan != null)
+				for (String check : TransferGeneratedKeyChecks.required(intervalPlan, targetDialect, configuration,
+						TransferGeneratedKeySynchronization.synchronizes(configuration)))
+					TransferSchemaPreparation.compatibility(configuration.compatibilityPolicy(), copyWarnings, check);
+			for (String warning : TransferIntervalProjection.warnings(intervalPlan))
+				TransferSchemaPreparation.compatibility(configuration.compatibilityPolicy(), copyWarnings, warning);
 			for (var task : resolved.plan().getTasks())
 				if (task.isFullScan())
 					TransferSchemaPreparation.compatibility(configuration.compatibilityPolicy(), copyWarnings,
 							TransferKeylessChecks.CODE + " Table " + task.getEffectiveSourceTable().getName()
 									+ " uses full-scan INSERT without a usable NOT NULL primary key. Duplicate rows are preserved; verification compares externally sorted row hashes, including multiplicity. Verification chunk indexes are hash-sort positions, not source row positions. MERGE, resume and key-based repair are unavailable. Review the target key design; optional missing-table creation can add a target-only generated PK.");
-			final var copyPlan = copyWarnings.equals(compatibility.warnings()) ? compatibility
-					: TransferSchemaPreparation
-							.withTables(
+			final var copyPlan = copyWarnings
+					.equals(compatibility.warnings())
+							? compatibility
+							: TransferSchemaPreparation.withDefaults(TransferSchemaPreparation.withTables(
 									TransferSchemaPreparation.result(compatibility.fingerprint(),
 											compatibility.statements(), copyWarnings, configuration.schemaMode()),
-									compatibility.tables());
+									compatibility.tables()), compatibility.defaults());
 			phase = "checking that the transfer definition has not changed";
 			if (!io.read(jobFile).fingerprint().equals(snapshot.fingerprint()))
 				throw new PreparationException("Transfer definition changed during preparation. Prepare it again.");
 			TransferNameMappingIO.capture(mapping, directory);
 			final var savedJob = io.write(directory.resolve("transfer.yaml"), snapshot.text(), null);
-			return withDraft(new Prepared(directory, savedJob, xml, bulk, resolved.plan().getFingerprint(),
+			return withDraft(new Prepared(directory, savedJob, xml, bulk, intervalPlan.getFingerprint(),
 					resolved.plan().getTaskIds(), copyPlan.warnings(), copyPlan), targetDialect, draft);
 		} catch (TransferSchemaPreparation.ValidationException failure) {
 			throw failure;

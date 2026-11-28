@@ -53,9 +53,9 @@ public class SqlTokenizer {
 		for (int i = 0; i < sql.length();) {
 			boolean lineComment = false;
 			// Client delimiter directives must be recognized before line comments.
-			if (i == 0 || sql.charAt(i - 1) == '\n') {
+			if (i == 0 || sql.charAt(i - 1) == '\n' || sql.charAt(i - 1) == '\r' && sql.charAt(i) != '\n') {
 				cursor.setPosition(i);
-				int lineEnd = sql.indexOf('\n', i);
+				int lineEnd = StringHolder.findLineEnd(sql, i);
 				String line = sql.substring(i, lineEnd < 0 ? sql.length() : lineEnd);
 				if (isChangeDelimiter(line, cursor)) {
 					i = cursor.getPosition();
@@ -73,7 +73,7 @@ public class SqlTokenizer {
 			int start = i;
 			Type type = Type.QUOTED_STRING;
 			if (lineComment || isLineCommentStart(sql, i)) {
-				i = sql.indexOf('\n', i);
+				i = StringHolder.findLineEnd(sql, i);
 				if (i < 0)
 					i = sql.length();
 				type = Type.SINGLE_LINE_COMMENT;
@@ -176,7 +176,7 @@ public class SqlTokenizer {
 	protected boolean isLineCommentStart(String sql, int position) {
 		if (!sql.startsWith("--", position))
 			return false;
-		int end = sql.indexOf('\n', position);
+		int end = StringHolder.findLineEnd(sql, position);
 		return isLineComment(sql.substring(position, end < 0 ? sql.length() : end));
 	}
 

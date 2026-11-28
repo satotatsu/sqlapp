@@ -104,30 +104,12 @@ public class TimesTen extends Dialect {
 		getDbDataTypes().addDateTime("DATE", type -> {
 			type.setDefaultValueLiteral(getCurrentDateTimeFunction());
 		});
-		// INTERVAL YAER
-		getDbDataTypes().addIntervalYear(type -> {
-			type.setCreateFormat("INTERVAL YAER");
-		});
-		// INTERVAL MONTH
-		getDbDataTypes().addIntervalMonth(type -> {
-			type.setCreateFormat("INTERVAL MONTH");
-		});
-		// INTERVAL DAY
-		getDbDataTypes().addIntervalDay(type -> {
-			type.setCreateFormat("INTERVAL DAY");
-		});
-		// INTERVAL HOUR
-		getDbDataTypes().addIntervalHour(type -> {
-			type.setCreateFormat("INTERVAL HOUR");
-		});
-		// INTERVAL MINUTE
-		getDbDataTypes().addIntervalMinute(type -> {
-			type.setCreateFormat("INTERVAL MINUTE");
-		});
-		// INTERVAL SECOND
-		getDbDataTypes().addIntervalMinute(type -> {
-			type.setCreateFormat("INTERVAL SECOND");
-		});
+		getDbDataTypes().addIntervalYear(type -> configureInterval(type));
+		getDbDataTypes().addIntervalMonth(type -> configureInterval(type));
+		getDbDataTypes().addIntervalDay(type -> configureInterval(type));
+		getDbDataTypes().addIntervalHour(type -> configureInterval(type));
+		getDbDataTypes().addIntervalMinute(type -> configureInterval(type));
+		getDbDataTypes().addIntervalSecond(type -> configureInterval(type));
 		// Decimal
 		getDbDataTypes().addDecimal("NUMBER", type -> {
 			type.setMaxPrecision(38).setDefaultScale(0);
@@ -285,4 +267,29 @@ public class TimesTen extends Dialect {
 	public CatalogReader getCatalogReader() {
 		return new OracleCatalogReader(this);
 	}
+
+	private void configureInterval(com.sqlapp.data.db.datatype.DbDataType<?> type) {
+		String qualifier = type.getDataType().name().substring("INTERVAL_".length());
+		type.setCreateFormat("INTERVAL " + qualifier);
+		type.setJdbcTypeHandler(
+				new com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler(type.getDataType(), 1, 9, 9, 0));
+		type.setColumnTypeMatcher(
+				new com.sqlapp.data.db.datatype.StandardIntervalCodec(type.getDataType(), 2, 6).columnTypeMatcher());
+		var converter = new com.sqlapp.data.converter.StandardIntervalConverter(type.getDataType());
+		type.setConverter(converter).setFormatter(converter).setLiteral("INTERVAL '", "' " + qualifier);
+	}
+
+	@Override
+	public String getSqlValueDefinition(com.sqlapp.data.schemas.Column column, Object value) {
+		if (column.getDataType() != null
+				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
+			var type = getDbDataTypes().getDbTypeStrict(column.getDataType());
+			if (type == null)
+				throw new IllegalArgumentException("Unsupported TimesTen interval qualifier");
+			return ((com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler) type.getJdbcTypeHandler())
+					.literal(value, column);
+		}
+		return super.getSqlValueDefinition(column, value);
+	}
+
 }

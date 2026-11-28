@@ -22,13 +22,13 @@ package com.sqlapp.data.db.converter.postgres;
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.db.dialect.postgres.converter.FromPGIntervalConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGIntervalConverter;
-import com.sqlapp.data.interval.Interval;
+import com.sqlapp.data.interval.IntervalValue;
 
-public class PGIntervalConveterTest extends AbstractConveterTest<Interval> {
+public class PGIntervalConveterTest extends AbstractConveterTest<IntervalValue> {
 
 	@Override
-	protected Interval newInstance() {
-		return new Interval(2011, 02, 25, 0, 0, 0);
+	protected IntervalValue newInstance() {
+		return IntervalValue.parse("P2011Y2M25D");
 	}
 
 	@Override

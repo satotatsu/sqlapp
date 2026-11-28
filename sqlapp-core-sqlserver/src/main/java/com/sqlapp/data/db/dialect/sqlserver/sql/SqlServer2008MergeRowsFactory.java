@@ -29,6 +29,30 @@ import com.sqlapp.data.schemas.Table;
 public class SqlServer2008MergeRowsFactory extends AbstractMergeRowsFactory<SqlServerSqlBuilder> {
 
 	@Override
+	protected void addTableAlias(final String alias, final SqlServerSqlBuilder builder) {
+		if ("_target_".equals(alias))
+			builder.with().space().brackets(builder::holdlock);
+		super.addTableAlias(alias, builder);
+	}
+
+	@Override
+	protected void addMergeTableWhenMatched(final Table table, final SqlSignature signature, final String targetAlias,
+			final String sourceAlias, final SqlServerSqlBuilder builder) {
+		if (SqlServerMergeSupport.hasUpdates(table, signature, this::isUpdateable))
+			super.addMergeTableWhenMatched(table, signature, targetAlias, sourceAlias, builder);
+	}
+
+	@Override
+	protected void addMergeTableWhenNotMatched(final Table table, final SqlSignature signature,
+			final String targetAlias, final String sourceAlias, final SqlServerSqlBuilder builder) {
+		if (table.getColumns().stream().noneMatch(c -> isInsertable(c) && !c.isIdentity())) {
+			builder.when().not().matched().by().target().then().insert()._add(" DEFAULT VALUES");
+			return;
+		}
+		super.addMergeTableWhenNotMatched(table, signature, targetAlias, sourceAlias, builder);
+	}
+
+	@Override
 	protected void addMergeTableWhenNotMatchedBySource(final Table obj, final SqlSignature sqlSignature,
 			final String targetTableAlias, final String sourceTableAlias, final SqlServerSqlBuilder builder) {
 		if (this.getTableOptions().getMergeRowsWithDelete().test(obj)) {
@@ -56,6 +80,8 @@ public class SqlServer2008MergeRowsFactory extends AbstractMergeRowsFactory<SqlS
 		builder.output();
 		int i = 0;
 		for (Column column : columnsHolder.getKeyColumns()) {
+			if (!column.isIdentity())
+				builder.comma(i > 0);
 			if (column.isIdentity()) {
 				builder.comma(i > 0).space();
 				builder.coalesce(() -> {
@@ -68,7 +94,7 @@ public class SqlServer2008MergeRowsFactory extends AbstractMergeRowsFactory<SqlS
 			}
 			i++;
 		}
-		builder.comma().name("$action");
+		builder.comma(i > 0).name("$action");
 		builder.semicolon();
 	}
 }

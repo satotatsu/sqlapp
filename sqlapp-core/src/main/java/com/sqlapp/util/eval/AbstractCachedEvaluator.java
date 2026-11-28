@@ -26,18 +26,24 @@ import com.sqlapp.data.parameter.ParametersContext;
 
 public abstract class AbstractCachedEvaluator implements CachedEvaluator {
 
-	private Map<String, Evaluator> evaluatorMap = new ConcurrentHashMap<String, Evaluator>();
+	private volatile Map<String, Evaluator> evaluatorMap = new ConcurrentHashMap<String, Evaluator>();
 
 	protected abstract String getCacheKey(String expression, Object context);
 
 	protected abstract String getCacheKey(String expression, Map<?, ?> context);
 
+	/** Returns the current cache generation; callers must not retain it across invalidation. */
 	protected Map<String, Evaluator> getEvaluatorMap() {
 		return evaluatorMap;
 	}
 
+	/**
+	 * Starts a new cache generation. Evaluations already in progress may finish
+	 * with their existing evaluator, but cannot repopulate the new cache.
+	 */
 	public void clearCache() {
-		evaluatorMap.clear();
+		// In-flight compilations retain their old map and cannot refill this cache.
+		evaluatorMap = new ConcurrentHashMap<String, Evaluator>();
 	}
 
 	protected abstract Evaluator createEvalExecutor(String expression);
@@ -53,8 +59,9 @@ public abstract class AbstractCachedEvaluator implements CachedEvaluator {
 	}
 
 	protected Evaluator putIfAbsent(String expression, String cacheKey) {
+		final Map<String, Evaluator> cache = getEvaluatorMap();
 		Evaluator evaluator = createEvalExecutor(expression);
-		Evaluator oldEvaluator = getEvaluatorMap().putIfAbsent(cacheKey, evaluator);
+		Evaluator oldEvaluator = cache.putIfAbsent(cacheKey, evaluator);
 		return oldEvaluator != null ? oldEvaluator : evaluator;
 	}
 

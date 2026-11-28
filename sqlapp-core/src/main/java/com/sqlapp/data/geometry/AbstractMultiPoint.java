@@ -19,7 +19,8 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.util.CommonUtils;
+import java.util.Arrays;
+
 import com.sqlapp.util.HashCodeBuilder;
 
 /**
@@ -43,10 +44,12 @@ public abstract class AbstractMultiPoint<T extends AbstractPoint2D> extends Abst
 	 */
 	@SafeVarargs
 	protected AbstractMultiPoint(T... points) {
-		this.points = this.newArray(points.length);
+		final T[] newPoints = this.newArray(points.length);
 		for (int i = 0; i < points.length; i++) {
-			this.points[i] = points[i];
+			newPoints[i] = points[i];
 		}
+		validatePoints(newPoints);
+		this.points = newPoints;
 	}
 
 	/**
@@ -59,22 +62,95 @@ public abstract class AbstractMultiPoint<T extends AbstractPoint2D> extends Abst
 		setPoint(args);
 	}
 
+	/**
+	 * 座標の並びから点を設定します。
+	 * 
+	 * @param args
+	 *            座標(点ごとに {@link #getDimension()} 個ずつ並べたもの)
+	 * @throws IllegalArgumentException
+	 *             座標数が次元で割り切れない場合、または点数が型の要件を満たさない場合
+	 */
 	protected void setPoint(double... args) {
-		int size = args.length / this.getDimension();
-		this.points = this.newArray(size);
-		double[] values = new double[this.getDimension()];
-		for (int i = 0; i < size; i++) {
-			for (int j = 0; j < this.getDimension(); j++) {
-				values[j] = args[this.getDimension() * i + j];
-			}
-			this.points[i] = newPoint(values);
+		final int dimension = this.getDimension();
+		if (args.length % dimension != 0) {
+			throw new IllegalArgumentException(this.getClass().getSimpleName() + " requires " + dimension
+					+ " coordinates per point, but " + args.length + " coordinates were given.");
 		}
+		final int size = args.length / dimension;
+		final T[] newPoints = this.newArray(size);
+		final double[] values = new double[dimension];
+		for (int i = 0; i < size; i++) {
+			for (int j = 0; j < dimension; j++) {
+				values[j] = args[dimension * i + j];
+			}
+			newPoints[i] = newPoint(values);
+		}
+		validatePoints(newPoints);
+		this.points = newPoints;
 	}
 
 	/**
 	 * コンストラクタ
 	 */
 	protected AbstractMultiPoint() {
+	}
+
+	/**
+	 * 最小の点数
+	 */
+	protected int getMinPointSize() {
+		return 1;
+	}
+
+	/**
+	 * 最大の点数
+	 */
+	protected int getMaxPointSize() {
+		return Integer.MAX_VALUE;
+	}
+
+	/**
+	 * 設定する点を検証します。
+	 * 
+	 * @throws IllegalArgumentException
+	 *             点数が型の要件を満たさない場合、またはnullの点を含む場合
+	 */
+	protected void validatePoints(final T[] points) {
+		final int min = getMinPointSize();
+		final int max = getMaxPointSize();
+		if (points.length < min || points.length > max) {
+			final String expected;
+			if (min == max) {
+				expected = String.valueOf(min);
+			} else if (max == Integer.MAX_VALUE) {
+				expected = min + " or more";
+			} else {
+				expected = min + " to " + max;
+			}
+			throw new IllegalArgumentException(this.getClass().getSimpleName() + " requires " + expected
+					+ " points, but " + points.length + " points were given.");
+		}
+		for (final T point : points) {
+			if (point == null) {
+				throw new IllegalArgumentException(this.getClass().getSimpleName() + " can't contain null point.");
+			}
+		}
+	}
+
+	/**
+	 * 文字列の点の列を解析して設定します。解析に失敗した場合は値を変更しません。
+	 * 
+	 * @param text
+	 *            文字列
+	 * @param allowBracket
+	 *            "[...]" 形式を受け付けるか
+	 * @return 解析結果
+	 */
+	protected GeometryTextParser.PointList setPointText(final String text, final boolean allowBracket) {
+		final GeometryTextParser.PointList list = GeometryTextParser.parsePoints(text, this.getDimension(),
+				getMinPointSize(), getMaxPointSize(), allowBracket, this.getClass().getSimpleName());
+		this.setPoint(list.flatten(this.getDimension()));
+		return list;
 	}
 
 	/*
@@ -86,11 +162,13 @@ public abstract class AbstractMultiPoint<T extends AbstractPoint2D> extends Abst
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append(getOpen());
-		for (int i = 0; i < this.points.length; i++) {
-			if (i != 0) {
-				builder.append(",");
+		if (this.points != null) {
+			for (int i = 0; i < this.points.length; i++) {
+				if (i != 0) {
+					builder.append(",");
+				}
+				builder.append(this.points[i]);
 			}
-			builder.append(this.points[i]);
 		}
 		builder.append(getClose());
 		return builder.toString();
@@ -98,6 +176,9 @@ public abstract class AbstractMultiPoint<T extends AbstractPoint2D> extends Abst
 
 	@Override
 	protected void hashCode(HashCodeBuilder builder) {
+		if (this.points == null) {
+			return;
+		}
 		for (int i = 0; i < this.points.length; i++) {
 			builder.append(i);
 			if (this.points[i] != null) {
@@ -128,12 +209,7 @@ public abstract class AbstractMultiPoint<T extends AbstractPoint2D> extends Abst
 			return false;
 		}
 		AbstractMultiPoint<?> cst = (AbstractMultiPoint<?>) obj;
-		for (int i = 0; i < this.points.length; i++) {
-			if (!CommonUtils.eq(this.points[i], cst.points[i])) {
-				return false;
-			}
-		}
-		return true;
+		return Arrays.equals(this.points, cst.points);
 	}
 
 	/**
@@ -146,27 +222,39 @@ public abstract class AbstractMultiPoint<T extends AbstractPoint2D> extends Abst
 	/**
 	 * @param points
 	 *            the points to set
+	 * @throws IllegalArgumentException
+	 *             点数が型の要件を満たさない場合
 	 */
 	@SuppressWarnings("unchecked")
 	public void setPoints(T... points) {
 		T[] newPoints = newArray(points.length);
 		for (int i = 0; i < points.length; i++) {
-			newPoints[i] = (T) points[i].clone();
+			newPoints[i] = points[i] == null ? null : (T) points[i].clone();
 		}
+		validatePoints(newPoints);
 		this.points = newPoints;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**
+	 * 配列と各点を複製します。
 	 * 
 	 * @see java.lang.Object#clone()
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	public AbstractMultiPoint<?> clone() {
+		final AbstractMultiPoint<T> clone;
 		try {
-			return (AbstractMultiPoint<?>) super.clone();
+			clone = (AbstractMultiPoint<T>) super.clone();
 		} catch (CloneNotSupportedException e) {
 			throw new RuntimeException(e);
 		}
+		if (this.points != null) {
+			clone.points = newArray(this.points.length);
+			for (int i = 0; i < this.points.length; i++) {
+				clone.points[i] = this.points[i] == null ? null : (T) this.points[i].clone();
+			}
+		}
+		return clone;
 	}
 }

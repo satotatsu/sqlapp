@@ -28,5 +28,9 @@ public class DialectHolder {
 	public final static Dialect defaultDialect2_2_0 = new Hsql2_2_0(() -> defaultDialect2_3_0);
 	public final static Dialect defaultDialect2_1_0 = new Hsql2_1_0(() -> defaultDialect2_2_0);
 	public final static Dialect defaultDialect2_0_0 = new Hsql2_0_0(() -> defaultDialect2_1_0);
+	/**
+	 * Base of the version chain. The resolver never returns it: HSQLDB 1.x is not
+	 * supported.
+	 */
 	public final static Dialect defaultDialect = new Hsql(() -> defaultDialect2_0_0);
 }

@@ -37,16 +37,14 @@ public class SqliteSqlBuilder extends AbstractSqlBuilder<SqliteSqlBuilder> {
 
 	@Override
 	protected SqliteSqlBuilder typeDefinition(Column column) {
-		if ("true".equals(column.getSpecifics().get("sqlite.declaredType.empty")) && column.getDomain() == null)
-			return this;
+		if (column.getDomain() != null)
+			return super.typeDefinition(column);
+		// Declarations read from the catalog are kept while they still describe the
+		// Schema type; a changed type, length or scale in the model wins.
+		if ("true".equals(column.getSpecifics().get("sqlite.declaredType.empty")))
+			return SqliteDdl.matchesDeclaredType(getDialect(), column, "") ? this : super.typeDefinition(column);
 		String declared = column.getSpecifics().get("sqlite.declaredType");
-		if (declared == null && column.getDomain() == null && column.getDataType() != null
-				&& column.getDataType().isDateTime() && column.getTable() != null
-				&& "true".equals(column.getTable().getSpecifics().get("strict")))
-			// STRICT tables reject DATE/TIME/TIMESTAMP declarations; values are ISO-8601
-			// text.
-			return _add("TEXT");
-		if (declared == null || column.getDomain() != null)
+		if (declared == null || !SqliteDdl.matchesDeclaredType(getDialect(), column, declared))
 			return super.typeDefinition(column);
 		// INT and INTEGER PRIMARY KEY have different rowid semantics. Do not
 		// normalize catalog declarations through an inherited Schema dialect.

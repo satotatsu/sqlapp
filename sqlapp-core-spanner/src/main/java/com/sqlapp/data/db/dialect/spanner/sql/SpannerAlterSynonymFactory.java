@@ -29,7 +29,8 @@ public class SpannerAlterSynonymFactory extends SimpleAlterSqlFactory<Synonym, S
 			if (!SchemaProperties.NAME.getLabel().equals(property)
 					&& !SchemaProperties.OBJECT_NAME.getLabel().equals(property)
 					&& !SchemaProperties.OBJECT_SCHEMA_NAME.getLabel().equals(property))
-				throw new UnsupportedOperationException("Spanner synonym change requires a separate migration: " + property);
+				throw new UnsupportedOperationException(
+						"Spanner synonym change requires a separate migration: " + property);
 		}
 		if (changes.isEmpty())
 			return List.of();

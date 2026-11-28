@@ -268,9 +268,11 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		}
 
 		protected ResultSet createResultSet() throws SQLException {
-			final ResultSet resultSet = statement.executeQuery();
-			resultSet.setFetchSize(fetchSize);
-			return resultSet;
+			try (var scope = com.sqlapp.data.db.datatype.JdbcReadScope.prepare(statement, table, dialect)) {
+				final ResultSet resultSet = statement.executeQuery();
+				resultSet.setFetchSize(fetchSize);
+				return resultSet;
+			}
 		}
 
 		/**
@@ -290,6 +292,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 				options = sqlFactory.getOptions().clone();
 			}
 			options.setDecorateSchemaName(true);
+			options.setJdbcRead(true);
 			sqlFactory.setOptions(options);
 			final List<SqlOperation> operationTexts = sqlFactory.createSql(table);
 			final SqlOperation operationText = CommonUtils.first(operationTexts);
@@ -316,7 +319,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			for (int i = 0; i < size; i++) {
 				final ColumnPosition columnPosition = columnList.get(i);
 				final Column column = columnPosition.column;
-				final Object obj = columnPosition.jdbcTypeHandler.getObject(resultSet, columnPosition.index);
+				final Object obj = columnPosition.jdbcTypeHandler.getObject(resultSet, columnPosition.index, column);
 				row.put(column.getOrdinal(), obj);
 			}
 		}

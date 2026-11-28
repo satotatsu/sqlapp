@@ -25,10 +25,11 @@ import com.sqlapp.data.interval.Interval;
 
 /**
  * For文の代わりに使用する<code>java.time.LocalTime</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class LocalTimeIntervalIterator extends AbstractObjectIterator<LocalTime, Interval>{
+final class LocalTimeIntervalIterator extends AbstractObjectIterator<LocalTime, Interval> {
 
 	/**
 	 * serialVersionUID
@@ -37,50 +38,38 @@ final class LocalTimeIntervalIterator extends AbstractObjectIterator<LocalTime, 
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ
+	 * @param end   終了
+	 * @param step  ステップ
 	 */
-	public LocalTimeIntervalIterator(final LocalTime start, final LocalTime end, final Interval step){
+	public LocalTimeIntervalIterator(final LocalTime start, final LocalTime end, final Interval step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step.isPositive()){
-			if (this.start.compareTo(this.next)>=0){
-				return false;
-			}else{
-				if (next.compareTo(end)<0){
-					return true;
-				}
-			}
-		} else{
-			if (this.start.compareTo(this.next)<=0){
-				return false;
-			}else{
-				if (next.compareTo(end)>0){
-					return true;
-				}
-			}
-		}
-		return false;
+		return hasNextInDirection(step.isPositive());
 	}
 
 	@Override
 	protected LocalTime getNext() {
-		return step.add(start, (int)this.count);
+		return step.add(start, (int) this.count);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public LocalTimeIntervalIterator clone(){
-		LocalTimeIntervalIterator clone=new LocalTimeIntervalIterator(this.start, this.end, this.step);
+	public LocalTimeIntervalIterator clone() {
+		LocalTimeIntervalIterator clone = new LocalTimeIntervalIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

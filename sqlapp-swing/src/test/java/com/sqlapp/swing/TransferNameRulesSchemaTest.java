@@ -61,7 +61,7 @@ class TransferNameRulesSchemaTest {
 					.previewRules(new TransferNameRules(TransferNameRules.NameCase.LOWER, true));
 			var candidate = editor.proposedConfiguration(editor.columnTools, changes);
 			assertEquals(original, editor.configuration());
-			assertEquals("KEEP", candidate.tables().get("PUBLIC.ITEMS").columns().get("B"));
+			assertEquals("KEEP", candidate.tables().get("PUBLIC.ITEMS").names().get("B"));
 			editor.columnTools.applyRules(changes);
 			assertEquals(candidate, editor.configuration());
 			editor.tableGrid.setRowSelectionInterval(0, 0);

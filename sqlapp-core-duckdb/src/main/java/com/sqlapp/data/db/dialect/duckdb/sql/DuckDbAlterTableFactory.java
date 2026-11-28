@@ -26,13 +26,21 @@ import com.sqlapp.util.CommonUtils;
  * ALTER TABLE for DuckDB.
  * <p>
  * DuckDB changes one column property per statement, cannot add a column with
- * constraints or a generation expression, cannot drop constraints and can only
- * add a primary key (DuckDB 1.2+) to an existing table. Unsupported changes
+ * constraints or a generation expression, cannot drop constraints and can add
+ * primary keys (DuckDB 1.2+) and unique constraints (2.0+). Unsupported changes
  * fail with an {@link IllegalArgumentException} instead of producing SQL that
  * DuckDB rejects; recreate the table for those changes.
  * </p>
  */
 public class DuckDbAlterTableFactory extends AbstractAlterTableFactory<DuckDbSqlBuilder> {
+
+	@Override
+	protected void addRenameTable(final Table originalTable, final Table table, final List<SqlOperation> result) {
+		final DuckDbSqlBuilder builder = createSqlBuilder();
+		builder.alter().table().name(originalTable, getOptions().isDecorateSchemaName());
+		builder.rename().to().name(table, false);
+		add(result, createOperation(builder.toString(), SqlType.ALTER, originalTable, table));
+	}
 
 	@Override
 	protected void addAddColumn(final Table originalTable, final Table table, final DbObjectDifference diff,
@@ -67,6 +75,10 @@ public class DuckDbAlterTableFactory extends AbstractAlterTableFactory<DuckDbSql
 	@Override
 	protected void addAlterColumn(final Table originalTable, final Table table, final Column oldColumn,
 			final Column column, final DbObjectDifference diff, final List<SqlOperation> result) {
+		if (!Objects.equals(emptyToNull(oldColumn.getCheck()), emptyToNull(column.getCheck()))) {
+			throw new IllegalArgumentException(
+					"DuckDB cannot change a column CHECK; recreate the table: " + column.getName());
+		}
 		if (!Objects.equals(emptyToNull(oldColumn.getFormula()), emptyToNull(column.getFormula()))) {
 			throw new IllegalArgumentException(
 					"DuckDB cannot change a generation expression; recreate the table: " + column.getName());
@@ -120,14 +132,22 @@ public class DuckDbAlterTableFactory extends AbstractAlterTableFactory<DuckDbSql
 	protected void addCreateConstraintDefinition(final Table originalTable, final Table table,
 			final Constraint originalConstraint, final Constraint constraint, final DbObjectDifference diff,
 			final List<SqlOperation> result) {
-		if (!(constraint instanceof UniqueConstraint unique) || !unique.isPrimaryKey()
-				|| !(getDialect() instanceof DuckDb duckDb) || !duckDb.supportsAlterTableAddPrimaryKey()) {
+		if (!(constraint instanceof UniqueConstraint unique) || !(getDialect() instanceof DuckDb duckDb)
+				|| !(unique.isPrimaryKey() ? duckDb.supportsAlterTableAddPrimaryKey()
+						: duckDb.supportsAlterTableAddUnique())) {
 			throw new IllegalArgumentException("DuckDB cannot add this constraint to an existing table"
-					+ " (only PRIMARY KEY on DuckDB 1.2+); recreate the table: " + constraint.getName());
+					+ " (PRIMARY KEY requires 1.2+, UNIQUE requires 2.0+); recreate the table: "
+					+ constraint.getName());
 		}
 		final DuckDbSqlBuilder builder = createSqlBuilder();
 		addAlterTable(table, builder);
-		builder.add().space().primaryKey().space()._add("(");
+		builder.add().space();
+		if (unique.isPrimaryKey()) {
+			builder.primaryKey();
+		} else {
+			builder.unique();
+		}
+		builder.space()._add("(");
 		int i = 0;
 		for (final ReferenceColumn column : unique.getColumns()) {
 			builder.comma(i++ > 0).name(column);

@@ -25,9 +25,8 @@ public class SqliteCheckConstraintReader extends CheckConstraintReader {
 	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			ProductVersionInfo version) {
 		List<CheckConstraint> result = new ArrayList<>();
-		try (var statement = SqliteMetadataQueries.prepare(connection, context, "m.name", "", "");
-				var rs = statement.executeQuery()) {
-			while (rs.next()) {
+		try {
+			SqliteMetadataQueries.forEach(connection, context, "m.name", "", "", rs -> {
 				String table = rs.getString("table_name");
 				int sequence = 0;
 				for (String fragment : SqliteColumnReader.splitColumnDefinitions(rs.getString("table_sql"))) {
@@ -41,11 +40,12 @@ public class SqliteCheckConstraintReader extends CheckConstraintReader {
 						constraint.setSchemaName(getSchemaName(context));
 						constraint.setTableName(table);
 						if (check.name() == null)
-							constraint.getSpecifics().put("sqlite.check.unnamed", "true");
+							constraint.getSpecifics()
+									.put(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.CHECK_UNNAMED, "true");
 						result.add(constraint);
 					}
 				}
-			}
+			});
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}

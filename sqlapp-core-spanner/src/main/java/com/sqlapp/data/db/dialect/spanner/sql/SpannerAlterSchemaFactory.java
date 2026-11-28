@@ -42,16 +42,17 @@ public class SpannerAlterSchemaFactory extends AlterSchemaFactory {
 	}
 
 	@Override
-	protected void addAlterSchemaObjects(final String propertyName,
-			final DbObjectDifferenceCollection collectionDiff, final List<SqlOperation> sqlList) {
+	protected void addAlterSchemaObjects(final String propertyName, final DbObjectDifferenceCollection collectionDiff,
+			final List<SqlOperation> sqlList) {
 		if (!SchemaObjectProperties.SYNONYMS.getLabel().equals(propertyName))
 			super.addAlterSchemaObjects(propertyName, collectionDiff, sqlList);
 	}
 
 	@Override
 	protected void addAlterTables(final DbObjectDifferenceCollection differences, final List<SqlOperation> operations) {
-		final boolean dependent = differences.getList().stream().anyMatch(difference ->
-				hasTableDependencies(difference.getOriginal()) || hasTableDependencies(difference.getTarget()));
+		final boolean dependent = differences.getList().stream()
+				.anyMatch(difference -> hasTableDependencies(difference.getOriginal())
+						|| hasTableDependencies(difference.getTarget()));
 		if (!dependent) {
 			super.addAlterTables(differences, operations);
 			return;
@@ -75,7 +76,8 @@ public class SpannerAlterSchemaFactory extends AlterSchemaFactory {
 		final var tables = new ArrayList<Table>();
 		final var byTable = new IdentityHashMap<Table, DbObjectDifference>();
 		for (final var difference : differences.getList(state)) {
-			final var table = state == State.Deleted ? difference.getOriginal(Table.class) : difference.getTarget(Table.class);
+			final var table = state == State.Deleted ? difference.getOriginal(Table.class)
+					: difference.getTarget(Table.class);
 			tables.add(table);
 			byTable.put(table, difference);
 		}
@@ -90,7 +92,8 @@ public class SpannerAlterSchemaFactory extends AlterSchemaFactory {
 		}
 		if (staged && state == State.Deleted) {
 			for (final var table : sorted)
-				operations.addAll(getSqlFactoryRegistry().createSql(table.diff(withoutForeignKeys(table)), SqlType.ALTER));
+				operations.addAll(
+						getSqlFactoryRegistry().createSql(table.diff(withoutForeignKeys(table)), SqlType.ALTER));
 		}
 		for (final var table : state == State.Deleted ? sorted.reversed() : sorted) {
 			if (staged && state == State.Added) {

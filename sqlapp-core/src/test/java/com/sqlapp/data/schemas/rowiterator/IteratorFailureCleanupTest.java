@@ -51,13 +51,22 @@ class IteratorFailureCleanupTest {
 		private final RuntimeException failure = new IllegalArgumentException("invalid input");
 		private final RuntimeException closeFailure = new IllegalStateException("close failed");
 		private int closes;
-		private Probe(final String stage) { this.stage = stage; }
-		private void check(final String current) {
-			if (current.equals(stage)) { throw failure; }
+
+		private Probe(final String stage) {
+			this.stage = stage;
 		}
+
+		private void check(final String current) {
+			if (current.equals(stage)) {
+				throw failure;
+			}
+		}
+
 		private void close() {
 			closes++;
-			if (stage != null) { throw closeFailure; }
+			if (stage != null) {
+				throw closeFailure;
+			}
 		}
 	}
 
@@ -65,28 +74,72 @@ class IteratorFailureCleanupTest {
 		final var rows = new Table("ITEMS").getRows();
 		if (text) {
 			return new AbstractTextRowListIterator<String>(rows, 0L, (r, c, v) -> v) {
-				@Override protected void preInitialize() { probe.check("open"); }
-				@Override protected void initializeColumn() { probe.check("columns"); }
-				@Override protected boolean hasNextInternal() {
+				@Override
+				protected void preInitialize() {
+					probe.check("open");
+				}
+
+				@Override
+				protected void initializeColumn() {
+					probe.check("columns");
+				}
+
+				@Override
+				protected boolean hasNextInternal() {
 					probe.check("hasNext");
 					return probe.stage != null;
 				}
-				@Override protected String read() { probe.check("read"); return "value"; }
-				@Override protected void set(final String value, final Row row) { probe.check("convert"); }
-				@Override protected void doClose() { probe.close(); }
+
+				@Override
+				protected String read() {
+					probe.check("read");
+					return "value";
+				}
+
+				@Override
+				protected void set(final String value, final Row row) {
+					probe.check("convert");
+				}
+
+				@Override
+				protected void doClose() {
+					probe.close();
+				}
 			};
 		}
-		 {
+		{
 			return new AbstractRowIterator<String>(rows, 0L, (r, c, v) -> v) {
-				@Override protected void preInitialize() { probe.check("open"); }
-				@Override protected void initializeColumn() { probe.check("columns"); }
-				@Override protected boolean hasNextInternal() {
+				@Override
+				protected void preInitialize() {
+					probe.check("open");
+				}
+
+				@Override
+				protected void initializeColumn() {
+					probe.check("columns");
+				}
+
+				@Override
+				protected boolean hasNextInternal() {
 					probe.check("hasNext");
 					return probe.stage != null;
 				}
-				@Override protected String read() { probe.check("read"); return "value"; }
-				@Override protected void set(final String value, final Row row) { probe.check("convert"); }
-				@Override protected void doClose() { probe.close(); }
+
+				@Override
+				protected String read() {
+					probe.check("read");
+					return "value";
+				}
+
+				@Override
+				protected void set(final String value, final Row row) {
+					probe.check("convert");
+				}
+
+				@Override
+				protected void doClose() {
+					probe.close();
+				}
 			};
 		}
 	}

@@ -13,7 +13,21 @@ import com.sqlapp.data.schemas.properties.IncludeColumnsProperty;
 final class TransferNameMappingProjection {
 	record Projection(Schema schema, Map<String, Table> bySourceName, boolean renamedIdentifiers,
 			Map<String, String> sourceKeys, Map<String, Map<String, String>> conversions,
-			Map<String, Map<String, String>> copyTypes) {
+			Map<String, Map<String, String>> copyTypes, Set<String> contracts) {
+		Projection(Schema schema, Map<String, Table> bySourceName, boolean renamedIdentifiers,
+				Map<String, String> sourceKeys, Map<String, Map<String, String>> conversions,
+				Map<String, Map<String, String>> copyTypes) {
+			this(schema, bySourceName, renamedIdentifiers, sourceKeys, conversions, copyTypes, Set.of());
+		}
+
+		/**
+		 * True when the mapping of the canonical source table is a declared contract
+		 * that an existing target table must accept.
+		 */
+		boolean contract(String sourceTable) {
+			return contracts.contains(sourceTable);
+		}
+
 		/** Resolved MVEL conversions by canonical source column name. */
 		Map<String, String> conversions(String sourceTable) {
 			return conversions.getOrDefault(sourceTable, Map.of());
@@ -83,6 +97,7 @@ final class TransferNameMappingProjection {
 		var targetNames = new HashSet<String>();
 		var conversions = new LinkedHashMap<String, Map<String, String>>();
 		var copyTypes = new LinkedHashMap<String, Map<String, String>>();
+		var contracts = new LinkedHashSet<String>();
 		boolean renamed = false;
 		for (var table : canonicalSelection) {
 			var rule = rules.getOrDefault(table.getName(), new TransferNameMappingIO.TableMapping(null, null));
@@ -115,6 +130,15 @@ final class TransferNameMappingProjection {
 				}
 				if (definition.conversion() != null)
 					converted.put(column.getName(), definition.conversion());
+			}
+			if (rule.declaresContract()) {
+				var undeclared = table.getColumns().stream().map(Column::getName)
+						.filter(name -> !types.containsKey(name)).toList();
+				if (!undeclared.isEmpty())
+					throw new TransferSchemaPreparation.ValidationException(
+							"Contract mapping of table " + table.getName() + " has no type for columns " + undeclared
+									+ ". Rebuild the models that write the mapping.");
+				contracts.add(table.getName());
 			}
 			if (!converted.isEmpty())
 				conversions.put(table.getName(), Collections.unmodifiableMap(converted));
@@ -183,7 +207,7 @@ final class TransferNameMappingProjection {
 		SchemaUtils.validate(projected);
 		return new Projection(projected, Collections.unmodifiableMap(targets), renamed,
 				Collections.unmodifiableMap(sourceKeys), Collections.unmodifiableMap(conversions),
-				Collections.unmodifiableMap(copyTypes));
+				Collections.unmodifiableMap(copyTypes), Collections.unmodifiableSet(contracts));
 	}
 
 	private static Column column(Table table, Map<String, String> names, String sourceName) {

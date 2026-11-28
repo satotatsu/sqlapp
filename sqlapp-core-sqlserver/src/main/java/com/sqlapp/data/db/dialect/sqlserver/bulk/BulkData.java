@@ -11,6 +11,9 @@ import java.util.Set;
 import com.microsoft.sqlserver.jdbc.ISQLServerBulkData;
 import com.microsoft.sqlserver.jdbc.SQLServerBulkCopyOptions;
 import com.microsoft.sqlserver.jdbc.SQLServerException;
+import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.sqlserver.SqlServerGeometryJdbcTypeHandler;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
@@ -19,6 +22,8 @@ import com.sqlapp.util.CommonUtils;
 
 /** Streams a sqlapp Table's rows to the Microsoft JDBC bulk-copy API. */
 public class BulkData implements ISQLServerBulkData, AutoCloseable {
+	private static final java.util.regex.Pattern JSON_NUMBER = java.util.regex.Pattern
+			.compile("-?(?:0|[1-9][0-9]*)(?:[.][0-9]+)?(?:[eE][+-]?[0-9]+)?");
 	private final Table table;
 	private final List<Column> columns = new ArrayList<>();
 	private final Set<Integer> columnOrdinals = new LinkedHashSet<>();
@@ -35,6 +40,9 @@ public class BulkData implements ISQLServerBulkData, AutoCloseable {
 					|| (column.isIdentity() && !effective.isKeepIdentity())) {
 				continue;
 			}
+			if (column.getDataType() == DataType.VECTOR && column.getSpecifics().get("vector_base_type") != null)
+				throw new IllegalArgumentException(
+						"Native SQL Server Bulk Copy supports FLOAT32 VECTOR only: " + column.getName());
 			columns.add(column);
 			columnOrdinals.add(columns.size());
 		}
@@ -80,6 +88,13 @@ public class BulkData implements ISQLServerBulkData, AutoCloseable {
 	@Override
 	public int getColumnType(final int ordinal) {
 		final Column column = getColumn(ordinal);
+		if (isGeometry(column)) {
+			// geometry / geography are sent as the same serialized bytes that the regular
+			// INSERT binds
+			return java.sql.Types.VARBINARY;
+		}
+		if (column.getDataType() == DataType.VECTOR)
+			return microsoft.sql.Types.VECTOR;
 		if (column.getDataType() == null || column.getDataType().getJdbcType() == null) {
 			return java.sql.Types.OTHER;
 		}
@@ -88,13 +103,23 @@ public class BulkData implements ISQLServerBulkData, AutoCloseable {
 
 	@Override
 	public int getPrecision(final int ordinal) {
-		final Long length = getColumn(ordinal).getLength();
+		Column column = getColumn(ordinal);
+		if (column.getDataType() == DataType.VECTOR) {
+			Integer dimension = column.getVectorDimension();
+			if (dimension == null || dimension < 1)
+				throw new IllegalArgumentException("Missing VECTOR dimension for " + column.getName());
+			return dimension;
+		}
+		final Long length = column.getLength();
 		return length == null ? 0 : Math.toIntExact(length);
 	}
 
 	@Override
 	public int getScale(final int ordinal) {
-		final Integer scale = getColumn(ordinal).getScale();
+		Column column = getColumn(ordinal);
+		if (column.getDataType() == DataType.VECTOR)
+			return 4;
+		final Integer scale = column.getScale();
 		return scale == null ? 0 : scale;
 	}
 
@@ -105,9 +130,44 @@ public class BulkData implements ISQLServerBulkData, AutoCloseable {
 		}
 		final Object[] values = new Object[columns.size()];
 		for (int i = 0; i < columns.size(); i++) {
-			values[i] = currentRow.get(columns.get(i).getOrdinal());
+			final Column column = columns.get(i);
+			final Object value = currentRow.get(column.getOrdinal());
+			if (value != null && isGeometry(column)) {
+				values[i] = SqlServerGeometryJdbcTypeHandler.toSqlServerBytes(
+						Converters.getDefault().convertObject(value, org.geolatte.geom.Geometry.class));
+			} else if (value != null && column.getDataType() == DataType.VECTOR) {
+				values[i] = vectorValue(value, i + 1);
+			} else {
+				values[i] = value;
+			}
 		}
 		return values;
+	}
+
+	private microsoft.sql.Vector vectorValue(Object value, int ordinal) throws SQLException {
+		Column column = getColumn(ordinal);
+		int dimension = getPrecision(ordinal);
+		int scale = getScale(ordinal);
+		try {
+			String text = value.toString().strip();
+			if (!text.startsWith("[") || !text.endsWith("]"))
+				throw new IllegalArgumentException("Expected a JSON array");
+			String[] elements = text.substring(1, text.length() - 1).split(",", -1);
+			if (elements.length != dimension)
+				throw new IllegalArgumentException("Expected " + dimension + " vector elements");
+			Float[] data = new Float[dimension];
+			for (int i = 0; i < dimension; i++) {
+				String element = elements[i].strip();
+				if (!JSON_NUMBER.matcher(element).matches())
+					throw new IllegalArgumentException("Expected a JSON number");
+				data[i] = Float.valueOf(element);
+				if (!Float.isFinite(data[i]))
+					throw new IllegalArgumentException("Vector element is outside the finite range");
+			}
+			return new microsoft.sql.Vector(dimension, scale, data);
+		} catch (IllegalArgumentException e) {
+			throw new SQLException("Invalid VECTOR value for column " + column.getName(), e);
+		}
 	}
 
 	@Override
@@ -124,6 +184,10 @@ public class BulkData implements ISQLServerBulkData, AutoCloseable {
 		} catch (RuntimeException e) {
 			throw new SQLException("Failed to read bulk row for " + table.getName(), e);
 		}
+	}
+
+	private static boolean isGeometry(final Column column) {
+		return column.getDataType() == DataType.GEOMETRY || column.getDataType() == DataType.GEOGRAPHY;
 	}
 
 	public long getRowCount() {

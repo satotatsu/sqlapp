@@ -167,6 +167,11 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 
 	@Override
 	protected OracleSqlBuilder typeDefinition(final Column column) {
+		if (column.getArrayDimension() > 0
+				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
+			return this
+					._add(com.sqlapp.data.db.dialect.oracle.metadata.OracleIntervalCollections.qualifiedName(column));
+		}
 		if (column.getDomain() != null && column.getDomainName() == null) {
 			throw new IllegalArgumentException("Column domain reference requires a name: " + column.getName());
 		}
@@ -880,8 +885,11 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 		var sequence = column.getSequence();
 		if (sequence != null) {
 			space()._add("(");
-			if (sequence.getStartValue() != null)
-				_add("START WITH ")._add(sequence.getStartValue()).space();
+			// Start at the next value (lastValue) when it is known, like sequences:
+			// Oracle does not keep the declared start of an identity.
+			var start = sequence.getLastValue() != null ? sequence.getLastValue() : sequence.getStartValue();
+			if (start != null)
+				_add("START WITH ")._add(start).space();
 			if (sequence.getIncrementBy() != null)
 				_add("INCREMENT BY ")._add(sequence.getIncrementBy()).space();
 			if (sequence.getMinValue() != null)

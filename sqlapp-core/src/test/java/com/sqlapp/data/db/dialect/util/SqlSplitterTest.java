@@ -49,6 +49,7 @@ public class SqlSplitterTest extends AbstractTest {
 		final List<SplitResult> list = splitter.getStatements();
 		assertEquals(5, list.size());
 	}
+
 	@Test
 	public void adjacentStatementsRetainFirstCharacter() {
 		List<SplitResult> parts = new SqlSplitter().parse("SELECT 1;SELECT 2;SELECT 3");
@@ -63,7 +64,9 @@ public class SqlSplitterTest extends AbstractTest {
 			@Override
 			protected SqlTokenizer createSqlTokenizer(String input) {
 				return new SqlTokenizer(input) {
-					{ setDelimiter("//"); }
+					{
+						setDelimiter("//");
+					}
 				};
 			}
 		};
@@ -73,12 +76,10 @@ public class SqlSplitterTest extends AbstractTest {
 		assertEquals("SELECT 2", parts.get(1).getText());
 	}
 
-
 	@Test
 	public void quotedTokensAndInlineCommentsProtectDelimiters() {
-		for (String body : new String[] { "SELECT \"a;b\" FROM t", "SELECT 'a'';b'",
-				"SELECT 1 -- comment; ignored\n", "SELECT 1 /* comment; ' \" */",
-				"SELECT '--;/*'", "SELECT \"a\"\";b\" FROM t" }) {
+		for (String body : new String[] { "SELECT \"a;b\" FROM t", "SELECT 'a'';b'", "SELECT 1 -- comment; ignored\n",
+				"SELECT 1 /* comment; ' \" */", "SELECT '--;/*'", "SELECT \"a\"\";b\" FROM t" }) {
 			var parts = new SqlSplitter().parse(body + ";SELECT 2;");
 			assertEquals(2, parts.size(), body);
 			assertEquals(body.stripTrailing(), parts.get(0).getText());
@@ -97,6 +98,48 @@ public class SqlSplitterTest extends AbstractTest {
 	public void emptyAndWhitespaceOnlyInputHaveNoParts() {
 		for (String sql : new String[] { "", "\n", "\n\n", " \t\n" })
 			assertEquals(0, new SqlSplitter().parse(sql).size());
+	}
+
+	@Test
+	public void preservesCarriageReturnsInLiteralValues() throws Exception {
+		try (var connection = java.sql.DriverManager.getConnection("jdbc:hsqldb:mem:splitLiteralReturns", "SA", "");
+				var statement = connection.createStatement()) {
+			for (String value : new String[] { "a\rb", "a\r\nb", "a\nb", "a\r;''b" }) {
+				String sql = "VALUES ('" + value + "')";
+				var parts = new SqlSplitter().parse(sql + ";\r\nVALUES (1);");
+				assertEquals(2, parts.size());
+				assertEquals(sql, parts.get(0).getText());
+				try (var original = statement.executeQuery(sql)) {
+					original.next();
+					String expected = original.getString(1);
+					try (var parsed = connection.createStatement();
+							var result = parsed.executeQuery(parts.get(0).getText())) {
+						result.next();
+						assertEquals(expected, result.getString(1));
+					}
+				}
+			}
+		}
+	}
+
+	@Test
+	public void lineCommentsEndAtEverySqlLineBoundary() throws Exception {
+		try (var connection = java.sql.DriverManager.getConnection("jdbc:hsqldb:mem:commentBoundaries", "SA", "");
+				var statement = connection.createStatement()) {
+			for (String newline : new String[] { "\r", "\n", "\r\n" }) {
+				var parts = new SqlSplitter().parse("VALUES(1); -- comment" + newline + "VALUES('a\rb');");
+				assertEquals(3, parts.size());
+				assertEquals(SqlSplitter.TextType.COMMENT, parts.get(1).getTextType());
+				assertEquals("-- comment", parts.get(1).getText());
+				assertEquals(SqlSplitter.TextType.SQL, parts.get(2).getTextType());
+				try (var result = statement.executeQuery(parts.get(2).getText())) {
+					result.next();
+					assertEquals("a\rb", result.getString(1));
+				}
+				parts = new SqlSplitter().parse("VALUES(1) -- inline" + newline + ";VALUES(2);");
+				assertEquals(2, parts.size());
+			}
+		}
 	}
 
 }

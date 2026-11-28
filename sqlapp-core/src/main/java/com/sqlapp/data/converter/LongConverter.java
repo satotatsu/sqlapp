@@ -23,11 +23,6 @@ import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
 
 import com.sqlapp.util.CommonUtils;
 
@@ -51,19 +46,13 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 	public Long convertObject(final Object value) {
 		if (isSupplier(value)) {
 			return convertObject(getSupplierValue(value));
+		} else if (isOptional(value)) {
+			// any kind of Optional: empty is the default value
+			return convertObject(getOptionalValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof Long) {
 			return (Long) value;
-		} else if (value instanceof OptionalInt) {
-			final OptionalInt op = (OptionalInt) value;
-			return op.isPresent() ? (long) op.getAsInt() : null;
-		} else if (value instanceof OptionalLong) {
-			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? op.getAsLong() : null;
-		} else if (value instanceof OptionalDouble) {
-			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? toLong(op.getAsDouble(), value) : null;
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
@@ -110,9 +99,7 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 	}
 
 	public static long toLong(final byte[] bytes) {
-		final ByteBuffer keyBuffer = ByteBuffer.wrap(bytes);
-		keyBuffer.order(ByteOrder.BIG_ENDIAN);
-		return keyBuffer.getLong();
+		return IntegralNumbers.fromBytes(bytes, "Long", Long.MIN_VALUE, Long.MAX_VALUE);
 	}
 
 	/*
@@ -125,7 +112,7 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof LongConverter)) {

@@ -47,12 +47,7 @@ public abstract class AbstractAlterTableFactory<S extends AbstractSqlBuilder<?>>
 		final Table table = difference.getTarget(Table.class);
 		Difference<?> tableProp = allDiff.get(SchemaProperties.NAME.getLabel());
 		if (tableProp != null) {
-			final S builder = createSqlBuilder();
-			builder.alter().table().name(originalTable, this.getOptions().isDecorateSchemaName());
-			this.addTableComment(table, builder);
-			builder.rename().to();
-			builder.name(table, this.getOptions().isDecorateSchemaName());
-			add(result, createOperation(builder.toString(), SqlType.ALTER, originalTable, table));
+			addRenameTable(originalTable, table, result);
 		}
 		final DbObjectDifferenceCollection consDiff = (DbObjectDifferenceCollection) allDiff
 				.get(SchemaObjectProperties.CONSTRAINTS.getLabel());
@@ -83,6 +78,15 @@ public abstract class AbstractAlterTableFactory<S extends AbstractSqlBuilder<?>>
 		}
 		addOtherDefinitions(allDiff, originalTable, table, result);
 		return result;
+	}
+
+	/** Emits a table rename; dialects may require an unqualified destination name. */
+	protected void addRenameTable(final Table originalTable, final Table table, final List<SqlOperation> result) {
+		final S builder = createSqlBuilder();
+		builder.alter().table().name(originalTable, getOptions().isDecorateSchemaName());
+		addTableComment(table, builder);
+		builder.rename().to().name(table, getOptions().isDecorateSchemaName());
+		add(result, createOperation(builder.toString(), SqlType.ALTER, originalTable, table));
 	}
 
 	protected void addOtherDefinitions(final Map<String, Difference<?>> allDiff, final Table originalTable,
@@ -156,11 +160,11 @@ public abstract class AbstractAlterTableFactory<S extends AbstractSqlBuilder<?>>
 		final Map<String, Difference<?>> colDiff = diff.toDifference().getProperties(this.getDialect(), State.Added,
 				State.Modified);
 		final Difference<?> nameDiff = colDiff.get(SchemaProperties.NAME.getLabel());
-		if (colDiff.size() > 1 || (nameDiff == null && colDiff.size() == 1)) {
-			addAlterColumn(originalTable, table, oldColumn, column, diff, result);
-		}
 		if (nameDiff != null) {
 			addRenameColumn(originalTable, table, oldColumn, column, diff, result);
+		}
+		if (colDiff.size() > 1 || (nameDiff == null && colDiff.size() == 1)) {
+			addAlterColumn(originalTable, table, oldColumn, column, diff, result);
 		}
 	}
 
@@ -314,7 +318,15 @@ public abstract class AbstractAlterTableFactory<S extends AbstractSqlBuilder<?>>
 			final Constraint originalConstraint, final Constraint constraint, final DbObjectDifference diff,
 			final List<SqlOperation> result) {
 		final S builder = createSqlBuilder();
-		dropConstraintDefinition(originalConstraint, builder);
+		Constraint dropConstraint = originalConstraint;
+		if (!CommonUtils.eq(originalTable.getName(), table.getName())) {
+			// Preserve dialect overrides and the original model while using the renamed owner.
+			final Table renamedOriginal = originalTable.clone();
+			renamedOriginal.setName(table.getName());
+			dropConstraint = renamedOriginal.getConstraints()
+					.get(originalTable.getConstraints().indexOf(originalConstraint));
+		}
+		dropConstraintDefinition(dropConstraint, builder);
 		add(result, createOperation(builder.toString(), SqlType.ALTER, originalConstraint));
 	}
 

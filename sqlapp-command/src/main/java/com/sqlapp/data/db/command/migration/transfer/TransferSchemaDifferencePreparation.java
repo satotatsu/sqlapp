@@ -51,6 +51,7 @@ final class TransferSchemaDifferencePreparation {
 			target.setDialect(registry.getDialect());
 			after.getTables().add(target);
 			if (old != null) {
+				TransferDefaultConversions.keepEquivalentDefaults(old, target, registry.getDialect());
 				final var captured = old.clone();
 				captured.setDialect(registry.getDialect());
 				before.getTables().add(captured);

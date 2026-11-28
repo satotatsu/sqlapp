@@ -48,4 +48,43 @@ class SqlServerMetadataDdlRegressionTest {
 		table.getSpecifics().put("LOCK_ESCALATION", "invalid");
 		assertThrows(IllegalArgumentException.class, () -> registry.createSql(table, SqlType.CREATE));
 	}
+
+	@Test
+	void tableOptionsDoNotEmitForeignMetadataOrIndexOptions() {
+		var registry = com.sqlapp.data.db.dialect.sqlserver.DialectHolder.defaultDialect2022.createSqlFactoryRegistry();
+		Table table = new Table("Audit");
+		table.getColumns().add(new com.sqlapp.data.schemas.Column("id").setDataType(DataType.INT));
+		table.getSpecifics().put("engine", "InnoDB");
+		table.getSpecifics().put("FILLFACTOR", "80");
+		table.getSpecifics().put("ledger_type", "NON_LEDGER_TABLE");
+		table.getSpecifics().put("is_node", "0");
+		table.setCompression(true).setCompressionType("PAGE");
+		String sql = registry.createSql(table, SqlType.CREATE).getFirst().getSqlText();
+		assertTrue(sql.contains("DATA_COMPRESSION"));
+		assertFalse(sql.contains("ENGINE"));
+		assertFalse(sql.contains("FILLFACTOR"));
+	}
+
+	@Test
+	void rejectsTableKindsWhoseStorageAndConstraintsCannotBeRecreated() {
+		var registry = com.sqlapp.data.db.dialect.sqlserver.DialectHolder.defaultDialect2022.createSqlFactoryRegistry();
+		for (String[] option : new String[][] { { "is_memory_optimized", "true" }, { "is_node", "1" },
+				{ "is_edge", "true" }, { "ledger_type", "APPEND_ONLY_LEDGER_TABLE" } }) {
+			Table table = new Table("Audit");
+			table.getSpecifics().put(option[0], option[1]);
+			assertThrows(IllegalArgumentException.class, () -> registry.createSql(table, SqlType.CREATE), option[0]);
+		}
+	}
+
+	@Test
+	void memoryTableTypeFromOtherDialectsIsCreatedAsOrdinaryTable() {
+		// HSQL/H2の通常テーブル(MEMORY)はSQL Serverのメモリ最適化テーブルではない
+		var registry = com.sqlapp.data.db.dialect.sqlserver.DialectHolder.defaultDialect2022.createSqlFactoryRegistry();
+		Table memory = new Table("Audit").setTableType(com.sqlapp.data.schemas.Table.TableType.Memory);
+		memory.getColumns().add(new com.sqlapp.data.schemas.Column("id").setDataType(DataType.INT));
+		String sql = registry.createSql(memory, SqlType.CREATE).getFirst().getSqlText();
+		assertTrue(sql.startsWith("CREATE TABLE"), sql);
+		assertFalse(sql.contains("MEMORY_OPTIMIZED"), sql);
+		assertFalse(sql.contains("DURABILITY"), sql);
+	}
 }

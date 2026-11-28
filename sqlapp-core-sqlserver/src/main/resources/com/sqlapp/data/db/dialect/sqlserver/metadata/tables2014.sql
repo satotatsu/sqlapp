@@ -1,6 +1,6 @@
 SELECT
       DB_NAME() AS catalog_name
-    , t.type AS object_typelock_escalation_desc
+    , t.type AS object_type
 	, t.name AS table_name
 	, s.name AS schema_name
 	, t.object_id AS table_id
@@ -44,7 +44,9 @@ LEFT OUTER JOIN sys.change_tracking_tables ctt
   ON (ctt.object_id = t.object_id)
 LEFT OUTER JOIN sys.extended_properties ex
   ON (t.object_id = ex.major_id
-  AND ex.minor_id = 0)
+  AND ex.minor_id = 0
+  AND ex.class = 1
+  AND ex.name = N'MS_Description')
 LEFT OUTER JOIN sys.partition_schemes ps 
   ON (idx.data_space_id = ps.data_space_id)
 LEFT OUTER JOIN sys.filetables ft

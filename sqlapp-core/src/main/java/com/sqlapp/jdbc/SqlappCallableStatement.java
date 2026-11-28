@@ -23,17 +23,15 @@ import java.sql.CallableStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-public class SqlappCallableStatement extends
-		AbstractCallableStatement<CallableStatement> {
+public class SqlappCallableStatement extends AbstractCallableStatement<CallableStatement> {
 
-	public SqlappCallableStatement(CallableStatement nativeStatement,
-			String sql, SqlappConnection connection) {
+	public SqlappCallableStatement(CallableStatement nativeStatement, String sql, SqlappConnection connection) {
 		super(nativeStatement, sql, connection);
 	}
 
 	@Override
 	protected ResultSet getResultSet(ResultSet rs, Statement statement) {
-		SqlappResultSet<Statement> resultSet= new SqlappResultSet<Statement>(rs, statement);
+		SqlappResultSet<Statement> resultSet = new SqlappResultSet<Statement>(rs, statement);
 		initializeChild(resultSet);
 		return resultSet;
 	}

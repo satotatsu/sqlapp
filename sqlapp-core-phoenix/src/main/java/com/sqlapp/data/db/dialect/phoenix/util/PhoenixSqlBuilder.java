@@ -62,7 +62,13 @@ public class PhoenixSqlBuilder extends AbstractSqlBuilder<PhoenixSqlBuilder> {
 			throw new IllegalArgumentException(
 					"Phoenix arrays require a nonnegative capacity and one-based indexing: " + column.getName());
 		final String nativeType = column.getDataTypeName();
-		if (nativeType != null && java.util.Set
+		if ("VARBINARY_ENCODED".equalsIgnoreCase(nativeType)) {
+			if (!(getDialect() instanceof Phoenix phoenix) || !phoenix.supportsEncodedBinary())
+				throw new UnsupportedOperationException("Phoenix VARBINARY_ENCODED requires version 5.3 or later");
+			if (column.getArrayDimension() > 0)
+				throw new UnsupportedOperationException("Phoenix VARBINARY_ENCODED ARRAY requires separate support");
+			_add("VARBINARY_ENCODED");
+		} else if (nativeType != null && java.util.Set
 				.of("UNSIGNED_FLOAT", "UNSIGNED_DOUBLE", "UNSIGNED_DATE", "UNSIGNED_TIME", "UNSIGNED_TIMESTAMP")
 				.contains(nativeType.toUpperCase(java.util.Locale.ROOT))) {
 			_add(nativeType.toUpperCase(java.util.Locale.ROOT));
@@ -110,6 +116,18 @@ public class PhoenixSqlBuilder extends AbstractSqlBuilder<PhoenixSqlBuilder> {
 	public PhoenixSqlBuilder insert() {
 		appendElement("UPSERT");
 		return instance();
+	}
+
+	@Override
+	public PhoenixSqlBuilder update() {
+		throw new UnsupportedOperationException("Apache Phoenix does not support generic UPDATE; "
+				+ "use explicit UPSERT with the complete primary key and the intended insert/update semantics");
+	}
+
+	@Override
+	public PhoenixSqlBuilder merge() {
+		throw new UnsupportedOperationException("Apache Phoenix does not support SQL MERGE; "
+				+ "use explicit UPSERT with the intended key and conflict semantics");
 	}
 
 	@Override

@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.ConnectionBuilder;
 import java.sql.SQLException;
+import java.sql.ShardingKey;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.logging.Logger;
 
@@ -126,8 +127,43 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource> implem
 		}
 	}
 
+	/**
+	 * Returns a builder whose connections retain this data source's wrapper
+	 * settings.
+	 */
 	@Override
 	public ConnectionBuilder createConnectionBuilder() throws SQLException {
-		return nativeObject.createConnectionBuilder();
+		return new ConnectionBuilder() {
+			private ConnectionBuilder delegate = nativeObject.createConnectionBuilder();
+
+			@Override
+			public ConnectionBuilder user(final String username) {
+				delegate = delegate.user(username);
+				return this;
+			}
+
+			@Override
+			public ConnectionBuilder password(final String password) {
+				delegate = delegate.password(password);
+				return this;
+			}
+
+			@Override
+			public ConnectionBuilder shardingKey(final ShardingKey shardingKey) {
+				delegate = delegate.shardingKey(shardingKey);
+				return this;
+			}
+
+			@Override
+			public ConnectionBuilder superShardingKey(final ShardingKey superShardingKey) {
+				delegate = delegate.superShardingKey(superShardingKey);
+				return this;
+			}
+
+			@Override
+			public Connection build() throws SQLException {
+				return getConnection(delegate.build());
+			}
+		};
 	}
 }

@@ -73,7 +73,7 @@ public class MariadbSequence11_50Reader extends SequenceReader {
 				if (i > 0)
 					sql.append(" UNION ALL ");
 				Sequence sequence = batch.get(i);
-				sql.append("SELECT ").append(i).append(" AS sequence_id, cache_size FROM ")
+				sql.append("SELECT ").append(i).append(" AS sequence_id, cache_size, next_not_cached_value FROM ")
 						.append(MariadbSequence10_30Reader.quote(sequence.getSchemaName())).append('.')
 						.append(MariadbSequence10_30Reader.quote(sequence.getName()));
 			}
@@ -94,6 +94,8 @@ public class MariadbSequence11_50Reader extends SequenceReader {
 					}
 					int size = value.intValueExact();
 					batch.get(id).setCacheSize(size).setCache(size > 0);
+					batch.get(id).setLastValue(MariadbSequence10_30Reader.nextValue(batch.get(id),
+							rs.getBigDecimal("next_not_cached_value")));
 				}
 			});
 			for (int i = 0; i < seen.length; i++) {

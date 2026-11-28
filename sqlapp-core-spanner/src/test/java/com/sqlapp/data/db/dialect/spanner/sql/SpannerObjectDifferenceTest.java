@@ -23,7 +23,7 @@ class SpannerObjectDifferenceTest {
 				new Schema("Sales").setDialect(DialectHolder.defaultDialect),
 				new Sequence("OrderSeq").setSchemaName("Sales").setDialect(DialectHolder.defaultDialect),
 				new Synonym("LegacyOrders").setSchemaName("Sales").setObjectName("Orders")
-						.setDialect(DialectHolder.defaultDialect)}) {
+						.setDialect(DialectHolder.defaultDialect) }) {
 			final var added = new DbObjectDifference(null, object, new EqualsHandler());
 			assertEquals(registry.createSql(object, SqlType.CREATE).getFirst().getSqlText(),
 					registry.createSql(added).getFirst().getSqlText());

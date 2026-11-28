@@ -1,10 +1,15 @@
 SELECT
   tc.*
+  , ic.coll_type AS SQLAPP_INTERVAL_COLLECTION_KIND
   , cc.COMMENTS
   , tic.GENERATION_TYPE
   , tic.SEQUENCE_NAME
   , tic.IDENTITY_OPTIONS
+  , iseq.LAST_NUMBER AS IDENTITY_LAST_NUMBER
 FROM all_tab_cols tc
+LEFT OUTER JOIN all_coll_types ic
+ON (ic.OWNER=tc.DATA_TYPE_OWNER AND ic.TYPE_NAME=tc.DATA_TYPE
+    AND ic.ELEM_TYPE_NAME IN ('INTERVAL YEAR TO MONTH','INTERVAL DAY TO SECOND'))
 LEFT OUTER JOIN all_col_comments cc
 ON (
      tc.OWNER=cc.OWNER
@@ -21,14 +26,14 @@ ON (
      AND
      tc.COLUMN_NAME=tic.COLUMN_NAME
     )
+LEFT OUTER JOIN all_sequences iseq
+ON (iseq.SEQUENCE_OWNER=tic.OWNER AND iseq.SEQUENCE_NAME=tic.SEQUENCE_NAME)
 WHERE 1=1
-  /*if isNotEmpty(containsHiddenColumns)*/
-  /*if !containsHiddenColumns*/
+  /*if containsHiddenColumns == null || !containsHiddenColumns*/
   AND (tc.HIDDEN_COLUMN='NO' OR tc.USER_GENERATED='YES')
   /*end*/
-  /*if containsHiddenColumns*/
+  /*if containsHiddenColumns != null && containsHiddenColumns*/
   AND tc.HIDDEN_COLUMN='YES' AND tc.USER_GENERATED='NO'
-  /*end*/
   /*end*/
   /*if isNotEmpty(schemaName)*/
   AND tc.OWNER IN /*schemaName*/('%')

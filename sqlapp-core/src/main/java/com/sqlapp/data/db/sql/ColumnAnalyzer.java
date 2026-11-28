@@ -74,9 +74,9 @@ public enum ColumnAnalyzer {
 			List<UniqueConstraint> uks = getUniqueConstrainsts(table);
 			if (!rows.isEmpty()) {
 				Row row = rows.get(0);
-				boolean notNull = true;
 				for (UniqueConstraint uk : uks) {
 					Set<Column> columns = getColumnsByUk(uk);
+					boolean notNull = !columns.isEmpty();
 					for (Column column : columns) {
 						if (row.get(column) == null) {
 							notNull = false;
@@ -198,9 +198,9 @@ public enum ColumnAnalyzer {
 			final List<Index> indexes = getUniqueIndexex(table);
 			if (!rows.isEmpty()) {
 				Row row = rows.get(0);
-				boolean notNull = true;
 				for (Index index : indexes) {
 					Set<Column> columns = getColumnsByIndex(index);
+					boolean notNull = !columns.isEmpty();
 					for (Column column : columns) {
 						if (row.get(column) == null) {
 							notNull = false;
@@ -242,7 +242,7 @@ public enum ColumnAnalyzer {
 			final List<Index> indexes = getUniqueIndexex(table);
 			for (Index index : indexes) {
 				final Set<Column> columns = getNotNullColumnsByIndex(index);
-				if (columns.isEmpty()) {
+				if (!columns.isEmpty()) {
 					result.addAll(columns);
 				}
 			}
@@ -415,9 +415,11 @@ public enum ColumnAnalyzer {
 		Set<Column> result = CommonUtils.linkedSet();
 		for (ReferenceColumn rCol : index.getColumns()) {
 			Column column = rCol.getColumn();
-			if (column != null) {
-				result.add(column);
+			if (column == null) {
+				// An expression or unresolved component cannot be omitted from a unique key.
+				return CommonUtils.linkedSet();
 			}
+			result.add(column);
 		}
 		return result;
 	}
@@ -446,7 +448,9 @@ public enum ColumnAnalyzer {
 	}
 
 	protected static List<Index> getUniqueIndexex(Table table) {
-		return table.getIndexes().stream().filter(index -> index.isUnique()).toList();
+		// A partial index only guarantees uniqueness for rows satisfying its predicate.
+		return table.getIndexes().stream()
+				.filter(index -> index.isUnique() && CommonUtils.isBlank(index.getWhere())).toList();
 	}
 
 	public static Set<Column> and(Set<Column> columns1, Set<Column> columns2) {

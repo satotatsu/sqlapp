@@ -41,8 +41,7 @@ class DataFormatRowIteratorHandlerTest {
 	void createsSingleAndCombinedHandlersFromFiles() {
 		assertInstanceOf(CsvRowIteratorHandler.class, FileRowIteratorFactory.create(new File("items.csv")));
 		assertInstanceOf(JsonRowIteratorHandler.class, FileRowIteratorFactory.create(Path.of("items.json")));
-		assertInstanceOf(YamlRowIteratorHandler.class,
-				DataFormat.YAML.createRowIteratorHandler(Path.of("items.yaml")));
+		assertInstanceOf(YamlRowIteratorHandler.class, DataFormat.YAML.createRowIteratorHandler(Path.of("items.yaml")));
 		assertInstanceOf(CombinedRowIteratorHandler.class,
 				FileRowIteratorFactory.create(List.of(new File("first.csv"), new File("second.json"))));
 	}
@@ -60,8 +59,7 @@ class DataFormatRowIteratorHandlerTest {
 		org.junit.jupiter.api.Assertions.assertFalse(FileRowIteratorFactory.supports(new File("items.unknown")));
 		org.junit.jupiter.api.Assertions.assertFalse(FileRowIteratorFactory.supports((File) null));
 		org.junit.jupiter.api.Assertions.assertFalse(FileRowIteratorFactory.supports((Path) null));
-		assertThrows(IllegalArgumentException.class,
-				() -> FileRowIteratorFactory.create(new File("items.unknown")));
+		assertThrows(IllegalArgumentException.class, () -> FileRowIteratorFactory.create(new File("items.unknown")));
 	}
 
 	@Test

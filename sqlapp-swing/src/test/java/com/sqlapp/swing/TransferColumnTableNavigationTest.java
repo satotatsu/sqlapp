@@ -49,7 +49,7 @@ class TransferColumnTableNavigationTest {
 			panel.columnGrid.getCellEditor().cancelCellEditing();
 			panel.columnTools.remove.doClick(0);
 			assertEquals(3, panel.columns.getRowCount());
-			assertEquals("OTHER", panel.configuration().tables().get("PUBLIC.AA").columns().get("ID"));
+			assertEquals("OTHER", panel.configuration().tables().get("PUBLIC.AA").names().get("ID"));
 		});
 	}
 
@@ -66,7 +66,7 @@ class TransferColumnTableNavigationTest {
 			assertTrue(panel.columnGrid.editCellAt(0, 2));
 			((JTextField) panel.columnGrid.getEditorComponent()).setText("CHANGED");
 			panel.showColumns("PUBLIC.A");
-			assertEquals("CHANGED", panel.configuration().tables().get("All tables").columns().get("ID"));
+			assertEquals("CHANGED", panel.configuration().tables().get("All tables").names().get("ID"));
 			assertEquals("PUBLIC.A", panel.columnGrid.getValueAt(0, 0));
 		});
 	}

@@ -21,25 +21,138 @@ package com.sqlapp.util.eval.mvel;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.ParseException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Year;
+import java.time.YearMonth;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalField;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.ZipFile;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.util.FileUtils;
 
 public class MvelUtilsTest {
+	@TempDir
+	Path temporaryDirectory;
+
+	@Test
+	void floatRandomValuesStayInsideBoundsAfterRounding() {
+		for (int i = 0; i < 1000; i++) {
+			float value = MvelUtils.nextFloat(0.5d, 1d);
+			assertTrue(value >= 0.5d && value < 1d);
+			value = MvelUtils.nextFloat(1d, Math.nextUp(1d));
+			assertEquals(1f, value);
+			value = MvelUtils.nextFloat(-1d, Math.nextUp(-1d));
+			assertEquals(-1f, value);
+			value = MvelUtils.nextFloat(Double.MIN_VALUE);
+			assertEquals(0f, value);
+			value = MvelUtils.nextFloat(Double.MAX_VALUE);
+			assertTrue(Float.isFinite(value) && value >= 0d && value < Double.MAX_VALUE);
+		}
+	}
+
+	@Test
+	void rejectsFloatIntervalsWithoutRepresentableValuesOrValidBounds() {
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(0.99999999d, 1d));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(Double.MIN_VALUE, (double) Float.MIN_VALUE));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(Double.MAX_VALUE / 2d, Double.MAX_VALUE));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(0d));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(-1d));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(1d, 1d));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(Double.NaN));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(Double.POSITIVE_INFINITY));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(Double.NEGATIVE_INFINITY, 0d));
+	}
+
+	@Test
+	void addsYearsToYearValues() {
+		assertEquals(Year.of(2026), MvelUtils.addYears(Year.of(2025), 1));
+		assertEquals(Year.of(2024), MvelUtils.addYears(Year.of(2025), -1));
+		assertEquals(YearMonth.of(2026, 3), MvelUtils.addYears(YearMonth.of(2025, 3), 1));
+	}
+
+	@Test
+	void writesZipWithEscapedPathsAndEmptyDirectories() throws Exception {
+		Path source = Files.createDirectory(temporaryDirectory.resolve("source"));
+		Files.createDirectories(source.resolve("empty/nested"));
+		Files.writeString(source.resolve("data.txt"), "content");
+		Path outputDirectory = Files.createDirectory(temporaryDirectory.resolve("space 日本語 #%"));
+		Path output = outputDirectory.resolve("archive.zip");
+		Files.writeString(output, "old output");
+		MvelUtils.setBasePath(temporaryDirectory.toString());
+		String relativeOutput = temporaryDirectory.relativize(output).toString();
+		assertEquals(output.toString(), MvelUtils.writeZip("source", relativeOutput));
+		try (ZipFile zip = new ZipFile(output.toFile())) {
+			assertNotNull(zip.getEntry("source/empty/nested/"));
+			assertEquals("content", new String(zip.getInputStream(zip.getEntry("source/data.txt")).readAllBytes(),
+					java.nio.charset.StandardCharsets.UTF_8));
+		}
+		try (var files = Files.list(outputDirectory)) {
+			assertEquals(1, files.count());
+		}
+	}
+
+	@Test
+	void preservesExistingZipWhenInputIsMissing() throws Exception {
+		Path output = temporaryDirectory.resolve("archive.zip");
+		Files.writeString(output, "original");
+		assertThrows(IOException.class, () -> MvelUtils.writeZip(
+				temporaryDirectory.resolve("missing").toString(), output.toString()));
+		assertEquals("original", Files.readString(output));
+		try (var files = Files.list(temporaryDirectory)) {
+			assertEquals(1, files.count());
+		}
+	}
+
+	@Test
+	void preservesExistingZipWhenArchiveCreationFails() throws Exception {
+		Path source = Files.createDirectory(temporaryDirectory.resolve("source"));
+		Path output = temporaryDirectory.resolve("archive.zip");
+		Files.writeString(output, "original");
+		assertThrows(IllegalArgumentException.class,
+				() -> MvelUtils.writeZip(source.toString(), output.toString(), "invalid-review-charset"));
+		assertEquals("original", Files.readString(output));
+		try (var files = Files.list(temporaryDirectory)) {
+			assertEquals(2, files.count());
+		}
+	}
+
+	@Test
+	void rejectsSourceAsOutputWithoutChangingIt() throws Exception {
+		Path source = temporaryDirectory.resolve("source.txt");
+		Files.writeString(source, "original");
+		assertThrows(IOException.class, () -> MvelUtils.writeZip(source.toString(), source.toString()));
+		assertEquals("original", Files.readString(source));
+	}
+
+	@Test
+	void writesEmptySourceAndExcludesOutputInsideSource() throws Exception {
+		Path source = Files.createDirectory(temporaryDirectory.resolve("source"));
+		Path output = source.resolve("archive.zip");
+		for (int i = 0; i < 2; i++) {
+			MvelUtils.writeZip(source.toString(), output.toString());
+			try (ZipFile zip = new ZipFile(output.toFile())) {
+				assertEquals(1, zip.size());
+				assertNotNull(zip.getEntry("source/"));
+			}
+		}
+	}
 
 	@BeforeEach
 	public void setUp() throws Exception {

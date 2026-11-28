@@ -339,6 +339,7 @@ public final class BulkMigrationRepairExecutor {
 				? ChunkedBulkMigrationExecutor.copyWithKeys(configured,
 						ChunkedBulkMigrationExecutor.primaryKeyNames(expected))
 				: configured;
+		final List<Table> selectedChunks = selectReplayChunks(expected, replayChunks, effective);
 		final BulkUpsertExecutor executor = BulkUpsertResolver.resolve(targetConnection);
 		if (effective.isUseTransaction() && !executor.supportsCallerTransactionAtomicity()) {
 			throw new IllegalStateException("The selected bulk upsert provider uses "
@@ -349,7 +350,7 @@ public final class BulkMigrationRepairExecutor {
 		try (var transaction = BulkUpsertTransaction.begin(targetConnection,
 				effective.isUseTransaction())) {
 			try {
-				for (final Table chunk : replayChunks) {
+				for (final Table chunk : selectedChunks) {
 					affectedRows = addRows(affectedRows,
 							executor.execute(targetConnection, chunk, effective));
 				}
@@ -359,8 +360,33 @@ public final class BulkMigrationRepairExecutor {
 				throw e;
 			}
 		}
-		return new BulkMigrationRepairResult(mismatchCount, replayChunks.size(), replayedRows,
+		return new BulkMigrationRepairResult(mismatchCount, selectedChunks.size(), replayedRows,
 				affectedRows, List.copyOf(extraActual), List.copyOf(withoutExpected));
+	}
+
+	/** Selects duplicates across the complete replay before any target mutation. */
+	static List<Table> selectReplayChunks(final Table target, final List<Table> chunks,
+			final BulkUpsertOption options) {
+		if (chunks.isEmpty()) return List.of();
+		final Table input = ChunkedBulkMigrationExecutor.chunkTable(target, List.of());
+		input.setRowIteratorHandler(rows -> chunks.stream()
+				.flatMap(chunk -> chunk.getRows().stream()).iterator());
+		final Iterator<Row> selected = BulkUpsertPlan.resolve(input, options)
+				.createStagingTable("SQLAPP_REPAIR_SELECTION").getRows().iterator();
+		final int chunkSize = chunks.stream().mapToInt(chunk -> chunk.getRows().size()).max().orElse(1);
+		final List<Table> result = new ArrayList<>();
+		Throwable failure = null;
+		try {
+			while (selected.hasNext()) {
+				result.add(ChunkedBulkMigrationExecutor.chunkTable(target, take(selected, chunkSize)));
+			}
+			return List.copyOf(result);
+		} catch (RuntimeException | Error rejected) {
+			failure = rejected;
+			throw rejected;
+		} finally {
+			BulkMigrationIteratorSupport.close(failure, selected);
+		}
 	}
 
 	private static long addRows(final long current, final long added) {

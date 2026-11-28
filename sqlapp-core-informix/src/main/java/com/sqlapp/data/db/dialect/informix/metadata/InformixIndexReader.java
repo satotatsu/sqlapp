@@ -40,7 +40,7 @@ public class InformixIndexReader extends JdbcIndexReader {
 	public static final String INFORMIX_INDEX_FOLLOWS_TABLE = "INFORMIX_INDEX_FOLLOWS_TABLE";
 	public static final String INFORMIX_INDEX_STORAGE_OVERRIDE_REQUIRED = "INFORMIX_INDEX_STORAGE_OVERRIDE_REQUIRED";
 
-	record Metadata(Index index, String constraintName, int accessMethod) {
+	record Metadata(Index index, String constraintName, int accessMethod, boolean primaryKey) {
 	}
 
 	@Override
@@ -106,7 +106,7 @@ public class InformixIndexReader extends JdbcIndexReader {
 						columns.operatorClassIds(operatorClassIds, accessMethod);
 						keys.add(columns);
 						result.add(new Metadata(index, uniqueConstraints ? getString(rs, CONSTRAINT_NAME) : null,
-								accessMethod));
+								accessMethod, uniqueConstraints && "P".equals(getString(rs, "constraint_type"))));
 					}
 				});
 		if (result.isEmpty())

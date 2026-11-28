@@ -39,7 +39,6 @@ public class MviewTest extends AbstractDbObjectTest<Mview> {
 		assertNull(new Mview("old").getOwnerName());
 	}
 
-
 	public static Mview getMview(String tableName) {
 		Mview table = new Mview(tableName);
 		// テーブルスペース

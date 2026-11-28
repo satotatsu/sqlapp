@@ -21,26 +21,28 @@ class SpannerAlterSchemaFactoryTest {
 		final var empty = new Schema("Sales").setDialect(DialectHolder.defaultDialect);
 		final var populated = new Schema("Sales").setDialect(DialectHolder.defaultDialect);
 		final var first = table("First");
-		first.getConstraints().add(new ForeignKeyConstraint("SelfReference",
-				first.getColumns().getFirst(), first.getColumns().getFirst()));
+		first.getConstraints().add(new ForeignKeyConstraint("SelfReference", first.getColumns().getFirst(),
+				first.getColumns().getFirst()));
 		populated.getTables().add(first);
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		assertEquals(1, registry.createSql(empty.diff(populated)).size());
 		assertEquals(1, registry.createSql(populated.diff(empty)).size());
 		final var second = table("Second");
 		populated.getTables().add(second);
-		first.getConstraints().add(new ForeignKeyConstraint("FirstSecond",
-				first.getColumns().getFirst(), second.getColumns().getFirst()));
-		second.getConstraints().add(new ForeignKeyConstraint("SecondFirst",
-				second.getColumns().getFirst(), first.getColumns().getFirst()));
+		first.getConstraints().add(
+				new ForeignKeyConstraint("FirstSecond", first.getColumns().getFirst(), second.getColumns().getFirst()));
+		second.getConstraints().add(
+				new ForeignKeyConstraint("SecondFirst", second.getColumns().getFirst(), first.getColumns().getFirst()));
 		final var added = registry.createSql(empty.diff(populated));
 		assertEquals(5, added.size());
 		assertTrue(added.get(0).getSqlText().startsWith("CREATE TABLE"));
 		assertTrue(added.get(1).getSqlText().startsWith("CREATE TABLE"));
-		assertTrue(added.subList(2, 5).stream().allMatch(operation -> operation.getSqlText().contains("ADD CONSTRAINT")));
+		assertTrue(
+				added.subList(2, 5).stream().allMatch(operation -> operation.getSqlText().contains("ADD CONSTRAINT")));
 		final var removed = registry.createSql(populated.diff(empty));
 		assertEquals(5, removed.size());
-		assertTrue(removed.subList(0, 3).stream().allMatch(operation -> operation.getSqlText().contains("DROP CONSTRAINT")));
+		assertTrue(removed.subList(0, 3).stream()
+				.allMatch(operation -> operation.getSqlText().contains("DROP CONSTRAINT")));
 		assertTrue(removed.get(3).getSqlText().startsWith("DROP TABLE"));
 		assertTrue(removed.get(4).getSqlText().startsWith("DROP TABLE"));
 		assertEquals(3, first.getConstraints().size());
@@ -54,10 +56,10 @@ class SpannerAlterSchemaFactoryTest {
 		final var parent = table("AParent");
 		final var child = table("MChild");
 		final var leaf = table("ZLeaf");
-		child.getConstraints().add(new ForeignKeyConstraint("ChildParent",
-				child.getColumns().getFirst(), parent.getColumns().getFirst()));
-		leaf.getConstraints().add(new ForeignKeyConstraint("LeafChild",
-				leaf.getColumns().getFirst(), child.getColumns().getFirst()));
+		child.getConstraints().add(
+				new ForeignKeyConstraint("ChildParent", child.getColumns().getFirst(), parent.getColumns().getFirst()));
+		leaf.getConstraints().add(
+				new ForeignKeyConstraint("LeafChild", leaf.getColumns().getFirst(), child.getColumns().getFirst()));
 		populated.getTables().add(leaf);
 		populated.getTables().add(parent);
 		populated.getTables().add(child);
@@ -132,8 +134,7 @@ class SpannerAlterSchemaFactoryTest {
 		assertEquals(4, operations.size());
 		assertEquals("ALTER TABLE `Sales`.`OldOrders` DROP SYNONYM `Sales`.`Legacy`",
 				operations.getFirst().getSqlText());
-		assertEquals("ALTER TABLE `Sales`.`NewOrders` ADD SYNONYM `Sales`.`Legacy`",
-				operations.getLast().getSqlText());
+		assertEquals("ALTER TABLE `Sales`.`NewOrders` ADD SYNONYM `Sales`.`Legacy`", operations.getLast().getSqlText());
 		assertTrue(operations.stream().anyMatch(operation -> operation.getSqlText().startsWith("DROP TABLE")));
 		assertTrue(operations.stream().anyMatch(operation -> operation.getSqlText().startsWith("CREATE TABLE")));
 	}

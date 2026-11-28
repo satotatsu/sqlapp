@@ -65,7 +65,9 @@ LEFT OUTER JOIN sys.default_constraints dc
   AND c.column_Id = dc.parent_column_id)
 LEFT OUTER JOIN sys.extended_properties ex
   ON (t.object_id = ex.major_id
-  AND c.column_Id = ex.minor_id)
+  AND c.column_Id = ex.minor_id
+  AND ex.class = 1
+  AND ex.name = N'MS_Description')
 LEFT OUTER JOIN sys.masked_columns mc
   ON (c.object_id = mc.object_id
   AND c.column_Id = mc.column_id)

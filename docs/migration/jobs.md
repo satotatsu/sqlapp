@@ -209,3 +209,8 @@ See [Migration job leases and fencing](job-leases.md).
 ## Live job reports
 
 See [Migration job reports](job-reports.md).
+
+The core job executor enforces `requireEmptyTarget=true` before starting lifecycle
+maintenance or copying any task, including direct Java API calls. An occupied
+target rejects the job. Full-scan INSERT requires this safeguard; it is not a
+concurrent-writer lock.

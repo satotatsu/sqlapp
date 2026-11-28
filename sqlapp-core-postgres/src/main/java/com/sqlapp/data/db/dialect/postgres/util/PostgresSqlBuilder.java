@@ -412,6 +412,21 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 			generated().space()
 					._add(column.getIdentityGenerationType() == IdentityGenerationType.Always ? "ALWAYS" : "BY DEFAULT")
 					.space().as().space().identity();
+			final var options = new java.util.ArrayList<String>();
+			final Long start = column.getIdentityStartValue();
+			final Long step = column.getIdentityStep();
+			if (start != null && start != 1L) {
+				options.add("START WITH " + start);
+			}
+			if (step != null && step != 1L) {
+				if (step == 0L) {
+					throw new IllegalArgumentException("Identity increment must not be zero: " + column.getName());
+				}
+				options.add("INCREMENT BY " + step);
+			}
+			if (!options.isEmpty()) {
+				space()._add("(")._add(String.join(" ", options))._add(")");
+			}
 		}
 		return instance();
 	}

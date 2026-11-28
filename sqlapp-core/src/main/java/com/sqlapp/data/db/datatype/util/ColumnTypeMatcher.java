@@ -27,5 +27,15 @@ import java.util.Optional;
 @FunctionalInterface
 public interface ColumnTypeMatcher {
 
+	/**
+	 * Copies this matcher for a cloned data type. Stateless matchers may return
+	 * themselves. Mutable implementations must override this method; wrappers
+	 * must also copy their internal matcher. Default suppliers are rebound by
+	 * DbDataType after copying.
+	 */
+	default ColumnTypeMatcher copy() {
+		return this;
+	}
+
 	Optional<TypeInformation> match(String productDataType);
 }

@@ -29,6 +29,8 @@ import com.sqlapp.jdbc.function.SQLFunction;
 
 /**
  * データソースからコネクションの取得、開放を行うクラス
+ * <p>Connection release failures are reported as runtime exceptions. Execution helpers
+ * retain the operation failure and attach a concurrent release failure as a suppressed exception.</p>
  * 
  * @author tatsuo satoh
  * 
@@ -60,6 +62,7 @@ public final class DataSourceConnectionUtils {
 		try {
 			releaseConnectionAndCloseDataSourceHandler.accept(dataSource, connection);
 		} catch (SQLException e) {
+			throw new RuntimeException("Failed to release JDBC connection", e);
 		}
 	}
 
@@ -70,6 +73,7 @@ public final class DataSourceConnectionUtils {
 		try {
 			releaseConnectionHandler.accept(dataSource, connection);
 		} catch (SQLException e) {
+			throw new RuntimeException("Failed to release JDBC connection", e);
 		}
 	}
 
@@ -108,19 +112,7 @@ public final class DataSourceConnectionUtils {
 	 * @param cons       行う処理
 	 */
 	public static void executeAndCloseDataSource(DataSource dataSource, ExceptionConsumer<Connection> cons) {
-		Connection connection;
-		try {
-			connection = get(dataSource);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-		try {
-			cons.accept(connection);
-		} catch (Exception e) {
-			exceptionHandler.accept(e, connection);
-		} finally {
-			releaseConnectionAndCloseDataSource(dataSource, connection);
-		}
+		execute(dataSource, cons, false, true);
 	}
 
 	/**
@@ -130,21 +122,7 @@ public final class DataSourceConnectionUtils {
 	 * @param cons       行う処理
 	 */
 	public static void executeTranAndCloseDataSource(DataSource dataSource, ExceptionConsumer<Connection> cons) {
-		Connection connection;
-		try {
-			connection = get(dataSource);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-		try {
-			connection.setAutoCommit(false);
-			cons.accept(connection);
-			connection.commit();
-		} catch (Exception e) {
-			exceptionHandler.accept(e, connection);
-		} finally {
-			releaseConnectionAndCloseDataSource(dataSource, connection);
-		}
+		execute(dataSource, cons, true, true);
 	}
 
 	/**
@@ -154,19 +132,7 @@ public final class DataSourceConnectionUtils {
 	 * @param cons       行う処理
 	 */
 	public static void execute(DataSource dataSource, ExceptionConsumer<Connection> cons) {
-		Connection connection;
-		try {
-			connection = get(dataSource);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-		try {
-			cons.accept(connection);
-		} catch (Exception e) {
-			exceptionHandler.accept(e, connection);
-		} finally {
-			releaseConnection(dataSource, connection);
-		}
+		execute(dataSource, cons, false, false);
 	}
 
 	/**
@@ -176,21 +142,41 @@ public final class DataSourceConnectionUtils {
 	 * @param cons       行う処理
 	 */
 	public static void executeTran(DataSource dataSource, ExceptionConsumer<Connection> cons) {
-		Connection connection;
+		execute(dataSource, cons, true, false);
+	}
+
+
+	private static void execute(DataSource dataSource, ExceptionConsumer<Connection> cons,
+			boolean transactional, boolean closeDataSource) {
+		final Connection connection;
 		try {
 			connection = get(dataSource);
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
+		Throwable failure = null;
 		try {
-			connection.setAutoCommit(false);
-			cons.accept(connection);
-			connection.commit();
-		} catch (Exception e) {
-			exceptionHandler.accept(e, connection);
+			try {
+				if (transactional) { connection.setAutoCommit(false); }
+				cons.accept(connection);
+				if (transactional) { connection.commit(); }
+			} catch (Exception e) {
+				exceptionHandler.accept(e, connection);
+			}
+		} catch (RuntimeException | Error e) {
+			failure = e;
+			throw e;
 		} finally {
-			releaseConnection(dataSource, connection);
+			try {
+				if (closeDataSource) {
+					releaseConnectionAndCloseDataSource(dataSource, connection);
+				} else {
+					releaseConnection(dataSource, connection);
+				}
+			} catch (RuntimeException | Error releaseFailure) {
+				if (failure == null) { throw releaseFailure; }
+				if (failure != releaseFailure) { failure.addSuppressed(releaseFailure); }
+			}
 		}
 	}
-
 }

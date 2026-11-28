@@ -32,6 +32,8 @@ module com.sqlapp.core.mysql {
 			com.sqlapp.data.db.dialect.mysql.bulk.MySqlBulkInsertProvider;
 	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
 		com.sqlapp.data.db.dialect.mysql.bulk.MySqlBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.GeneratedKeyCounterProvider with
+		com.sqlapp.data.db.dialect.mysql.bulk.MySqlGeneratedKeyCounterProvider;
 	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
 		com.sqlapp.data.db.dialect.mysql.bulk.MySqlSetBasedMigrationSnapshotProvider;
 }

@@ -52,53 +52,53 @@ public class JdbcTableReader extends TableReader {
 	}
 
 	/**
-	 * テーブルタイプ "TABLE","VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY",
-	 * "LOCAL TEMPORARY", "ALIAS", "SYNONYM".
+	 * テーブルタイプ "TABLE","VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY", "LOCAL
+	 * TEMPORARY", "ALIAS", "SYNONYM".
 	 */
 	private String[] tableTypes = new String[] { "TABLE", "SYSTEM TABLE" };
 
 	@Override
-	protected List<Table> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		try {
 			return JdbcMetadataUtils.getMetadata(connection,
-					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName()))
-					, getTableType());
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())),
+					getTableType());
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
-	protected void setFilter(List<Table> tableList, ParametersContext context){
-		Set<String> catalogNames=CommonUtils.treeSet();
-		Set<String> schemaNames=CommonUtils.treeSet();
-		Set<String> tableNames=CommonUtils.treeSet();
+	protected void setFilter(List<Table> tableList, ParametersContext context) {
+		context.put(JdbcMetadataUtils.SELECTED_TABLES, List.copyOf(tableList));
+		Set<String> catalogNames = CommonUtils.treeSet();
+		Set<String> schemaNames = CommonUtils.treeSet();
+		Set<String> tableNames = CommonUtils.treeSet();
 		for (Table table : tableList) {
-			if (table.getCatalogName()!=null){
+			if (table.getCatalogName() != null) {
 				catalogNames.add(table.getCatalogName());
 			}
-			if (table.getSchemaName()!=null){
+			if (table.getSchemaName() != null) {
 				schemaNames.add(table.getSchemaName());
 			}
-			if (table.getName()!=null){
+			if (table.getName() != null) {
 				tableNames.add(table.getName());
 			}
 		}
-		if (catalogNames.size()==1){
+		if (catalogNames.size() == 1) {
 			context.put("catalogName", catalogNames);
 		}
-		if (schemaNames.size()==1){
+		if (schemaNames.size() == 1) {
 			context.put("schemaName", schemaNames);
 		}
-		if (tableNames.size()==1){
+		if (tableNames.size() == 1) {
 			context.put("tableName", tableNames);
 		}
 	}
-	
+
 	protected String[] getTableType() {
 		return tableTypes;
 	}

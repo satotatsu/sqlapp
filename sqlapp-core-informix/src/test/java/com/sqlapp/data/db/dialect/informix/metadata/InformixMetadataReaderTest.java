@@ -26,6 +26,7 @@ import com.sqlapp.util.DoubleKeyMap;
 
 class InformixMetadataReaderTest {
 	static ExResultSet row(final Map<String, Object> values) {
+		boolean[] nullInteger = { false };
 		return new ExResultSet((ResultSet) Proxy.newProxyInstance(ResultSet.class.getClassLoader(),
 				new Class<?>[] { ResultSet.class }, (proxy, method, args) -> switch (method.getName()) {
 				case "getString" -> values.get(args[0] instanceof Integer n ? switch (n) {
@@ -35,7 +36,12 @@ class InformixMetadataReaderTest {
 				case 7 -> "dbspace";
 				default -> throw new UnsupportedOperationException("column " + n);
 				} : args[0]);
-				case "getInt" -> values.getOrDefault(args[0], 0);
+				case "getInt" -> {
+					Object value = values.get(args[0]);
+					nullInteger[0] = value == null;
+					yield value == null ? 0 : ((Number) value).intValue();
+				}
+				case "wasNull" -> nullInteger[0];
 				case "getLong" -> ((Number) values.getOrDefault(args[0], 0L)).longValue();
 				case "getDouble" -> ((Number) values.getOrDefault(args[0], 0)).doubleValue();
 				default -> throw new UnsupportedOperationException(method.getName());
@@ -45,6 +51,20 @@ class InformixMetadataReaderTest {
 				return true;
 			}
 		};
+	}
+
+	@Test
+	void readsLockModeAndNextExtentInTheExistingTableMetadataQuery() {
+		var reader = new Tables();
+		var table = new Table("items").setCatalogName("testdb").setSchemaName("owner");
+		var tables = new DoubleKeyMap<String, String, Table>();
+		tables.put("owner", "items", table);
+		reader.rows.add(Map.of("schema_name", "owner", "table_name", "items", "catalog_name", "testdb",
+				"table_lock_level", "R", "table_next_size", 64));
+		reader.setTableTypes(null, tables);
+		assertEquals(1, reader.queries);
+		assertEquals("ROW", table.getSpecifics().get("INFORMIX_LOCK_MODE"));
+		assertEquals("64", table.getSpecifics().get("INFORMIX_NEXT_SIZE_KB"));
 	}
 
 	static Map<String, Object> indexRow(final String owner, final String table, final String column, final int number) {
@@ -288,6 +308,35 @@ class InformixMetadataReaderTest {
 		final Tables reader = new Tables();
 		reader.setUniqueConstraints(null, new DoubleKeyMap<>());
 		assertEquals(0, reader.queries);
+	}
+
+	@Test
+	void enrichesExistingPrimaryKeysWithNamedBackingIndexesInConstantQueries() throws Exception {
+		final Tables reader = new Tables();
+		final Table table = new Table("items").setCatalogName("testdb").setSchemaName("owner");
+		table.getColumns().add(new Column("id"));
+		final var primary = table.getConstraints().addPrimaryKeyConstraint("pk", "id");
+		final var values = indexRow("owner", "items", "id", 1);
+		values.put("constraint_name", "pk");
+		values.put("constraint_type", "P");
+		values.put("raw_index_keys", "1 [1]");
+		values.put("backing_named", "1");
+		reader.rows.add(values);
+		final DoubleKeyMap<String, String, Table> tables = new DoubleKeyMap<>();
+		tables.put("owner", "items", table);
+		reader.setUniqueConstraints(null, tables);
+		assertEquals(2, reader.queries);
+		assertSame(primary, table.getConstraints().get("pk"));
+		assertTrue(primary.isPrimaryKey());
+		assertEquals(1, table.getConstraints().size());
+		assertEquals(1, table.getIndexes().size());
+		assertEquals("ix", primary.getIndexName());
+		assertTrue(primary.getIndex().isUnique());
+		assertTrue(table.getColumns().get("id").isNotNull());
+		reader.setUniqueConstraints(null, tables);
+		assertEquals(4, reader.queries);
+		assertEquals(1, table.getIndexes().size());
+		assertSame(primary, table.getConstraints().get("pk"));
 	}
 
 	@Test

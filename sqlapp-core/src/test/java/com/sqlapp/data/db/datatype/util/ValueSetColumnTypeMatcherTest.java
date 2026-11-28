@@ -20,8 +20,10 @@
 package com.sqlapp.data.db.datatype.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Optional;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -70,6 +72,22 @@ class ValueSetColumnTypeMatcherTest {
 	private TypeInformation createCoumn(String value, ColumnTypeMatcher columnTypeNameMatcher) {
 		Optional<TypeInformation> columnOp = columnTypeNameMatcher.match(value);
 		return columnOp.get();
+	}
+
+	@Test
+	void quotedCommasAndEscapesRemainWithinOneValue() {
+		for (String type : List.of("ENUM", "SET")) {
+			ColumnTypeMatcher matcher = new ValueSetColumnTypeMatcher(type);
+			assertEquals(List.of("'a,b'", "'c'", "''"),
+					matcher.match(type + "('a,b', 'c', '')").orElseThrow().getValues().orElseThrow());
+			assertEquals(List.of("'a'',b'", "'c'"),
+					matcher.match(type + "('a'',b','c')").orElseThrow().getValues().orElseThrow());
+			assertEquals(List.of("'a\\',b'", "'c'"),
+					matcher.match(type + "('a\\',b','c')").orElseThrow().getValues().orElseThrow());
+			assertEquals(List.of("\"a,b\"", "\"c\""),
+					matcher.match(type + "(\"a,b\",\"c\")").orElseThrow().getValues().orElseThrow());
+			assertThrows(IllegalArgumentException.class, () -> matcher.match(type + "('a,b)"));
+		}
 	}
 
 }

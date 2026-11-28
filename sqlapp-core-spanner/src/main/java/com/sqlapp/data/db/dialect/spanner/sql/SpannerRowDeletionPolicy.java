@@ -23,14 +23,16 @@ final class SpannerRowDeletionPolicy {
 			return null;
 		final var matcher = EXPRESSION.matcher(value);
 		if (!matcher.matches())
-			throw new IllegalArgumentException("Spanner TTL requires OLDER_THAN(timestamp_column, INTERVAL nonnegative_days DAY)");
+			throw new IllegalArgumentException(
+					"Spanner TTL requires OLDER_THAN(timestamp_column, INTERVAL nonnegative_days DAY)");
 		final String identifier = matcher.group(1);
 		final String name = identifier.startsWith("`") ? identifier.substring(1, identifier.length() - 1) : identifier;
 		final var column = table.getColumns().get(name);
 		if (column == null || column.getDataType() != DataType.TIMESTAMP || column.getArrayDimension() != 0)
 			throw new IllegalArgumentException("Spanner TTL requires an existing scalar TIMESTAMP column: " + name);
 		if (!name.equals(column.getName()))
-			throw new IllegalArgumentException("Spanner TTL must use the column's original casing: " + column.getName());
+			throw new IllegalArgumentException(
+					"Spanner TTL must use the column's original casing: " + column.getName());
 		return value.trim();
 	}
 }

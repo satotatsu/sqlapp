@@ -80,7 +80,9 @@ class LongIterator implements Iterator<Long>, Serializable, Cloneable {
 			throw new NoSuchElementException();
 		}
 		long value = current;
-		current += step;
+		final long candidate = current + step;
+		final boolean overflow = step > 0 ? candidate < current : candidate > current;
+		current = overflow ? end : candidate;
 		return value;
 	}
 

@@ -248,6 +248,8 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 	}
 
 	private static Object decode(Column column, String value) {
+		if (TransferIntervalCodec.interval(column))
+			return TransferIntervalCodec.decode(column, value);
 		if (TransferCsvTemporalCodec.temporal(column))
 			return TransferCsvTemporalCodec.decode(column, value);
 		final var type = column.getDataType().getJdbcType();

@@ -112,7 +112,7 @@ public enum RowComparisonOperator {
 
 	public BindParameterHolder addOperator(final Dialect dialect, ColumnsHolder columnsHolder, final Row row,
 			String prefix, final SqlBuilder builder) {
-		final BindParameterHolder holder = new BindParameterHolder();
+		final BindParameterHolder holder = new BindParameterHolder(1);
 		if (columnsHolder.getKeyColumns().size() == 1) {
 			Column column = CommonUtils.first(columnsHolder.getKeyColumns());
 			columnsHolder.addName(column, prefix, builder);

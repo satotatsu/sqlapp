@@ -419,11 +419,8 @@ public final class RowCollection
 
 	@Override
 	public boolean removeAll(Collection<?> c) {
-		for (Object obj : c) {
-			Row row = cast(obj);
-			row.setParent(null);
-		}
-		return getRowList().removeAll(c);
+		java.util.Objects.requireNonNull(c);
+		return removeRows(row -> c.contains(row));
 	}
 
 	public <X> List<X> getValues(Column column) {
@@ -436,13 +433,34 @@ public final class RowCollection
 
 	@Override
 	public boolean retainAll(Collection<?> c) {
-		return getRowList().removeAll(c);
+		java.util.Objects.requireNonNull(c);
+		return removeRows(row -> !c.contains(row));
+	}
+
+	/**
+	 * Removes matching rows and detaches only the rows actually removed.
+	 */
+	private boolean removeRows(final Predicate<Row> filter) {
+		boolean removed = false;
+		for (final Iterator<Row> it = getRowList().iterator(); it.hasNext();) {
+			final Row row = it.next();
+			if (filter.test(row)) {
+				it.remove();
+				row.setParent(null);
+				removed = true;
+			}
+		}
+		return removed;
 	}
 
 	@Override
 	public Row set(int index, Row row) {
 		row.setParent(this);
-		return getRowList().set(index, row);
+		final Row old = getRowList().set(index, row);
+		if (old != null && old != row) {
+			old.setParent(null);
+		}
+		return old;
 	}
 
 	@Override

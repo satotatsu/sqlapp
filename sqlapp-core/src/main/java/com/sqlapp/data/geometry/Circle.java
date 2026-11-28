@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.HashCodeBuilder;
 
@@ -27,7 +26,7 @@ import com.sqlapp.util.HashCodeBuilder;
  * CIRCLE型
  *
  */
-public class Circle extends AbstractPoint2D implements ToUpperDimensionType<Circle3D>{
+public class Circle extends AbstractPoint2D{
     /** serialVersionUID */
 	private static final long serialVersionUID = 3280634501061893212L;
 	/** 半径  */
@@ -100,16 +99,10 @@ public class Circle extends AbstractPoint2D implements ToUpperDimensionType<Circ
     	return new Circle(this.getX(), this.getY(), this.r);
     }
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.geometric.ToUpperDimensionType#toUpperDimension()
-	 */
-	@Override
-	public Circle3D toUpperDimension() {
-		return new Circle3D(this.getX(), this.getY(), 0d, this.getR());
-	}
 	
 	@Override
 	protected void hashCode(HashCodeBuilder builder){
+		super.hashCode(builder);
 		builder.append(r);
 	}
 	
@@ -118,10 +111,7 @@ public class Circle extends AbstractPoint2D implements ToUpperDimensionType<Circ
 	 */
 	@Override
 	public Circle setValue(String text) {
-		text=CommonUtils.unwrap(text, "<", ">");
-		text=text.replace("(", "").replace(")", "");
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
+		final double[] vals = GeometryTextParser.parseCircle(text, 2, "Circle");
 		this.setX(vals[0]);
 		this.setY(vals[1]);
 		this.setR(vals[2]);

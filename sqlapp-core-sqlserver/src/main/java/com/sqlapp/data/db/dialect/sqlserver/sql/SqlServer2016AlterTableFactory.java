@@ -255,7 +255,7 @@ public class SqlServer2016AlterTableFactory extends SqlServer2014AlterTableFacto
 				normalized.getColumns().get(after.getName()).setHidden(before.isHidden());
 			}
 		}
-		if ((!added.isEmpty() || !altered.isEmpty()) && original.getTableType() == Table.TableType.Memory)
+		if ((!added.isEmpty() || !altered.isEmpty()) && SqlServerDdlSupport.isMemoryOptimized(original))
 			throw unsupported(target, "Changing stored columns of memory-optimized temporal tables");
 		if (!normalized.equals(original))
 			throw unsupported(target,

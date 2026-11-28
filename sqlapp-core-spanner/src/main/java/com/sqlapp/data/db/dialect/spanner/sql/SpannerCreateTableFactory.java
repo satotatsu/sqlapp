@@ -33,9 +33,10 @@ public class SpannerCreateTableFactory extends AbstractCreateTableFactory<Spanne
 
 	@Override
 	protected void addCreateObject(final Table table, final SpannerSqlBuilder builder) {
-		if (table.getColumns().stream().anyMatch(column ->
-				column.getSpecifics().get(SpannerAlterTableFactory.IDENTITY_RESTART_COUNTER_WITH) != null))
-			throw new IllegalArgumentException("Spanner identity restart requests require ALTER; use identityStartValue for CREATE");
+		if (table.getColumns().stream().anyMatch(
+				column -> column.getSpecifics().get(SpannerAlterTableFactory.IDENTITY_RESTART_COUNTER_WITH) != null))
+			throw new IllegalArgumentException(
+					"Spanner identity restart requests require ALTER; use identityStartValue for CREATE");
 		if (table.getName() == null || table.getName().isBlank())
 			throw new IllegalArgumentException("Cloud Spanner CREATE TABLE requires a name");
 		interleaveType(table); // Validate before generating any part of the statement.
@@ -147,8 +148,8 @@ public class SpannerCreateTableFactory extends AbstractCreateTableFactory<Spanne
 		final String type = interleaveType(table);
 		if (type == null)
 			return;
-		builder._add(", INTERLEAVE ")._add(type).space()
-				.name(interleaveParent(table), getOptions().isDecorateSchemaName());
+		builder._add(", INTERLEAVE ")._add(type).space().name(interleaveParent(table),
+				getOptions().isDecorateSchemaName());
 		if ("IN PARENT".equals(type)) {
 			builder._add(" ON DELETE ")._add(interleaveDeleteAction(table));
 		}

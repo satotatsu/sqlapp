@@ -30,7 +30,7 @@ public abstract class AbstractCommentNodeFactory<T extends CommentNode> extends
 			node.setMatchText(matcher.group(0));
 			return;
 		}
-		node.setMatchText(matcher.group("value"));
+		node.setMatchText(matcher.group(0));
 		node.setExpression(matcher.group("expression"));
 	}
 }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "sqlapp Dialect Review"
+  short_description: "sqlappのDB Dialectを計画立案から検証までレビュー"
+  default_prompt: "Use $sqlapp-dialect-review to comprehensively review the specified sqlapp database Dialect, develop your own coverage plan, verify likely defects, and report evidence and remaining gaps without modifying source files."

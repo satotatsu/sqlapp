@@ -87,7 +87,7 @@ public class YearConverter extends AbstractJava8DateConverter<Year, YearConverte
 			final String lowerVal = ((String) value).toLowerCase();
 			if (isCurrentText(lowerVal)) {
 				return Year.now();
-			} else if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+			} else if (lowerVal.length() >= 2 && lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
 				final String val = cast(value);
 				return parseDate(val.substring(1, val.length() - 1));
 			}

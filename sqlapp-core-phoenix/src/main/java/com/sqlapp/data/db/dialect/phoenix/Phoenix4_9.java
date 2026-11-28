@@ -5,7 +5,7 @@ import java.util.function.Supplier;
 import com.sqlapp.data.db.dialect.Dialect;
 
 /** Apache Phoenix 4.9 introduces column DEFAULT declarations. */
-public class Phoenix4_9 extends Phoenix {
+public class Phoenix4_9 extends Phoenix4_8 {
 	private static final long serialVersionUID = 1L;
 
 	protected Phoenix4_9(final Supplier<Dialect> nextVersionDialectSupplier) {
@@ -14,6 +14,11 @@ public class Phoenix4_9 extends Phoenix {
 
 	@Override
 	public boolean supportsColumnDefault() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsGuidePostsWidth() {
 		return true;
 	}
 }

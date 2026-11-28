@@ -24,9 +24,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.text.DecimalFormat;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
 
 /**
  * BigIntegerType Converter
@@ -48,6 +45,9 @@ public class BigIntegerConverter extends AbstractNumberConverter<BigInteger> {
 		}
 		if (isSupplier(value)) {
 			return convertObject(getSupplierValue(value));
+		} else if (isOptional(value)) {
+			// any kind of Optional: empty is the default value
+			return convertObject(getOptionalValue(value));
 		} else if (value instanceof BigInteger) {
 			return (BigInteger) value;
 		} else if (value instanceof String) {
@@ -55,16 +55,7 @@ public class BigIntegerConverter extends AbstractNumberConverter<BigInteger> {
 		} else if (value instanceof BigDecimal) {
 			return ((BigDecimal) value).toBigInteger();
 		} else if (value instanceof Number) {
-			return BigInteger.valueOf(((Number) value).longValue());
-		} else if (value instanceof OptionalInt) {
-			final OptionalInt op = (OptionalInt) value;
-			return op.isPresent() ? BigInteger.valueOf(op.getAsInt()) : null;
-		} else if (value instanceof OptionalLong) {
-			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? BigInteger.valueOf(op.getAsLong()) : null;
-		} else if (value instanceof OptionalDouble) {
-			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? BigInteger.valueOf((long) op.getAsDouble()) : null;
+			return toBigInteger((Number) value);
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return BigInteger.ONE;
@@ -75,9 +66,40 @@ public class BigIntegerConverter extends AbstractNumberConverter<BigInteger> {
 		return convert(value.toString());
 	}
 
+	/**
+	 * Truncates toward zero like the other integral converters, without the
+	 * saturation of {@code longValue()} for large floating point values.
+	 */
+	private static BigInteger toBigInteger(final Number value) {
+		if (value instanceof Integer || value instanceof Long || value instanceof Short || value instanceof Byte) {
+			return BigInteger.valueOf(value.longValue());
+		}
+		if (value instanceof Double || value instanceof Float) {
+			final double number = value.doubleValue();
+			if (Double.isNaN(number) || Double.isInfinite(number)) {
+				throw new ConverterException("Cannot convert to BigInteger: " + value);
+			}
+			return new BigDecimal(number).toBigInteger();
+		}
+		try {
+			return new BigDecimal(value.toString()).toBigInteger();
+		} catch (final NumberFormatException e) {
+			throw new ConverterException("Cannot convert to BigInteger: " + value, e);
+		}
+	}
+
 	private BigInteger convert(final String value) {
 		if (getNumberFormat() == null) {
-			return new BigInteger(value);
+			try {
+				return new BigInteger(value);
+			} catch (final NumberFormatException e) {
+				// "1.5", "1e3": truncated toward zero as for the other integral types
+				try {
+					return new BigDecimal(value).toBigInteger();
+				} catch (final NumberFormatException decimalFailure) {
+					throw new ConverterException("Cannot convert to BigInteger: " + value, e);
+				}
+			}
 		}
 		final DecimalFormat format = (DecimalFormat) getNumberFormat();
 		format.setParseBigDecimal(true);
@@ -102,7 +124,7 @@ public class BigIntegerConverter extends AbstractNumberConverter<BigInteger> {
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof BigIntegerConverter)) {

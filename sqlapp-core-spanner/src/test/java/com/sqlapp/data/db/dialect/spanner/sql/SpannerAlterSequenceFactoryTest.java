@@ -17,6 +17,14 @@ import com.sqlapp.data.schemas.Sequence;
 
 class SpannerAlterSequenceFactoryTest {
 	@Test
+	void ignoresObservedCounterChangesForDdl() {
+		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		final var original = new Sequence("OrderSeq");
+		final var target = original.clone().setLastValue(java.math.BigInteger.TEN);
+		assertTrue(registry.createSql(original.diff(target), SqlType.ALTER).isEmpty());
+	}
+
+	@Test
 	void restartsOnlyFromExplicitCounterRequestsInTheOriginalStyle() throws Exception {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		for (String style : List.of("CLAUSES", "OPTIONS")) {
@@ -25,8 +33,9 @@ class SpannerAlterSequenceFactoryTest {
 			final var target = original.clone();
 			target.getSpecifics().put(SpannerAlterSequenceFactory.RESTART_COUNTER_WITH, "12345");
 			final Sequence restored = SchemaUtils.readXml(new StringReader(target.asXml()));
-			assertEquals("ALTER SEQUENCE `Sales`.`OrderSeq` " + ("CLAUSES".equals(style)
-					? "RESTART COUNTER WITH 12345" : "SET OPTIONS (start_with_counter = 12345)"),
+			assertEquals(
+					"ALTER SEQUENCE `Sales`.`OrderSeq` " + ("CLAUSES".equals(style) ? "RESTART COUNTER WITH 12345"
+							: "SET OPTIONS (start_with_counter = 12345)"),
 					registry.createSql(original.diff(restored), SqlType.ALTER).getFirst().getSqlText());
 			assertThrows(IllegalArgumentException.class,
 					() -> registry.createSql(restored.diff(original), SqlType.ALTER));
@@ -53,8 +62,9 @@ class SpannerAlterSequenceFactoryTest {
 			final String prefix = "ALTER SEQUENCE `Sales`.`OrderSeq` ";
 			assertEquals(prefix + ("CLAUSES".equals(style) ? "SKIP RANGE 10, 20"
 					: "SET OPTIONS (skip_range_min = 10, skip_range_max = 20)"), add.getFirst().getSqlText());
-			assertEquals(prefix + ("CLAUSES".equals(style) ? "NO SKIP RANGE"
-					: "SET OPTIONS (skip_range_min = NULL, skip_range_max = NULL)"),
+			assertEquals(
+					prefix + ("CLAUSES".equals(style) ? "NO SKIP RANGE"
+							: "SET OPTIONS (skip_range_min = NULL, skip_range_max = NULL)"),
 					registry.createSql(restored.diff(original), SqlType.ALTER).getFirst().getSqlText());
 		}
 	}

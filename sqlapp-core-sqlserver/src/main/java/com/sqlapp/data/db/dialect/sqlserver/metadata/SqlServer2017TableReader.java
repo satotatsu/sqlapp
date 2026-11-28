@@ -38,6 +38,10 @@ public class SqlServer2017TableReader extends SqlServer2016TableReader {
 				throw new SQLException("Unsupported SQL Server temporal history retention for " + table.getName(), e);
 			}
 		}
+		if (rs.contains("is_node"))
+			setSpecifics(rs, "is_node", table);
+		if (rs.contains("is_edge"))
+			setSpecifics(rs, "is_edge", table);
 		return table;
 	}
 }

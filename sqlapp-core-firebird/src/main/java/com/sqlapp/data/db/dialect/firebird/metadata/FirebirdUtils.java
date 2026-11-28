@@ -103,6 +103,33 @@ public class FirebirdUtils {
 	}
 
 	/**
+	 * CHAR/VARCHAR with CHARACTER SET OCTETS hold bytes, not text: they are
+	 * BINARY/VARBINARY (Firebird 4.0 names them so). Call after the character set
+	 * and length are set. The character set and collation are dropped because
+	 * OCTETS has only its own collation, which the binary type implies.
+	 *
+	 * @param column column, domain or routine argument
+	 */
+	public static void setBinaryIfOctets(AbstractColumn<?> column) {
+		String characterSet = column.getCharacterSet() == null ? null : column.getCharacterSet().trim();
+		if (!"OCTETS".equalsIgnoreCase(characterSet))
+			return;
+		if (column.getDataType() == CHAR) {
+			column.setDataType(com.sqlapp.data.db.datatype.DataType.BINARY).setDataTypeName("BINARY");
+		} else if (column.getDataType() == VARCHAR) {
+			column.setDataType(com.sqlapp.data.db.datatype.DataType.VARBINARY).setDataTypeName("VARBINARY");
+		} else {
+			return;
+		}
+		// A binary type has no character set or collation; the only OCTETS
+		// collation is implied. (Changing the data type may already clear them.)
+		column.setCharacterSet(null);
+		column.setCollation(null);
+		column.getSpecifics().remove("firebird.column.collationId");
+		column.getSpecifics().remove("firebird.domain.collationId");
+	}
+
+	/**
 	 * Firebirdのデータ型をTYPEとSUBTYPEから設定する
 	 * 
 	 * @param column
@@ -228,17 +255,19 @@ public class FirebirdUtils {
 				column.getSpecifics().put(com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder.BLOB_SEGMENT_SIZE,
 						Integer.toString(segmentLength));
 			switch (subType) {
+			// BLOBs have no declared length; the segment size is a buffer hint kept in
+			// specifics and must not become a length that truncates on migration.
 			case 0:// BLOB
 				column.setDataTypeName("BLOB SUB_TYPE BINARY");
 				column.setDataType(BLOB);
-				column.setLength(segmentLength);
-				column.setOctetLength(segmentLength);
+				column.setLength((Long) null);
+				column.setOctetLength((Long) null);
 				break;
 			case 1:// CLOB
 				column.setDataTypeName("BLOB SUB_TYPE TEXT");
 				column.setDataType(CLOB);
-				column.setLength(segmentLength);
-				column.setOctetLength(segmentLength);
+				column.setLength((Long) null);
+				column.setOctetLength((Long) null);
 				break;
 			default:
 				break;

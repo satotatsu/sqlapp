@@ -34,4 +34,12 @@ class SqlServerSqlSplitterRegressionTest {
 		assertThrows(InvalidTextException.class, () -> new SqlServerSqlSplitter(null).parse("SELECT [missing\nGO\n"));
 	}
 
+	@Test
+	void goWithLineCommentPreservesRepeatCountAndBatchContents() {
+		var parts = new SqlServerSqlSplitter(null).parse("SELECT 1;\r\nGO -- end\r\nSELECT 2;\r\nGO 2 -- repeat");
+		assertEquals(3, parts.size());
+		assertEquals("SELECT 1", parts.get(0).getText());
+		assertEquals("SELECT 2", parts.get(1).getText());
+		assertEquals("SELECT 2", parts.get(2).getText());
+	}
 }

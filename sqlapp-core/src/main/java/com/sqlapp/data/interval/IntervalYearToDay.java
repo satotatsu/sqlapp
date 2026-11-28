@@ -38,6 +38,12 @@ public final class IntervalYearToDay extends Interval{
      */
 	public IntervalYearToDay(){
     }
+
+	@Override
+	protected IntervalValue constrainValue(final IntervalValue value) {
+		return new IntervalValue(value.months(), Math.addExact(value.days(),
+				value.timePart().dividedBy(java.time.Duration.ofDays(1))), java.time.Duration.ZERO);
+	}
 	
 	/**
 	 * コンストラクタ
@@ -115,8 +121,9 @@ public final class IntervalYearToDay extends Interval{
     	if (interval==null){
     		return null;
     	}
-    	IntervalYearToDay result=new IntervalYearToDay(interval.getYears(), interval.getMonths(), interval.getDays());
-    	if (!interval.isPositive()){
+		final Interval value = interval.toInterval();
+		IntervalYearToDay result=new IntervalYearToDay(value.getYears(), value.getMonths(), value.getDays());
+		if (!value.isPositive()){
     		result.scale(-1);
     	}
     	return result;
@@ -190,8 +197,13 @@ public final class IntervalYearToDay extends Interval{
 	 */
     @Override
 	public void setNanos(long nanos) {
-        super.setNanos(truncate(nanos, NANO_LIMIT*DAY_SECONDS));
+        super.setNanos(truncate(nanos, (long)NANO_LIMIT*DAY_SECONDS));
     }
+
+	@Override
+	public void setNanos(int nanos) {
+		setNanos((long)nanos);
+	}
 
     /* (non-Javadoc)
      * @see java.lang.Object#clone()

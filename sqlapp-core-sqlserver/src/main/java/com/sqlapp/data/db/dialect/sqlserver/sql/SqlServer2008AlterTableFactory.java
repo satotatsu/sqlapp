@@ -22,7 +22,6 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
 import java.util.List;
 import java.util.Map;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.Difference;
@@ -40,17 +39,30 @@ public class SqlServer2008AlterTableFactory extends SqlServer2005AlterTableFacto
 	protected void addOtherDefinitions(Map<String, Difference<?>> allDiff, Table originalTable, Table table,
 			List<SqlOperation> result) {
 		super.addOtherDefinitions(allDiff, originalTable, table, result);
-		Difference<?> diff = allDiff.get("HAS_CHANGE_TRACKING");
-		if (diff != null && diff.getState().isChanged()) {
-			Boolean val = Converters.getDefault().convertObject(diff.getTarget(), Boolean.class);
-			SqlServerSqlBuilder builder = createSqlBuilder();
-			builder.alter().table().name(originalTable, this.getOptions().isDecorateSchemaName());
-			builder.lineBreak();
-			if (val.booleanValue()) {
-				builder.enable().changeTracking();
-			} else {
-				builder.disable().changeTracking();
-			}
-		}
+		boolean before = tracking(originalTable, "HAS_CHANGE_TRACKING");
+		boolean after = tracking(table, "HAS_CHANGE_TRACKING");
+		boolean oldColumns = tracking(originalTable, "is_track_columns_updated_on");
+		boolean columns = tracking(table, "is_track_columns_updated_on");
+		if (!after && columns && (!before || !oldColumns))
+			throw new IllegalArgumentException("TRACK_COLUMNS_UPDATED requires change tracking");
+		if (before == after && (!after || oldColumns == columns))
+			return;
+		SqlServerSqlBuilder builder = createSqlBuilder();
+		builder.alter().table().name(table, getOptions().isDecorateSchemaName());
+		if (after)
+			builder.enable().changeTracking()._add(" WITH (TRACK_COLUMNS_UPDATED = ")._add(columns ? "ON" : "OFF")
+					._add(")");
+		else
+			builder.disable().changeTracking();
+		add(result, createOperation(builder.toString(), com.sqlapp.data.db.sql.SqlType.ALTER, originalTable, table));
+	}
+
+	private boolean tracking(Table table, String key) {
+		String value = table.getSpecifics().get(key);
+		if (value == null || "false".equalsIgnoreCase(value) || "0".equals(value))
+			return false;
+		if ("true".equalsIgnoreCase(value) || "1".equals(value))
+			return true;
+		throw new IllegalArgumentException("Invalid " + key + ": " + value);
 	}
 }

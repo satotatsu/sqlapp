@@ -59,6 +59,7 @@ public final class BulkMigrationJobExecutor {
 		final BulkMigrationJobLifecycle lifecycle = plan.getLifecycle();
 		try {
 			lifecycle.validateBeforeExecution(plan);
+			BulkMigrationTargetValidator.validateRequiredEmptyTargets(targetConnection, plan);
 			plan.validateUnchanged();
 		} catch (SQLException | RuntimeException | Error rejection) {
 			try {

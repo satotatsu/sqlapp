@@ -102,4 +102,23 @@ class SqliteIntegrityCheckBuilderTest {
 		assertEquals(builder.build(), legacy.build());
 		assertEquals(builder.quick().maxErrors(10).build(), legacy.quick().maxErrors(10).build());
 	}
+
+	@Test
+	void tableScopedCheckRequiresSqlite333AndExcludesTheErrorLimit() throws Exception {
+		var builder = new SqliteIntegrityCheckBuilder(DialectHolder.defaultDialect).table("it's");
+		String sql = builder.build();
+		assertTrue(sql.endsWith(".integrity_check('it''s')"), sql);
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE \"it's\"(id INTEGER PRIMARY KEY, value TEXT UNIQUE)");
+			try (var result = statement.executeQuery(sql)) {
+				assertTrue(result.next());
+				assertEquals("ok", result.getString(1));
+			}
+		}
+		assertThrows(IllegalArgumentException.class, () -> builder.maxErrors(3).build());
+		var older = DialectResolver.getInstance().getDialect("SQLite", 3, 32, null);
+		assertThrows(IllegalArgumentException.class, () -> new SqliteIntegrityCheckBuilder(older).table("t").build());
+		assertThrows(IllegalArgumentException.class, () -> builder.table(" "));
+	}
 }

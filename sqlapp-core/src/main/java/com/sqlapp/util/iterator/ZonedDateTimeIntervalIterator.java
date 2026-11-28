@@ -25,10 +25,11 @@ import com.sqlapp.data.interval.Interval;
 
 /**
  * For文の代わりに使用する<code>java.time.ZonedDateTime</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class ZonedDateTimeIntervalIterator extends AbstractObjectIterator<ZonedDateTime, Interval>{
+final class ZonedDateTimeIntervalIterator extends AbstractObjectIterator<ZonedDateTime, Interval> {
 
 	/**
 	 * serialVersionUID
@@ -37,37 +38,38 @@ final class ZonedDateTimeIntervalIterator extends AbstractObjectIterator<ZonedDa
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ
+	 * @param end   終了
+	 * @param step  ステップ
 	 */
-	public ZonedDateTimeIntervalIterator(final ZonedDateTime start, final ZonedDateTime end, final Interval step){
+	public ZonedDateTimeIntervalIterator(final ZonedDateTime start, final ZonedDateTime end, final Interval step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step.isPositive()){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step.isPositive());
 	}
 
 	@Override
 	protected ZonedDateTime getNext() {
-		return step.add(start, (int)this.count);
+		return step.add(start, (int) this.count);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public ZonedDateTimeIntervalIterator clone(){
-		ZonedDateTimeIntervalIterator clone=new ZonedDateTimeIntervalIterator(this.start, this.end, this.step);
+	public ZonedDateTimeIntervalIterator clone() {
+		ZonedDateTimeIntervalIterator clone = new ZonedDateTimeIntervalIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

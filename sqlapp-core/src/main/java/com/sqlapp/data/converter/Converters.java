@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.map;
-
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -47,6 +45,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.geolatte.geom.Geometry;
 
@@ -70,10 +69,10 @@ import com.sqlapp.data.interval.IntervalMinute;
 import com.sqlapp.data.interval.IntervalMinuteToSecond;
 import com.sqlapp.data.interval.IntervalMonth;
 import com.sqlapp.data.interval.IntervalSecond;
+import com.sqlapp.data.interval.IntervalValue;
 import com.sqlapp.data.interval.IntervalYear;
 import com.sqlapp.data.interval.IntervalYearToDay;
 import com.sqlapp.data.interval.IntervalYearToMonth;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * 
@@ -87,13 +86,13 @@ public class Converters implements Serializable {
 	 */
 	private static final long serialVersionUID = -7044716555455402735L;
 
-	private Map<Class<?>, Converter<?>> converterMap = map();
+	private Map<Class<?>, Converter<?>> converterMap = new ConcurrentHashMap<>();
 
 	private static final Converters DEFAULT_CONVERTER = new Converters();
 	/**
 	 * default converter
 	 */
-	private final Converter<?> defaultConveter = new DefaultConverter();
+	private final Converter<?> defaultConverter = new DefaultConverter();
 	/**
 	 */
 	private boolean enumEmptyToNull = false;
@@ -226,6 +225,7 @@ public class Converters implements Serializable {
 
 	protected void setIntervalConverters() {
 		// Interval
+		puts(new IntervalValueConverter(), IntervalValue.class);
 		puts(new IntervalConverter(), Interval.class);
 		puts(new IntervalArrayConverter(this.getConverter(Interval.class)), Interval[].class);
 		//
@@ -378,6 +378,11 @@ public class Converters implements Serializable {
 	}
 
 	/**
+	 * Switches the date-time output formats of this instance to ISO 8601. The
+	 * converters are changed in place, so calling this on {@link #getDefault()}
+	 * affects every user of the shared instance; use {@code new Converters()
+	 * .toIsoDateFormat()} for a local setting.
+	 * 
 	 * @return this
 	 */
 	public Converters toIsoDateFormat() {
@@ -432,14 +437,14 @@ public class Converters implements Serializable {
 				InstantConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.RFC_1123_DATE_TIME, "uuuu-M-d'T'H:m:s.SSSXXXX", "uuuu-M-d H:m:s.SSS XXXX",
 						"uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS",
-						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M-d").setFormat("yyyy-MM-dd HH:mm:ss"));
+						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M-d").setFormat("uuuu-MM-dd HH:mm:ss"));
 		puts(new InstantArrayConverter(this.getConverter(java.time.Instant.class)), java.time.Instant[].class);
 		// LocalDate
 		put(java.time.LocalDate.class,
 				LocalDateConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.RFC_1123_DATE_TIME, "uuuu-M-d'T'H:m:s.SSSXXXX", "uuuu-M-d H:m:s.SSS XXXX",
 						"uuuu-M-d", "uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS",
-						"uuuu-M-d H:m:s", "uuuu-M-d H:m").setFormat("yyyy-MM-dd"));
+						"uuuu-M-d H:m:s", "uuuu-M-d H:m").setFormat("uuuu-MM-dd"));
 		puts(new LocalDateArrayConverter(this.getConverter(java.time.LocalDate.class)), java.time.LocalDate[].class);
 		// LocalDateTime
 		put(java.time.LocalDateTime.class,
@@ -466,13 +471,13 @@ public class Converters implements Serializable {
 				YearMonthConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.RFC_1123_DATE_TIME, "uuuu-M-d'T'H:m:s.SSSXXXX", "uuuu-M-d H:m:s.SSS XXXX",
 						"uuuu-M-d", "uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS",
-						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M").setFormat("yyyy-MM"));
+						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M", "uuuuMM").setFormat("uuuu-MM"));
 		puts(new YearMonthArrayConverter(this.getConverter(java.time.YearMonth.class)), java.time.YearMonth[].class);
 		// Year
 		put(java.time.Year.class, YearConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 				, DateTimeFormatter.RFC_1123_DATE_TIME, "uuuu-M-d'T'H:m:s.SSSXXXX", "uuuu-M-d H:m:s.SSS XXXX",
 				"uuuu-M-d", "uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS",
-				"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M", "uuuu").setFormat("yyyy"));
+				"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M", "uuuu").setFormat("uuuu"));
 		puts(new YearArrayConverter(this.getConverter(java.time.Year.class)), java.time.Year[].class);
 		return zonedDateTimeConverter;
 	}
@@ -560,7 +565,7 @@ public class Converters implements Serializable {
 		@SuppressWarnings("rawtypes")
 		Converter converter = getConverter(clazz);
 		if (converter == null) {
-			converter = this.defaultConveter;
+			converter = this.defaultConverter;
 		}
 		if (src != null && !(src instanceof String)) {
 			if (converter instanceof StringConverter) {
@@ -593,11 +598,11 @@ public class Converters implements Serializable {
 	@SuppressWarnings({ "unchecked" })
 	public <S extends Converter<T>, T> S getConverter(final Class<T> clazz) {
 		if (clazz == null) {
-			return (S) defaultConveter;
+			return (S) defaultConverter;
 		}
 		final Converter<?> converter = getConverterInternal(clazz);
 		if (converter == null) {
-			return (S) defaultConveter;
+			return (S) defaultConverter;
 		}
 		return (S) converter;
 	}
@@ -627,7 +632,7 @@ public class Converters implements Serializable {
 		return (S) converter;
 	}
 
-	private final Set<Class<?>> unsupportedClasses = CommonUtils.set();
+	private final Set<Class<?>> unsupportedClasses = ConcurrentHashMap.newKeySet();
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private EnumConverter<?> createEnumConverter(final Class<?> clazz) {
@@ -645,10 +650,14 @@ public class Converters implements Serializable {
 		if (unsupportedClasses.contains(clazz)) {
 			return null;
 		}
+		// Use the most specific registered type, independent of the map order: a
+		// subclass of Timestamp must get the Timestamp converter, not the Date one.
+		Class<?> converterClass = null;
 		for (final Map.Entry<Class<?>, Converter<?>> entry : converterMap.entrySet()) {
-			if (entry.getKey().isAssignableFrom(clazz)) {
+			final Class<?> key = entry.getKey();
+			if (key.isAssignableFrom(clazz) && isMoreSpecific(key, converterClass)) {
+				converterClass = key;
 				converter = (Converter<T>) entry.getValue();
-				break;
 			}
 		}
 		if (converter != null) {
@@ -657,6 +666,23 @@ public class Converters implements Serializable {
 			unsupportedClasses.add(clazz);
 		}
 		return converter;
+	}
+
+	private static boolean isMoreSpecific(final Class<?> candidate, final Class<?> current) {
+		if (current == null) {
+			return true;
+		}
+		if (current.isAssignableFrom(candidate)) {
+			return true;
+		}
+		if (candidate.isAssignableFrom(current)) {
+			return false;
+		}
+		// unrelated types (for example two interfaces): prefer a class, then the name
+		if (candidate.isInterface() != current.isInterface()) {
+			return !candidate.isInterface();
+		}
+		return candidate.getName().compareTo(current.getName()) < 0;
 	}
 
 	public Map<Class<?>, Converter<?>> getConverterMap() {
@@ -693,7 +719,7 @@ public class Converters implements Serializable {
 		try {
 			put(Class.forName(name), converter);
 		} catch (final ClassNotFoundException e) {
-			throw new RuntimeException(e);
+			throw new ConverterException(e.getMessage(), e);
 		}
 		return this;
 	}
@@ -704,9 +730,10 @@ public class Converters implements Serializable {
 
 	public static Converters getNewBooleanTrueInstance() {
 		final Converters converters = new Converters();
-		final BooleanConverter converter = (BooleanConverter) converters.getConverter(Boolean.class);
-		converter.setTrueString("true").setFalseString("false");
-		converters.puts(converter, Boolean.class, boolean.class);
+		// Keep the separate boolean converter so that boolean.class keeps its false
+		// default; the array converters share these instances.
+		((BooleanConverter) converters.getConverter(Boolean.class)).setTrueString("true").setFalseString("false");
+		((BooleanConverter) converters.getConverter(boolean.class)).setTrueString("true").setFalseString("false");
 		return converters;
 	}
 

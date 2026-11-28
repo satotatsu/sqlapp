@@ -21,6 +21,8 @@ module com.sqlapp.core.phoenix {
 	requires java.xml;
 	requires java.sql;
 	requires com.sqlapp.core;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider
+		with com.sqlapp.data.db.dialect.phoenix.bulk.PhoenixBulkUpsertProvider;
 	exports com.sqlapp.data.db.dialect.phoenix;
 //	exports com.sqlapp.data.db.dialect.phoenix.metadata;
 	exports com.sqlapp.data.db.dialect.phoenix.resolver;

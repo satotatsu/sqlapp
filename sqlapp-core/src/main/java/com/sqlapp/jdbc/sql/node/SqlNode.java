@@ -70,20 +70,20 @@ public class SqlNode extends Node {
 		return true;
 	}
 
-	private Set<ParameterDefinition> parameters;
+	private Set<ParameterDefinition> parameters = CommonUtils.linkedSet();
 
 	/**
 	 * @return the parameters
 	 */
 	public Set<ParameterDefinition> getParameters() {
-		return parameters;
+		return parameters == null ? java.util.Collections.emptySet() : parameters;
 	}
 
 	/**
 	 * @param parameters the parameters to set
 	 */
 	public void setParameters(Set<ParameterDefinition> parameters) {
-		this.parameters = parameters;
+		this.parameters = parameters == null ? CommonUtils.linkedSet() : parameters;
 	}
 
 	/**
@@ -120,7 +120,7 @@ public class SqlNode extends Node {
 	 * @return パラメータ
 	 */
 	public ParameterDefinition getParameterByName(String name) {
-		for (ParameterDefinition def : this.parameters) {
+		for (ParameterDefinition def : getParameters()) {
 			if (name.equals(def.getName())) {
 				return def;
 			}

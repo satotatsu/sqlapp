@@ -93,4 +93,20 @@ public class DialectResolverTest {
 		assertTrue(find);
 	}
 
+	@Test
+	public void testInnovationVersionBoundaries() {
+		var resolver = new MySqlDialectResolver.MySqlVersionResolver();
+		assertEquals(MySql800.class, resolver.getDialect(8, 0, null).getClass());
+		assertEquals(MySql800.class, resolver.getDialect(8, 0, 0).getClass());
+		assertEquals(com.sqlapp.data.db.dialect.mysql.MySql801.class, resolver.getDialect(8, 0, 1).getClass());
+		for (int minor = 1; minor <= 3; minor++) {
+			for (Integer revision : new Integer[] { null, 0, 1 }) {
+				assertEquals(com.sqlapp.data.db.dialect.mysql.MySql8019.class,
+						resolver.getDialect(8, minor, revision).getClass(), "8." + minor + "." + revision);
+			}
+		}
+		assertEquals(MySql840.class, resolver.getDialect(8, 4, null).getClass());
+		assertEquals(MySql900.class, resolver.getDialect(9, 0, null).getClass());
+	}
+
 }

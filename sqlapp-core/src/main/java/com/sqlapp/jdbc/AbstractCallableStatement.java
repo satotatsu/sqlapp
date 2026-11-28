@@ -1235,7 +1235,7 @@ public abstract class AbstractCallableStatement<T extends CallableStatement> ext
 	@Override
 	public void setObject(final String parameterName, final Object x, final java.sql.SQLType targetSqlType,
 			final int scaleOrLength) throws SQLException {
-		nativeObject.setObject(scaleOrLength, x, scaleOrLength);
+		nativeObject.setObject(parameterName, x, targetSqlType, scaleOrLength);
 	}
 
 	@Override

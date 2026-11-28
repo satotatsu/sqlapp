@@ -23,57 +23,61 @@ import java.time.OffsetDateTime;
 
 /**
  * For文の代わりに使用する<code>java.time.OffsetDateTime</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class OffsetDateTimeIterator extends AbstractObjectIterator<OffsetDateTime, Integer>{
+final class OffsetDateTimeIterator extends AbstractObjectIterator<OffsetDateTime, Integer> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start
 	 * @param end
 	 */
-	public OffsetDateTimeIterator(final OffsetDateTime start, final OffsetDateTime end){
-		this(start, end, 3600*24);
+	public OffsetDateTimeIterator(final OffsetDateTime start, final OffsetDateTime end) {
+		this(start, end, 3600 * 24);
 	}
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ(秒単位)
+	 * @param end   終了
+	 * @param step  ステップ(秒単位)
 	 */
-	public OffsetDateTimeIterator(final OffsetDateTime start, final OffsetDateTime end, final Integer step){
+	public OffsetDateTimeIterator(final OffsetDateTime start, final OffsetDateTime end, final Integer step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step>0){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step > 0);
 	}
 
 	@Override
 	protected OffsetDateTime getNext() {
 		return current.plusSeconds(this.step.intValue());
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public OffsetDateTimeIterator clone(){
-		OffsetDateTimeIterator clone=new OffsetDateTimeIterator(this.start, this.end, this.step);
+	public OffsetDateTimeIterator clone() {
+		OffsetDateTimeIterator clone = new OffsetDateTimeIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

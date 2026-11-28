@@ -57,8 +57,9 @@ public final class IntervalYear extends Interval{
     	if (interval==null){
     		return null;
     	}
-    	final IntervalYear result=new IntervalYear(interval.getYears());
-    	if (!interval.isPositive()){
+		final Interval value = interval.toInterval();
+		final IntervalYear result=new IntervalYear(value.getYears());
+		if (!value.isPositive()){
     		result.scale(-1);
     	}
     	return result;

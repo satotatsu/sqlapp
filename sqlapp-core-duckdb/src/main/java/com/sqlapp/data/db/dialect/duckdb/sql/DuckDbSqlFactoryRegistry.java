@@ -27,11 +27,18 @@ public class DuckDbSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	}
 
 	@Override
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+		registerSqlFactory(Sequence.class, com.sqlapp.data.schemas.State.Modified, SqlType.ALTER);
+	}
+
+	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		registerSqlFactory(Table.class, SqlType.CREATE, DuckDbCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, DuckDbAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.MERGE, DuckDbMergeFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT_FOR_APP, DuckDbSelectForAppFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, DuckDbCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, DuckDbTruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ANALYZE, DuckDbAnalyzeTableFactory.class);
@@ -42,6 +49,7 @@ public class DuckDbSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Domain.class, SqlType.DROP, DuckDbDropDomainFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE, DuckDbCreateIndexFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.CREATE, DuckDbCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.ALTER, DuckDbAlterSequenceFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, DuckDbSequenceNextValuesFactory.class);
 		for (final Class<?> type : java.util.List.<Class<?>>of(Table.class, View.class, Column.class, Index.class,
 				Sequence.class, Function.class, Domain.class)) {

@@ -52,26 +52,26 @@ public class URLConverter extends AbstractConverter<URL> {
 			try {
 				return ((URI) value).toURL();
 			} catch (MalformedURLException e) {
-				throw new RuntimeException(e);
+				throw new ConverterException(e.getMessage(), e);
 			}
 		} else if (value instanceof File) {
 			try {
 				return ((File) value).toURI().toURL();
 			} catch (MalformedURLException e) {
-				throw new RuntimeException(e);
+				throw new ConverterException(e.getMessage(), e);
 			}
 		} else if (value instanceof String) {
 			try {
 				URL url = new URI((String) value).toURL();
 				return url;
 			} catch (MalformedURLException | URISyntaxException e) {
-				throw new RuntimeException(e);
+				throw new ConverterException(e.getMessage(), e);
 			}
 		}
 		try {
 			return new URI(value.toString()).toURL();
 		} catch (MalformedURLException | URISyntaxException e) {
-			throw new RuntimeException(e);
+			throw new ConverterException(e.getMessage(), e);
 		}
 	}
 
@@ -93,7 +93,7 @@ public class URLConverter extends AbstractConverter<URL> {
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof URLConverter)) {

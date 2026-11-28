@@ -7,6 +7,8 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
@@ -20,6 +22,8 @@ public abstract class ExecuteMigrationModelsTask extends AbstractDbTask<ExecuteM
 		getModifiedOnly().convention(false);
 		getUnitTestsEnabled().convention(true);
 		getTestOnly().convention(false);
+		getDataTestsEnabled().convention(true);
+		getFullRefresh().convention(false);
 	}
 
 	public void call(final Action<ExecuteMigrationModelsTask> action) {
@@ -34,6 +38,15 @@ public abstract class ExecuteMigrationModelsTask extends AbstractDbTask<ExecuteM
 	@Internal
 	public abstract RegularFileProperty getStateFile();
 
+	/**
+	 * Transfer name mapping with the declared column types of table models,
+	 * written after a complete build. Use it as {@code mappingFile} of the
+	 * transfer from the engine to the target.
+	 */
+	@OutputFile
+	@Optional
+	public abstract RegularFileProperty getTargetMappingFile();
+
 	@Input
 	public abstract Property<Boolean> getModifiedOnly();
 
@@ -43,13 +56,25 @@ public abstract class ExecuteMigrationModelsTask extends AbstractDbTask<ExecuteM
 	@Input
 	public abstract Property<Boolean> getTestOnly();
 
+	/** Run the data tests of the built models after a complete build. */
+	@Input
+	public abstract Property<Boolean> getDataTestsEnabled();
+
+	/** Rebuild incremental models from all rows. */
+	@Input
+	public abstract Property<Boolean> getFullRefresh();
+
 	@Override
 	protected void beforeRun(final ExecuteMigrationModelsCommand command) {
 		command.setConfigurationFile(getConfigurationFile().get().getAsFile());
 		command.setStateFile(getStateFile().isPresent() ? getStateFile().get().getAsFile() : null);
+		command.setTargetMappingFile(
+				getTargetMappingFile().isPresent() ? getTargetMappingFile().get().getAsFile() : null);
 		command.setModifiedOnly(getModifiedOnly().get());
 		command.setUnitTestsEnabled(getUnitTestsEnabled().get());
 		command.setTestOnly(getTestOnly().get());
+		command.setDataTestsEnabled(getDataTestsEnabled().get());
+		command.setFullRefresh(getFullRefresh().get());
 	}
 
 	@Override

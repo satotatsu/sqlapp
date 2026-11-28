@@ -168,12 +168,13 @@ public class SqlServer2000 extends Dialect {
 		});
 		// 行バージョン型
 		getDbDataTypes().addRowVersion("TIMESTAMP", type -> {
+			type.setColumnTypeMatcher("TIMESTAMP", "ROWVERSION");
 			type.setLiteral("0x", "");
 		});
 		// SYSNAME型
 		getDbDataTypes().addSqlIdentifierType("SYSNAME");
 		// ANYDATA
-		getDbDataTypes().addAnyData("VARIANT");
+		getDbDataTypes().addAnyData("SQL_VARIANT");
 		// 推奨される型の登録
 		getDbDataTypes().registerRecommend(CHAR, NVARCHAR);
 		getDbDataTypes().registerRecommend(NCHAR, NVARCHAR);
@@ -305,6 +306,11 @@ public class SqlServer2000 extends Dialect {
 	@Override
 	public boolean supportsDefaultValueFunction() {
 		return true;
+	}
+
+	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new SqlServerDefaultExpressionSupport(this);
 	}
 
 	/**

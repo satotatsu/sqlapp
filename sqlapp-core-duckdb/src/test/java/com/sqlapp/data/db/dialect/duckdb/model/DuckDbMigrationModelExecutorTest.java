@@ -167,4 +167,125 @@ class DuckDbMigrationModelExecutorTest {
 			assertEquals(List.of(List.of(2L)), query(connection, "SELECT count(*) FROM customer"));
 		}
 	}
+
+	@Test
+	void rejectsValuesThatTheDeclaredTypeWouldChange() throws Exception {
+		final var columns = List.of(
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("ID",
+						com.sqlapp.data.db.datatype.DataType.INT, null, null, false),
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("AMOUNT",
+						com.sqlapp.data.db.datatype.DataType.DECIMAL, 12L, 2, false),
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("DAY",
+						com.sqlapp.data.db.datatype.DataType.DATE, null, null, false));
+		final MigrationModel model = new MigrationModel("payment", null, "unused", Materialization.TABLE, Map.of(),
+				columns, List.of("ID"));
+		try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
+			final MigrationModelExecutor executor = MigrationModelExecutorResolver.resolve(connection);
+			connection.setAutoCommit(false);
+			// Lossless conversions are accepted: wider integers, fewer fraction digits,
+			// dates as text.
+			executor.materialize(connection, model, "SELECT 1::BIGINT AS ID, 1.5::DOUBLE AS AMOUNT,"
+					+ " '2026-11-20' AS DAY UNION ALL SELECT 2, 3.10, NULL");
+			connection.commit();
+			assertEquals(
+					List.of(Arrays.asList(1, new java.math.BigDecimal("1.50"), "2026-11-20"),
+							Arrays.asList(2, new java.math.BigDecimal("3.10"), null)),
+					query(connection, "SELECT ID, AMOUNT, CAST(DAY AS VARCHAR) FROM payment ORDER BY ID"));
+
+			final Map<String, String> changing = Map.of( //
+					"SELECT 1 AS ID, 12.345 AS AMOUNT, NULL::DATE AS DAY",
+					"AMOUNT (1 rows, DECIMAL(5,3) to DECIMAL(12,2))",
+					"SELECT 1 AS ID, 0.1::DOUBLE + 0.2::DOUBLE AS AMOUNT, NULL::DATE AS DAY", "AMOUNT (1 rows",
+					"SELECT 1 AS ID, 1e11::DOUBLE AS AMOUNT, NULL::DATE AS DAY", "AMOUNT (1 rows", // overflow
+					"SELECT 1 AS ID, 1 AS AMOUNT, TIMESTAMP '2026-11-20 10:00:00' AS DAY", "DAY (1 rows",
+					"SELECT 1 AS ID, 1 AS AMOUNT, '20261120' AS DAY", "DAY (1 rows", // not a date
+					"SELECT 1.5 AS ID, 1 AS AMOUNT, NULL::DATE AS DAY", "ID (1 rows",
+					"SELECT 3000000000 AS ID, 1 AS AMOUNT, NULL::DATE AS DAY", "ID (1 rows");
+			for (final Map.Entry<String, String> entry : changing.entrySet()) {
+				final var e = assertThrows(IllegalArgumentException.class,
+						() -> executor.materialize(connection, model, entry.getKey()), entry.getKey());
+				assertTrue(e.getMessage().contains(entry.getValue()), e.getMessage());
+				connection.rollback();
+			}
+			// Values are not written to the message.
+			final var rounded = assertThrows(IllegalArgumentException.class, () -> executor.materialize(connection,
+					model, "SELECT 1 AS ID, 12.345 AS AMOUNT, NULL::DATE AS DAY"));
+			assertTrue(!rounded.getMessage().contains("12.345") && rounded.getMessage().contains("ROUND"),
+					rounded.getMessage());
+			connection.rollback();
+			// The committed table is unchanged.
+			assertEquals(List.of(List.of(2L)), query(connection, "SELECT count(*) FROM payment"));
+
+			// An explicit conversion in the model SQL is accepted.
+			executor.materialize(connection, model,
+					"SELECT 1 AS ID, ROUND(12.345, 2) AS AMOUNT, CAST(TIMESTAMP '2026-11-20 10:00:00' AS DATE) AS DAY");
+			connection.commit();
+			assertEquals(List.of(Arrays.asList(1, new java.math.BigDecimal("12.35"), "2026-11-20")),
+					query(connection, "SELECT ID, AMOUNT, CAST(DAY AS VARCHAR) FROM payment"));
+		}
+	}
+
+	@Test
+	void runsTheModelQueryOnceForCheckAndInsert() throws Exception {
+		final var columns = List.of(new com.sqlapp.data.schemas.migration.MigrationModelColumn("ID",
+				com.sqlapp.data.db.datatype.DataType.INT, null, null, false));
+		final MigrationModel model = new MigrationModel("numbered", null, "unused", Materialization.TABLE, Map.of(),
+				columns, List.of());
+		try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
+			final MigrationModelExecutor executor = MigrationModelExecutorResolver.resolve(connection);
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE SEQUENCE numbers");
+			}
+			connection.setAutoCommit(false);
+			executor.materialize(connection, model, "SELECT nextval('numbers') AS ID FROM range(3)");
+			connection.commit();
+			assertEquals(List.of(List.of(1), List.of(2), List.of(3)),
+					query(connection, "SELECT ID FROM numbered ORDER BY ID"));
+			assertEquals(List.of(List.of(3L)), query(connection, "SELECT currval('numbers')"));
+		}
+	}
+
+	@Test
+	void mergesIncrementalRowsAndRecordsTheFingerprint() throws Exception {
+		final var columns = List.of(
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("ID",
+						com.sqlapp.data.db.datatype.DataType.INT, null, null, false),
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("NAME",
+						com.sqlapp.data.db.datatype.DataType.VARCHAR, 10L, null, false));
+		final MigrationModel model = new MigrationModel("customer", null, "unused", Materialization.INCREMENTAL,
+				Map.of(), columns, List.of("ID"));
+		try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
+			final MigrationModelExecutor executor = MigrationModelExecutorResolver.resolve(connection);
+			assertEquals(new MigrationModelExecutor.IncrementalState(false, null),
+					executor.incrementalState(connection, model));
+			connection.setAutoCommit(false);
+			executor.materializeIncremental(connection, model, "SELECT 1 AS ID, 'a' AS NAME UNION ALL SELECT 2, 'b'",
+					false, "sha256:first");
+			connection.commit();
+			assertEquals(new MigrationModelExecutor.IncrementalState(true, "sha256:first"),
+					executor.incrementalState(connection, model));
+			// isIncremental selects the rows to merge: one update, one insert.
+			executor.materializeIncremental(connection, model,
+					"SELECT * FROM (SELECT 2 AS ID, 'B' AS NAME UNION ALL SELECT 3, 'c')"
+							+ " /*if !isIncremental*/ WHERE FALSE /*end*/",
+					true, "sha256:first");
+			connection.commit();
+			assertEquals(List.of(Arrays.asList(1, "a"), Arrays.asList(2, "B"), Arrays.asList(3, "c")),
+					query(connection, "SELECT * FROM customer ORDER BY ID"));
+			final var e = assertThrows(IllegalArgumentException.class,
+					() -> executor.materializeIncremental(connection, model,
+							"SELECT 4 AS ID, 'x' AS NAME UNION ALL SELECT 4, 'y' UNION ALL SELECT NULL, 'z'", true,
+							"sha256:first"));
+			assertTrue(e.getMessage().contains("1 rows with a NULL key, 1 duplicated keys"), e.getMessage());
+			connection.rollback();
+			assertEquals(List.of(List.of(3L)), query(connection, "SELECT count(*) FROM customer"));
+			// A table without a recorded fingerprint, or a view, has none to compare.
+			try (var statement = connection.createStatement()) {
+				statement.execute("COMMENT ON TABLE customer IS 'other'");
+			}
+			connection.commit();
+			assertEquals(new MigrationModelExecutor.IncrementalState(true, null),
+					executor.incrementalState(connection, model));
+		}
+	}
 }

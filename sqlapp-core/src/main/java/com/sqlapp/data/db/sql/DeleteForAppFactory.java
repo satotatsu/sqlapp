@@ -31,6 +31,11 @@ import com.sqlapp.util.AbstractSqlBuilder;
 public class DeleteForAppFactory extends AbstractDeleteTableFactory<AbstractSqlBuilder<?>> {
 
 	@Override
+	protected boolean requiresKeyColumns() {
+		return false;
+	}
+
+	@Override
 	protected SqlType getSqlType() {
 		return SqlType.DELETE_FOR_APP;
 	}

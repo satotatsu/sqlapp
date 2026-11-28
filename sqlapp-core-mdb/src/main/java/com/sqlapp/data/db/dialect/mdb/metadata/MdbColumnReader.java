@@ -8,8 +8,10 @@ package com.sqlapp.data.db.dialect.mdb.metadata;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcColumnReader;
 import com.sqlapp.data.db.dialect.mdb.util.MdbColumnSupport;
@@ -29,22 +31,39 @@ public class MdbColumnReader extends JdbcColumnReader {
 
 	@Override
 	protected List<Column> doGetAll(final Connection connection, final ParametersContext context,
-			final ProductVersionInfo productVersionInfo) {
-		final List<Column> columns = super.doGetAll(connection, context, productVersionInfo);
+			final ProductVersionInfo version) {
 		try {
 			final Database database = MdbMetadataSupport.database(connection);
-			if (database == null) {
-				return columns;
-			}
-			for (final Column column : columns) {
-				final io.github.spannm.jackcess.Table table = database.getTable(column.getTableName());
-				if (table != null && table.getColumn(column.getName()) != null) {
-					MdbColumnSupport.enrich(column, table.getColumn(column.getName()));
-				}
-			}
+			final List<Column> columns = new ArrayList<>();
+			MdbMetadataSupport.withDatabase(connection, database,
+					() -> columns.addAll(super.doGetAll(connection, context, version)));
 			return columns;
 		} catch (final SQLException | IOException e) {
 			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	protected void completeColumn(final Connection connection, final ExResultSet rs, final Column column)
+			throws SQLException {
+		try {
+			final Database database = MdbMetadataSupport.database(connection);
+			if (database == null) {
+				return;
+			}
+			final io.github.spannm.jackcess.Table table = database.getTable(column.getTableName());
+			final var source = table == null ? null : table.getColumn(column.getName());
+			if (source != null) {
+				// UCanAccess reports its HSQLDB mirror type; preserve the physical Access type.
+				final DataType dataType = MdbColumnSupport.dataType(source.getType());
+				if (dataType != DataType.OTHER && !source.getType().isTextual()) {
+					column.setDataType(dataType);
+				}
+				MdbColumnSupport.enrich(column, source);
+			}
+		} catch (final IOException e) {
+			throw new SQLException(
+					"Cannot read Access column metadata for " + column.getTableName() + "." + column.getName(), e);
 		}
 	}
 

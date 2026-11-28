@@ -20,23 +20,31 @@
 package com.sqlapp.util.eval.script;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import org.junit.jupiter.api.BeforeEach;
+import javax.script.ScriptEngineManager;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.parameter.ParametersContext;
 
 public class CachedScriptEvaluatorTest {
 
-	private CachedScriptEvaluator cs = null;
-
-	@BeforeEach
-	public void setUp() throws Exception {
-		cs = new CachedScriptEvaluator();
+	@Test
+	void rejectsMissingScriptEngineAtConstruction() {
+		String name = "sqlapp-missing-test-engine";
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new CachedScriptEvaluator(name));
+		assertTrue(exception.getMessage().contains(name));
+		assertTrue(exception.getMessage().contains("JSR-223"));
 	}
 
 	@Test
 	public void testGetEvalExecutor() {
+		assumeTrue(new ScriptEngineManager().getEngineByName("JavaScript") != null,
+				"JavaScript engine is not installed");
+		CachedScriptEvaluator cs = new CachedScriptEvaluator();
 		ParametersContext context = new ParametersContext();
 		context.put("a", 1);
 		if (cs.getEngine() != null) {

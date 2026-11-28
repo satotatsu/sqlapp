@@ -19,14 +19,12 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * 無限の直線型
  *
  */
-public final class Line extends AbstractMultiPoint<Point> implements ToUpperDimensionType<Line3D>{
+public final class Line extends AbstractMultiPoint<Point>{
 
     /**
 	 * serialVersionUID
@@ -48,9 +46,7 @@ public final class Line extends AbstractMultiPoint<Point> implements ToUpperDime
      * @param y2 終了Y座標
      */
     public Line(double x1, double y1, double x2, double y2){
-    	super();
-        this.points[0]=newPoint(x1, y1);
-        this.points[1]=newPoint(x2, y2);
+    	super(x1, y1, x2, y2);
     }
 
     
@@ -58,6 +54,54 @@ public final class Line extends AbstractMultiPoint<Point> implements ToUpperDime
      */
     public Line(){
     }
+
+	/**
+	 * 直線の方程式 Ax + By + C = 0 の係数から、直線上の異なる2点を持つ Line を作成します。
+	 * <p>
+	 * 係数の大きさに応じて軸と点の間隔を選択し、除算のオーバーフローや丸めによる傾きの消失を避けます。
+	 * 2点で表すため、元の係数の大きさ・符号は保存されず、直線としての意味のみ保持されます。
+	 * </p>
+	 * 
+	 * @param a
+	 *            Aの係数
+	 * @param b
+	 *            Bの係数
+	 * @param c
+	 *            Cの係数
+	 * @throws IllegalArgumentException
+	 *             係数が有限でない場合、A と B がともに 0 の場合、または有限の2点で表せない場合
+	 */
+	public static Line fromCoefficients(final double a, final double b, final double c) {
+		if (!Double.isFinite(a) || !Double.isFinite(b) || !Double.isFinite(c) || (a == 0d && b == 0d)) {
+			throw new IllegalArgumentException("Invalid line coefficients: coefficients must be finite and A and B cannot both be zero. {" + a + ","
+					+ b + "," + c + "}");
+		}
+		// Solve for the coordinate with the larger coefficient, so |slope| <= 1.
+		final boolean solveY = Math.abs(b) >= Math.abs(a);
+		final double divisor = solveY ? b : a;
+		final double slope = -(solveY ? a : b) / divisor;
+		final double intercept = -c / divisor + 0d;
+		if (!Double.isFinite(intercept) || (slope == 0d && (solveY ? a : b) != 0d)) {
+			throw new IllegalArgumentException("Line coefficients cannot be represented by finite points.");
+		}
+		// Use a larger independent coordinate when a unit step would lose the slope.
+		double step = slope == 0d ? 1d : Math.max(1d, Math.abs(intercept));
+		final double sign = (slope > 0d) == (intercept > 0d) && intercept != 0d ? -1d : 1d;
+		double signedStep = Math.copySign(step, sign);
+		double end = Math.fma(slope, signedStep, intercept) + 0d;
+		if (slope != 0d && end == intercept) {
+			// Even a very small slope can be represented if the independent
+			// coordinate is increased enough to move several ULPs at the intercept.
+			step = (Math.ulp(intercept) / Math.abs(slope)) * 4d;
+			signedStep = Math.copySign(step, sign);
+			end = Math.fma(slope, signedStep, intercept) + 0d;
+		}
+		if (!Double.isFinite(signedStep) || !Double.isFinite(end) || (slope != 0d && end == intercept)) {
+			throw new IllegalArgumentException("Line coefficients cannot be represented by distinct finite points.");
+		}
+		return solveY ? new Line(0d, intercept, signedStep, end)
+				: new Line(intercept, 0d, end, signedStep);
+	}
     
 	/* (non-Javadoc)
 	 * @see com.sqlapp.data.geometric.AbstractGeometry#equals(java.lang.Object)
@@ -99,29 +143,50 @@ public final class Line extends AbstractMultiPoint<Point> implements ToUpperDime
 		return 2;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.geometric.ToUpperDimensionType#toUpperDimension()
-	 */
-	@Override
-	public Line3D toUpperDimension() {
-		Point3D[] points=new Point3D[this.points.length];
-		for(int i=0;i<points.length;i++){
-			points[i]=this.points[i].toUpperDimension();
-		}
-		return new Line3D(points[0], points[1]);
-	}
 	
 	/* (non-Javadoc)
 	 * @see com.sqlapp.data.geometric.AbstractGeometry#parse(java.lang.String)
 	 */
 	@Override
 	public Line setValue(String text) {
-		text=text.replace("(", "").replace(")", "");
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
-		this.setPoint(vals);
+		if (GeometryTextParser.isCoefficientForm(text)) {
+			final double[] coefficients = GeometryTextParser.parseCoefficients(text, "Line");
+			final Line line = fromCoefficients(coefficients[0], coefficients[1], coefficients[2]);
+			this.points = line.points;
+			return this;
+		}
+		this.setPointText(text, true);
 		return this;
 	}
+
+	/**
+	 * 2点のみ設定できます。
+	 */
+	@Override
+	protected int getMinPointSize() {
+		return 2;
+	}
+
+	/**
+	 * 2点のみ設定できます。
+	 */
+	@Override
+	protected int getMaxPointSize() {
+		return 2;
+	}
+
+	/**
+	 * 2点の座標が同じ場合は直線を定められないため拒否します。
+	 */
+	@Override
+	protected void validatePoints(final Point[] points) {
+		super.validatePoints(points);
+		if (points[0].equals(points[1])) {
+			throw new IllegalArgumentException("Line requires two distinct points. points=" + points[0] + ","
+					+ points[1]);
+		}
+	}
+
 
 	/**
 	 * Lseg型に変換します

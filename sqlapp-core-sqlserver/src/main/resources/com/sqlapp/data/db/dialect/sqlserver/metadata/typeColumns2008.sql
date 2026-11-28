@@ -62,8 +62,10 @@ LEFT OUTER JOIN sys.default_constraints dc
   ON (o.object_id = dc.parent_object_id
   AND c.column_Id = dc.parent_column_id)
 LEFT OUTER JOIN sys.extended_properties ex
-  ON (o.object_id = ex.major_id
-  AND c.column_Id = ex.minor_id)
+  ON (t.user_type_id = ex.major_id
+  AND c.column_Id = ex.minor_id
+  AND ex.class = 8
+  AND ex.name = N'MS_Description')
 WHERE 1=1
 --  AND t.is_user_defined=1
   AND t.is_table_type=1

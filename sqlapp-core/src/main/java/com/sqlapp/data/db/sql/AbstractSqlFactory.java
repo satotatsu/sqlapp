@@ -48,6 +48,25 @@ import com.sqlapp.util.CommonUtils;
  * @param <T>
  */
 public abstract class AbstractSqlFactory<T, S extends AbstractSqlBuilder<?>> implements SqlFactory<T> {
+	protected boolean hasJdbcReadExpression(Column column) {
+		String quoted = createSqlBuilder(getDialect()).name(column).toString();
+		var type = getDialect().getDbDataType(column);
+		return type != null && !quoted.equals(type.getJdbcTypeHandler().readExpression(quoted, column));
+	}
+
+	protected void addJdbcReadColumn(Column column, String prefix, S builder) {
+		if (!getOptions().isJdbcRead()) {
+			if (prefix == null) builder.name(column); else builder.name(prefix, column);
+			return;
+		}
+		var identifier = createSqlBuilder(getDialect());
+		if (prefix == null) identifier.name(column); else identifier.name(prefix, column);
+		String quoted = identifier.toString();
+		var type = getDialect().getDbDataType(column);
+		String expression = type == null ? quoted : type.getJdbcTypeHandler().readExpression(quoted, column);
+		builder._add(expression);
+		if (!expression.equals(quoted)) builder.space().as().space().name(column);
+	}
 	/**
 	 * Operationファクトリ
 	 */
@@ -644,6 +663,12 @@ public abstract class AbstractSqlFactory<T, S extends AbstractSqlBuilder<?>> imp
 	}
 
 	protected String getColumnParameterExpression(final Column column, final String _default) {
+		final String expression = getUnconvertedColumnParameterExpression(column, _default);
+		final var type = getDialect().getDbDataType(column);
+		return type == null ? expression : type.getJdbcTypeHandler().writeExpression(expression, column);
+	}
+
+	private String getUnconvertedColumnParameterExpression(final Column column, final String _default) {
 		if (this.getOptions() != null) {
 			if (this.getTableOptions() != null) {
 				if (this.getTableOptions().getParameterExpression() != null) {

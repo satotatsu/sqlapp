@@ -20,9 +20,10 @@ public class PhoenixSequenceNextValuesFactory extends SimpleSqlFactory<Sequence,
 
 	@Override
 	public List<SqlOperation> createSql(final Sequence obj) {
+		PhoenixCreateSequenceFactory.requireName(obj);
 		final PhoenixSqlBuilder builder = createSqlBuilder();
 		builder.select().next().space()._add(getColumnParameterExpression(CONTEXT, "1"));
-		builder.values().for_().name(obj);
+		builder.values().for_().name(obj, getOptions().isDecorateSchemaName());
 		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, SqlType.SEQUENCE_NEXT_VALUES, obj);
 		return sqlList;

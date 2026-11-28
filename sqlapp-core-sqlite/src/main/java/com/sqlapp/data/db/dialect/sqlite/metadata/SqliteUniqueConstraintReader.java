@@ -29,9 +29,8 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 		List<UniqueConstraint> result = new ArrayList<>();
 		// sqlite_master is available on legacy SQLite; no table-valued PRAGMAs are
 		// needed.
-		try (var statement = SqliteMetadataQueries.prepare(connection, context, "m.name", "", "");
-				var rs = statement.executeQuery()) {
-			while (rs.next()) {
+		try {
+			SqliteMetadataQueries.forEach(connection, context, "m.name", "", "", rs -> {
 				String table = rs.getString("table_name");
 				int sequence = 0;
 				for (String fragment : SqliteColumnReader.splitColumnDefinitions(rs.getString("table_sql"))) {
@@ -43,6 +42,9 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 						constraint.setCatalogName(getCatalogName(context));
 						constraint.setSchemaName(getSchemaName(context));
 						constraint.setTableName(table);
+						if (key.name() == null && !key.primary())
+							constraint.getSpecifics()
+									.put(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.UNIQUE_UNNAMED, "true");
 						if (key.conflict() != null)
 							constraint.getSpecifics().put("sqlite.onConflict", key.conflict());
 						for (int i = 0; i < key.columns().size(); i++) {
@@ -55,7 +57,7 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 						result.add(constraint);
 					}
 				}
-			}
+			});
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}

@@ -9,14 +9,11 @@ import static com.sqlapp.util.CommonUtils.list;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.datatype.DataType;
@@ -28,9 +25,6 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 
 /** Reads SQLite columns from table-valued PRAGMA metadata. */
 public class SqliteColumnReader extends ColumnReader {
-	private static final Pattern SIZE_PATTERN = Pattern
-			.compile("^\\s*([^()]+?)(?:\\s*\\(\\s*(\\d+)(?:\\s*,\\s*(\\d+))?\\s*\\))?\\s*$");
-
 	public SqliteColumnReader(final Dialect dialect) {
 		super(dialect);
 	}
@@ -38,14 +32,47 @@ public class SqliteColumnReader extends ColumnReader {
 	@Override
 	protected List<Column> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
+		List<Column> result;
 		if (SqliteIndexReader.supportsBulkIndexes(productVersionInfo)) {
-			return readBulkColumns(connection, context, productVersionInfo);
+			result = readBulkColumns(connection, context, productVersionInfo);
+		} else {
+			result = readColumns(connection, context, "table_xinfo");
+			if (result.isEmpty()) {
+				result = readColumns(connection, context, "table_info");
+			}
 		}
-		List<Column> result = readColumns(connection, context, "table_xinfo");
-		if (result.isEmpty()) {
-			result = readColumns(connection, context, "table_info");
-		}
+		readAutoIncrementNextValues(connection, context, result);
 		return result;
+	}
+
+	/**
+	 * AUTOINCREMENT keys never reuse a value: sqlite_sequence holds the largest key
+	 * ever issued, so the next value is seq + 1. A table without a row has never
+	 * issued a key and stays unknown. Plain rowid aliases follow MAX(rowid) and
+	 * have no counter to read.
+	 */
+	private void readAutoIncrementNextValues(Connection connection, ParametersContext context, List<Column> columns) {
+		Map<String, Column> autoIncrements = new java.util.HashMap<>();
+		for (Column column : columns) {
+			if (column.isIdentity() && "true".equals(column.getSpecifics().get("sqlite.autoincrement")))
+				autoIncrements.put(column.getTableName(), column);
+		}
+		if (autoIncrements.isEmpty())
+			return;
+		String schema = SqliteMetadataQueries.schemaName(context);
+		try (var statement = connection.createStatement();
+				var rs = statement.executeQuery(
+						"SELECT name, seq FROM \"" + schema.replace("\"", "\"\"") + "\".sqlite_sequence")) {
+			while (rs.next()) {
+				Column column = autoIncrements.get(rs.getString(1));
+				long seq = rs.getLong(2);
+				if (column != null && !rs.wasNull() && seq < Long.MAX_VALUE)
+					column.setIdentityLastValue(seq + 1);
+			}
+		} catch (SQLException e) {
+			// sqlite_sequence is created with the first AUTOINCREMENT table; without
+			// it every counter is unused.
+		}
 	}
 
 	private List<Column> readBulkColumns(Connection connection, ParametersContext context, ProductVersionInfo version) {
@@ -53,40 +80,42 @@ public class SqliteColumnReader extends ColumnReader {
 		String pragma = version.getMajorVersion() > 3 || version.getMinorVersion() >= 26 ? "table_xinfo" : "table_info";
 		Map<String, List<Column>> primaryKeys = new java.util.LinkedHashMap<>();
 		Map<String, String> definitions = new java.util.LinkedHashMap<>();
-		try (var statement = SqliteMetadataQueries.prepare(connection, context, "m.type AS object_type, p.*",
-				"JOIN pragma_" + pragma + "(m.name, ?) p", ", p.cid", true); var rs = statement.executeQuery()) {
-			while (rs.next()) {
-				String table = rs.getString("table_name");
-				String definition = rs.getString("table_sql");
-				definitions.put(table, definition);
-				Column column = new Column(rs.getString("name"));
-				column.setDialect(getDialect());
-				column.setCatalogName(getCatalogName(context));
-				column.setSchemaName(getSchemaName(context));
-				column.setTableName(table);
-				splitColumnDefinitions(definition).stream()
-						.filter(item -> Objects.equals(column.getName(), readIdentifier(item))).findFirst()
-						.ifPresent(item -> setColumnDeclaration(column, item));
-				setDataType(column, rs.getString("type"));
-				setViewColumnType(column, "view".equals(rs.getString("object_type")));
-				setStrictAnyType(column, definition);
-				setVirtualColumnType(column, definition);
-				int pk = rs.getInt("pk");
-				column.setNullable(rs.getInt("notnull") == 0);
-				column.setDefaultValue(rs.getString("dflt_value"));
-				if (pk > 0)
-					primaryKeys.computeIfAbsent(table, key -> new java.util.ArrayList<>()).add(column);
-				int hidden = pragma.equals("table_xinfo") ? rs.getInt("hidden") : 0;
-				column.setHidden(hidden == 1);
-				column.setFormulaPersisted(hidden == 3);
-				if (hidden == 2 || hidden == 3) {
-					splitColumnDefinitions(definition).stream()
-							.filter(item -> Objects.equals(column.getName(), readIdentifier(item)))
-							.map(SqliteColumnReader::extractFormula).filter(Objects::nonNull).findFirst()
-							.ifPresent(column::setFormula);
-				}
-				result.add(column);
-			}
+		// Parse each CREATE statement once, not once per column.
+		Map<String, Map<String, String>> fragments = new java.util.HashMap<>();
+		try {
+			SqliteMetadataQueries.forEach(connection, context, "m.type AS object_type, p.*",
+					"JOIN pragma_" + pragma + "(m.name, ?) p", ", p.cid", true, rs -> {
+						String table = rs.getString("table_name");
+						String definition = rs.getString("table_sql");
+						definitions.put(table, definition);
+						Column column = new Column(rs.getString("name"));
+						column.setDialect(getDialect());
+						column.setCatalogName(getCatalogName(context));
+						column.setSchemaName(getSchemaName(context));
+						column.setTableName(table);
+						String fragment = fragments.computeIfAbsent(table, key -> columnFragments(definition))
+								.get(column.getName());
+						if (fragment != null)
+							setColumnDeclaration(column, fragment);
+						setDataType(column, rs.getString("type"));
+						setViewColumnType(column, "view".equals(rs.getString("object_type")));
+						setStrictAnyType(column, definition);
+						setVirtualColumnType(column, definition);
+						int pk = rs.getInt("pk");
+						column.setNullable(rs.getInt("notnull") == 0);
+						column.setDefaultValue(rs.getString("dflt_value"));
+						if (pk > 0)
+							primaryKeys.computeIfAbsent(table, key -> new java.util.ArrayList<>()).add(column);
+						int hidden = pragma.equals("table_xinfo") ? rs.getInt("hidden") : 0;
+						column.setHidden(hidden == 1);
+						column.setFormulaPersisted(hidden == 3);
+						if ((hidden == 2 || hidden == 3) && fragment != null) {
+							String formula = extractFormula(fragment);
+							if (formula != null)
+								column.setFormula(formula);
+						}
+						result.add(column);
+					});
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
@@ -95,6 +124,17 @@ public class SqliteColumnReader extends ColumnReader {
 					.equalsIgnoreCase(keys.get(0).getSpecifics().getOrDefault("sqlite.declaredType", "").trim()))
 				setPrimaryKeyDetails(keys.get(0), definitions.get(table));
 		});
+		return result;
+	}
+
+	/**
+	 * Column fragments by name. Column definitions precede table constraints, so
+	 * the first fragment for a name is its column definition.
+	 */
+	private static Map<String, String> columnFragments(String definition) {
+		Map<String, String> result = new java.util.HashMap<>();
+		for (String item : splitColumnDefinitions(definition))
+			result.putIfAbsent(readIdentifier(item), item);
 		return result;
 	}
 
@@ -328,41 +368,7 @@ public class SqliteColumnReader extends ColumnReader {
 			column.getSpecifics().put("sqlite.declaredType.empty", "true");
 		else
 			column.getSpecifics().put("sqlite.declaredType", typeName);
-		final Matcher matcher = SIZE_PATTERN.matcher(typeName);
-		final String baseType = matcher.matches() ? matcher.group(1).trim() : typeName;
-		final Long precision = matcher.matches() && matcher.group(2) != null ? Long.valueOf(matcher.group(2)) : null;
-		final Integer scale = matcher.matches() && matcher.group(3) != null ? Integer.valueOf(matcher.group(3)) : null;
-		int sqlType = toSqlType(baseType);
-		// Ordinary ANY retains NUMERIC affinity; only STRICT ANY is dynamic.
-		getDialect().setDbType(sqlType, "ANY".equalsIgnoreCase(baseType) ? "NUMERIC" : baseType, precision, scale,
-				column);
-		// SQLite accepts arbitrary declarations; map unregistered names by affinity
-		// for JDBC binding while sqlite.declaredType preserves executable source DDL.
-		if (column.getDataType() == null || column.getDataType().isOther()) {
-			column.setDataTypeName(null);
-			column.setDataType(DataType.valueOf(sqlType));
-			if (precision != null)
-				column.setLength(precision);
-			if (scale != null)
-				column.setScale(scale);
-		}
-	}
-
-	private int toSqlType(final String declaredType) {
-		final String type = declaredType.toUpperCase(Locale.ROOT);
-		if (type.contains("INT")) {
-			return Types.BIGINT;
-		}
-		if (type.contains("CHAR") || type.contains("CLOB") || type.contains("TEXT")) {
-			return Types.VARCHAR;
-		}
-		if (type.contains("BLOB") || type.isEmpty()) {
-			return Types.BLOB;
-		}
-		if (type.contains("REAL") || type.contains("FLOA") || type.contains("DOUB")) {
-			return Types.DOUBLE;
-		}
-		return Types.NUMERIC;
+		SqliteDdl.applyDeclaredType(getDialect(), column, typeName);
 	}
 
 	private String quoteIdentifier(final String value) {

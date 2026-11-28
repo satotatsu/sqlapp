@@ -38,8 +38,7 @@ class EdgeUtilsTest {
 
 		assertEquals(TableSvgCreator.HEADER_HEIGHT + TableSvgCreator.ROW_HEIGHT / 2.0,
 				EdgeUtils.calulucateY(tableNode, List.of(table.getColumns().get(0))));
-		assertEquals(TableSvgCreator.HEADER_HEIGHT + TableSvgCreator.ROW_HEIGHT * 4
-				+ TableSvgCreator.ROW_HEIGHT / 2.0,
+		assertEquals(TableSvgCreator.HEADER_HEIGHT + TableSvgCreator.ROW_HEIGHT * 4 + TableSvgCreator.ROW_HEIGHT / 2.0,
 				EdgeUtils.calulucateY(tableNode, List.of(table.getColumns().get(4))));
 	}
 
@@ -54,12 +53,10 @@ class EdgeUtilsTest {
 		double fifthRowCenter = TableSvgCreator.HEADER_HEIGHT + TableSvgCreator.ROW_HEIGHT * 4
 				+ TableSvgCreator.ROW_HEIGHT / 2.0;
 
-		assertEquals(fifthRowCenter,
-				EdgeUtils.calulucateY(tableNode, List.of(new Column("COLUMN_4"))));
+		assertEquals(fifthRowCenter, EdgeUtils.calulucateY(tableNode, List.of(new Column("COLUMN_4"))));
 
 		ForeignKeyConstraint foreignKey = new ForeignKeyConstraint("FK_TEST");
 		foreignKey.getRelatedColumns().add("COLUMN_4");
-		assertEquals(fifthRowCenter,
-				EdgeUtils.calulucateY(tableNode, foreignKey.getRelatedColumns()));
+		assertEquals(fifthRowCenter, EdgeUtils.calulucateY(tableNode, foreignKey.getRelatedColumns()));
 	}
 }

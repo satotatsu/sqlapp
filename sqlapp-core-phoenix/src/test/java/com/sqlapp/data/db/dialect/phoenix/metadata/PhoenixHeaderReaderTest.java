@@ -11,6 +11,37 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.*;
 
 class PhoenixHeaderReaderTest {
+	@Test
+	void validatesOptionalBooleanHeadersWithoutCoercion() throws Exception {
+		for (boolean views : List.of(false, true)) {
+			for (String field : List.of("IMMUTABLE_ROWS", "MULTI_TENANT", "TRANSACTIONAL")) {
+				for (String value : Arrays.asList(null, "true", "FALSE", "TrUe", "", "invalid", "1", " true ")) {
+					final var values = row();
+					values.put(field, value);
+					final var jdbc = new PhoenixColumnReaderTest.Jdbc(List.of(values), "getTables");
+					if (value == null || value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) {
+						final var header = PhoenixJdbcHeaders
+								.read(jdbc.connection, null, null, null, views, new ReaderOptions()).get(0);
+						final Table restored = SchemaUtils.readXml(new java.io.StringReader(header.asXml()));
+						final String key = switch (field) {
+						case "IMMUTABLE_ROWS" -> "phoenix.immutableRows";
+						case "MULTI_TENANT" -> "phoenix.multiTenant";
+						default -> "phoenix.transactional";
+						};
+						assertEquals(value == null ? null : Boolean.valueOf(value).toString(),
+								restored.getSpecifics().get(key));
+					} else {
+						final var error = assertThrows(IllegalStateException.class, () -> PhoenixJdbcHeaders
+								.read(jdbc.connection, null, null, null, views, new ReaderOptions()));
+						assertTrue(error.getMessage().contains(field));
+					}
+					assertEquals(1, jdbc.queries);
+					assertTrue(jdbc.closed);
+				}
+			}
+		}
+	}
+
 	private Map<String, Object> row() {
 		final var row = new HashMap<String, Object>();
 		row.put("TABLE_CAT", "tenant");
@@ -23,6 +54,38 @@ class PhoenixHeaderReaderTest {
 		row.put("IMMUTABLE_ROWS", true);
 		row.put("MULTI_TENANT", false);
 		return row;
+	}
+
+	@Test
+	void retainsOptionalTransactionIdentityWithoutExtraQueriesAndGuardsRecreation() throws Exception {
+		for (String provider : Arrays.asList(null, "OMID", "TEPHRA", "NOTAVAILABLE")) {
+			final var values = row();
+			values.put("TRANSACTIONAL", true);
+			if (provider != null)
+				values.put("TRANSACTION_PROVIDER", provider);
+			final var jdbc = new PhoenixColumnReaderTest.Jdbc(List.of(values), "getTables");
+			final var table = PhoenixJdbcHeaders.read(jdbc.connection, null, null, null, false, new ReaderOptions())
+					.get(0);
+			assertEquals(1, jdbc.queries);
+			assertTrue(jdbc.closed);
+			final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			assertEquals("true", restored.getSpecifics().get("phoenix.transactional"));
+			assertEquals(provider, restored.getSpecifics().get("phoenix.transactionProvider"));
+			assertThrows(UnsupportedOperationException.class, () -> DialectHolder.defaultDialect5_3_1
+					.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE));
+		}
+	}
+
+	@Test
+	void rejectsMalformedTransactionHeadersAndClosesTheResult() {
+		for (String field : List.of("TRANSACTIONAL", "TRANSACTION_PROVIDER")) {
+			final var values = row();
+			values.put(field, field.equals("TRANSACTIONAL") ? "invalid" : " ");
+			final var jdbc = new PhoenixColumnReaderTest.Jdbc(List.of(values), "getTables");
+			assertThrows(IllegalStateException.class,
+					() -> PhoenixJdbcHeaders.read(jdbc.connection, null, null, null, false, new ReaderOptions()));
+			assertTrue(jdbc.closed);
+		}
 	}
 
 	@Test

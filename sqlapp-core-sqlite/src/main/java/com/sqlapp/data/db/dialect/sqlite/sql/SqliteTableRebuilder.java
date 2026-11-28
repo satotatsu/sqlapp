@@ -522,10 +522,11 @@ public final class SqliteTableRebuilder {
 					}
 				}
 			checkForeignKeys(connection, dialect, database);
-			String integrity = new SqliteIntegrityCheckBuilder(dialect).schema(database).build();
-			try (var statement = connection.createStatement(); var result = statement.executeQuery(integrity)) {
-				if (!result.next() || !"ok".equals(result.getString(1)) || result.next())
-					throw new SQLException("SQLite integrity_check rejected rebuilt schema; rolling back");
+			for (String integrity : integrityChecks(dialect, database, prepared)) {
+				try (var statement = connection.createStatement(); var result = statement.executeQuery(integrity)) {
+					if (!result.next() || !"ok".equals(result.getString(1)) || result.next())
+						throw new SQLException("SQLite integrity_check rejected rebuilt schema; rolling back");
+				}
 			}
 			connection.commit();
 			resolvedTransaction = true;
@@ -670,6 +671,19 @@ public final class SqliteTableRebuilder {
 				return ((Number) value).longValue();
 			}
 		}
+	}
+
+	/**
+	 * Only the rebuilt tables and their indexes were written, so check those
+	 * instead of the whole database when SQLite can scope the check. Virtual tables
+	 * keep their data in shadow tables, so they use the database check.
+	 */
+	private static List<String> integrityChecks(Sqlite dialect, String database, List<Prepared> prepared) {
+		if (!dialect.supportsIntegrityCheckTable()
+				|| prepared.stream().anyMatch(item -> module(item.original()) != null || module(item.target()) != null))
+			return List.of(new SqliteIntegrityCheckBuilder(dialect).schema(database).build());
+		return prepared.stream().map(item -> new SqliteIntegrityCheckBuilder(dialect).schema(database)
+				.table(item.target().getName()).build()).toList();
 	}
 
 	private static String module(Table table) {
@@ -931,7 +945,7 @@ public final class SqliteTableRebuilder {
 	}
 
 	private static boolean withoutRowid(Table table) {
-		return "true".equals(table.getSpecifics().get("without_rowid"));
+		return com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.isWithoutRowid(table);
 	}
 
 	private static boolean autoIncrement(Table table) {

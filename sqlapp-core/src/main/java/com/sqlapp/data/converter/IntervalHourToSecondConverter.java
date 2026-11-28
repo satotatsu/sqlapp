@@ -80,7 +80,7 @@ public class IntervalHourToSecondConverter extends AbstractConverter<IntervalHou
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof IntervalHourToSecondConverter)) {

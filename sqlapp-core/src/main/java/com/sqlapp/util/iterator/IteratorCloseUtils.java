@@ -6,7 +6,9 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Set;
 
-/** Failure-preserving close support for iterators backed by external resources. */
+/**
+ * Failure-preserving close support for iterators backed by external resources.
+ */
 public final class IteratorCloseUtils {
 	private IteratorCloseUtils() {
 	}

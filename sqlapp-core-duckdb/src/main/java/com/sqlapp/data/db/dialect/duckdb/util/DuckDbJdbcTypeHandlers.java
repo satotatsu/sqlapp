@@ -15,9 +15,12 @@ import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.SignStyle;
+import java.time.temporal.ChronoField;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 import com.sqlapp.data.interval.Interval;
@@ -40,10 +43,8 @@ import com.sqlapp.data.interval.Interval;
  * <li>UUID: the 1.0 driver changes the high bit of a {@link UUID} bound with
  * {@code setObject}.</li>
  * <li>BLOB: bound with {@code setBytes} and read with {@code getBytes}.</li>
- * <li>INTERVAL: read from DuckDB's text form into {@link Interval}; an interval
- * whose months, days and time have different signs cannot be represented by
- * {@link Interval} and is kept as DuckDB text. Written as months, days and
- * microseconds.</li>
+ * <li>INTERVAL: independent months, days and microseconds are retained by
+ * {@link com.sqlapp.data.interval.IntervalValue}.</li>
  * </ul>
  */
 public final class DuckDbJdbcTypeHandlers {
@@ -55,6 +56,12 @@ public final class DuckDbJdbcTypeHandlers {
 	/** DuckDB's TIMESTAMPTZ input format with an explicit offset. */
 	private static final java.time.format.DateTimeFormatter TIMESTAMP_WITH_TIME_ZONE_FORMAT = java.time.format.DateTimeFormatter
 			.ofPattern("uuuu-MM-dd HH:mm:ss.SSSSSSxxx");
+
+	private static final DateTimeFormatter DATE_FORMAT = new DateTimeFormatterBuilder()
+			.appendValue(ChronoField.YEAR, 1, 9, SignStyle.NORMAL).appendPattern("-MM-dd").toFormatter();
+
+	private static final DateTimeFormatter TIME_WITH_TIME_ZONE_FORMAT = DateTimeFormatter
+			.ofPattern("HH:mm:ss.SSSSSSxxxxx");
 
 	private DuckDbJdbcTypeHandlers() {
 	}
@@ -119,22 +126,37 @@ public final class DuckDbJdbcTypeHandlers {
 		}
 	}
 
-	/** DATE, read as {@link java.sql.Date}. */
+	/** DATE, retaining the proleptic year and DuckDB's infinite date values. */
 	public static class DateHandler extends AbstractHandler {
 		private static final long serialVersionUID = 1L;
 
 		@Override
 		public Object getObject(final ResultSet rs, final int columnIndex) throws SQLException {
-			final Object value = rs.getObject(columnIndex);
-			if (value == null) {
-				return null;
+			final String text = rs.getString(columnIndex);
+			if (text == null || "infinity".equals(text) || "-infinity".equals(text)) {
+				return text;
 			}
-			return java.sql.Date.valueOf(value instanceof LocalDate date ? date : LocalDate.parse(value.toString()));
+			if (text.endsWith(" (BC)")) {
+				final LocalDate date = LocalDate.parse(text.substring(0, text.length() - 5), DATE_FORMAT);
+				return date.withYear(1 - date.getYear());
+			}
+			final LocalDate date = LocalDate.parse(text.startsWith("+") ? text.substring(1) : text, DATE_FORMAT);
+			// JDBC renders DuckDB's reserved int32 infinity sentinels as LocalDate.
+			if (date.toEpochDay() == Integer.MAX_VALUE)
+				return "infinity";
+			if (date.toEpochDay() == -Integer.MAX_VALUE)
+				return "-infinity";
+			return date;
 		}
 
 		@Override
 		protected void setNonNull(final PreparedStatement stmt, final int parameterIndex, final Object x)
 				throws SQLException {
+			stmt.setString(parameterIndex, format(x));
+		}
+
+		/** Text shared by JDBC binding and executable SQL literals. */
+		public static String format(final Object x) throws SQLException {
 			final LocalDate value;
 			if (x instanceof LocalDate date) {
 				value = date;
@@ -147,11 +169,84 @@ public final class DuckDbJdbcTypeHandlers {
 			} else if (x instanceof java.util.Date date) {
 				value = new java.sql.Date(date.getTime()).toLocalDate();
 			} else if (x instanceof CharSequence text) {
+				if ("infinity".contentEquals(text) || "-infinity".contentEquals(text)) {
+					return text.toString();
+				}
 				value = LocalDate.parse(text.toString().trim());
 			} else {
 				throw unsupported("DATE", x);
 			}
-			stmt.setString(parameterIndex, value.toString());
+			return value.toString();
+		}
+	}
+
+	/** TIMETZ, preserving the offset and fractional seconds. */
+	public static class TimeWithTimeZoneHandler extends AbstractHandler {
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public Object getObject(final ResultSet rs, final int columnIndex) throws SQLException {
+			final String text = rs.getString(columnIndex);
+			return text == null ? null : OffsetTime.parse(text);
+		}
+
+		@Override
+		protected void setNonNull(final PreparedStatement stmt, final int parameterIndex, final Object value)
+				throws SQLException {
+			stmt.setString(parameterIndex, format(value));
+		}
+
+		/** Text shared by JDBC binding and executable SQL literals. */
+		public static String format(final Object value) throws SQLException {
+			final OffsetTime time;
+			if (value instanceof OffsetTime offsetTime) {
+				time = offsetTime;
+			} else if (value instanceof CharSequence text) {
+				time = OffsetTime.parse(text.toString());
+			} else {
+				throw unsupported("TIMETZ", value);
+			}
+			return TIME_WITH_TIME_ZONE_FORMAT.format(time);
+		}
+	}
+
+	/**
+	 * Canonical DuckDB text for native/nested types not modeled by a shared
+	 * DataType.
+	 */
+	public static class NativeTextHandler extends AbstractHandler {
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public String readExpression(String expression, com.sqlapp.data.schemas.Column column) {
+			return DuckDbNativeCodec.readExpression(expression, column);
+		}
+
+		@Override
+		public String writeExpression(String expression, com.sqlapp.data.schemas.Column column) {
+			return DuckDbNativeCodec.writeExpression(expression, column);
+		}
+
+		@Override
+		public Object getObject(ResultSet rs, int index, com.sqlapp.data.schemas.Column column) throws SQLException {
+			return DuckDbNativeCodec.read(rs, index, column);
+		}
+
+		@Override
+		public Object getObject(final ResultSet rs, final int columnIndex) throws SQLException {
+			final String type = rs.getMetaData().getColumnTypeName(columnIndex);
+			if (type.matches("(?is).*\\b(?:UNION\\s*\\(|VARIANT\\b).*$"))
+				throw new SQLException("Tagged DuckDB native values require a column-aware SQLapp JDBC projection");
+			return rs.getString(columnIndex);
+		}
+
+		@Override
+		protected void setNonNull(final PreparedStatement stmt, final int parameterIndex, final Object value)
+				throws SQLException {
+			if (!(value instanceof CharSequence text)) {
+				throw unsupported("native type (supply DuckDB text)", value);
+			}
+			stmt.setString(parameterIndex, text.toString());
 		}
 	}
 
@@ -171,6 +266,11 @@ public final class DuckDbJdbcTypeHandlers {
 		@Override
 		protected void setNonNull(final PreparedStatement stmt, final int parameterIndex, final Object x)
 				throws SQLException {
+			stmt.setString(parameterIndex, format(x));
+		}
+
+		/** Text shared by JDBC binding and executable SQL literals. */
+		public static String format(final Object x) throws SQLException {
 			final LocalTime value;
 			if (x instanceof LocalTime time) {
 				value = time;
@@ -185,7 +285,7 @@ public final class DuckDbJdbcTypeHandlers {
 			} else {
 				throw unsupported("TIME", x);
 			}
-			stmt.setString(parameterIndex, TIME_FORMAT.format(value));
+			return TIME_FORMAT.format(value);
 		}
 	}
 
@@ -271,104 +371,16 @@ public final class DuckDbJdbcTypeHandlers {
 		}
 	}
 
-	/** INTERVAL. */
-	public static class IntervalHandler extends AbstractHandler {
+	/** Exact interval adapter; legacy static helpers delegate to the same codec. */
+	public static class IntervalHandler extends com.sqlapp.data.db.dialect.duckdb.DuckDbIntervalJdbcTypeHandler {
 		private static final long serialVersionUID = 1L;
 
-		private static final Pattern PART = Pattern.compile(
-				"\\s*(?:(-?\\d+) (years?|months?|mons?|days?)\\b|(-)?(\\d+):(\\d{2}):(\\d{2})(?:\\.(\\d{1,9}))?)");
-
-		@Override
-		public Object getObject(final ResultSet rs, final int columnIndex) throws SQLException {
-			final String text = rs.getString(columnIndex);
-			return text == null ? null : parse(text);
+		public static Object parse(String text) {
+			return com.sqlapp.data.db.dialect.duckdb.DuckDbIntervalCodec.decode(text);
 		}
 
-		/**
-		 * Parses DuckDB's interval text.
-		 *
-		 * @param text DuckDB interval text such as
-		 *             {@code 1 year 2 months 3 days 04:05:06.789}
-		 * @return {@link Interval}, or the text when the parts have mixed signs
-		 */
-		public static Object parse(final String text) {
-			long months = 0;
-			long days = 0;
-			long nanos = 0;
-			final Matcher matcher = PART.matcher(text);
-			int position = 0;
-			while (position < text.length()) {
-				if (!matcher.find(position) || matcher.start() != position) {
-					throw new IllegalArgumentException("Unexpected DuckDB interval: " + text);
-				}
-				if (matcher.group(1) != null) {
-					final long value = Long.parseLong(matcher.group(1));
-					final String unit = matcher.group(2);
-					if (unit.startsWith("year")) {
-						months += value * 12;
-					} else if (unit.startsWith("mon")) {
-						months += value;
-					} else {
-						days += value;
-					}
-				} else {
-					final String fraction = matcher.group(7) == null ? "" : matcher.group(7);
-					long value = ((Long.parseLong(matcher.group(4)) * 60 + Long.parseLong(matcher.group(5))) * 60
-							+ Long.parseLong(matcher.group(6))) * 1_000_000_000L
-							+ Long.parseLong((fraction + "000000000").substring(0, 9));
-					if (matcher.group(3) != null) {
-						value = -value;
-					}
-					nanos += value;
-				}
-				position = matcher.end();
-			}
-			final boolean negative = months < 0 || days < 0 || nanos < 0;
-			final boolean positive = months > 0 || days > 0 || nanos > 0;
-			if (negative && positive) {
-				return text;
-			}
-			final long seconds = Math.abs(days) * 86_400L + Math.abs(nanos) / 1_000_000_000L;
-			if (Math.abs(months) > Integer.MAX_VALUE || seconds > Integer.MAX_VALUE) {
-				return text;
-			}
-			final Interval interval = new Interval(0, (int) Math.abs(months), 0, 0, 0, (int) seconds,
-					Math.abs(nanos) % 1_000_000_000L);
-			if (negative) {
-				interval.setNegative();
-			}
-			return interval;
-		}
-
-		/**
-		 * Formats an {@link Interval} in a form DuckDB casts without loss.
-		 *
-		 * @param interval interval
-		 * @return text such as {@code 14 months 3 days 14706789000 microseconds}
-		 */
-		public static String format(final Interval interval) {
-			final long sign = interval.isPositive() ? 1 : -1;
-			final long seconds = interval.getSecondsFull();
-			final long micros = (seconds % 86_400L) * 1_000_000L + interval.getNanos() / 1_000L;
-			if (interval.getNanos() % 1_000 != 0) {
-				throw new IllegalArgumentException("DuckDB INTERVAL has microsecond precision: " + interval);
-			}
-			return sign * interval.getMonthsFull() + " months " + sign * (seconds / 86_400L) + " days " + sign * micros
-					+ " microseconds";
-		}
-
-		@Override
-		protected void setNonNull(final PreparedStatement stmt, final int parameterIndex, final Object x)
-				throws SQLException {
-			if (x instanceof Interval interval) {
-				stmt.setString(parameterIndex, format(interval));
-			} else if (x instanceof CharSequence text) {
-				stmt.setString(parameterIndex, text.toString());
-			} else if (x instanceof java.time.Duration duration) {
-				stmt.setString(parameterIndex, duration.toNanos() / 1_000L + " microseconds");
-			} else {
-				throw unsupported("INTERVAL", x);
-			}
+		public static String format(Interval value) {
+			return com.sqlapp.data.db.dialect.duckdb.DuckDbIntervalCodec.encode(value);
 		}
 	}
 }

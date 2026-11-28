@@ -56,24 +56,26 @@ public class ForeignKeyConstraintTest extends AbstractDbObjectTest<ForeignKeyCon
 
 	@org.junit.jupiter.api.Test
 	public void standaloneTableXmlPreservesReferencedOwnershipAndCompositeOrder() throws Exception {
-		for (String schemaName : new String[] {"Child Schema", "Parent Schema"}) {
+		for (String schemaName : new String[] { "Child Schema", "Parent Schema" }) {
 			Table parent = new Table("Parent Table").setSchemaName(schemaName);
 			Table child = new Table("Child Table").setSchemaName("Child Schema");
-			for (Table table : new Table[] {parent, child}) {
+			for (Table table : new Table[] { parent, child }) {
 				table.getColumns().add("id", c -> c.setDataType(DataType.INT));
 				table.getColumns().add("Other Key", c -> c.setDataType(DataType.INT));
 			}
 			var fk = new ForeignKeyConstraint("fk",
-					new Column[] {child.getColumns().get("Other Key"), child.getColumns().get("id")},
-					new Column[] {parent.getColumns().get("id"), parent.getColumns().get("Other Key")});
+					new Column[] { child.getColumns().get("Other Key"), child.getColumns().get("id") },
+					new Column[] { parent.getColumns().get("id"), parent.getColumns().get("Other Key") });
 			child.getConstraints().add(fk);
 			Table restored = SchemaUtils.readXml(new java.io.StringReader(child.asXml()));
 			var restoredFk = (ForeignKeyConstraint) restored.getConstraints().get("fk");
 			assertEquals("Parent Table", restoredFk.getRelatedTable().getName());
 			assertEquals(schemaName, restoredFk.getRelatedTableSchemaName());
 			assertNotSame(restored, restoredFk.getRelatedTable());
-			assertEquals(java.util.List.of("Other Key", "id"), restoredFk.getColumns().stream().map(Column::getName).toList());
-			assertEquals(java.util.List.of("id", "Other Key"), restoredFk.getRelatedColumns().stream().map(ReferenceColumn::getName).toList());
+			assertEquals(java.util.List.of("Other Key", "id"),
+					restoredFk.getColumns().stream().map(Column::getName).toList());
+			assertEquals(java.util.List.of("id", "Other Key"),
+					restoredFk.getRelatedColumns().stream().map(ReferenceColumn::getName).toList());
 			assertNotSame(restored.getColumns().get("id"), restoredFk.getRelatedColumns().get(0).getColumn());
 			assertSame(restoredFk.getRelatedTable(), restoredFk.getRelatedColumns().get(0).getColumn().getTable());
 		}
@@ -82,15 +84,22 @@ public class ForeignKeyConstraintTest extends AbstractDbObjectTest<ForeignKeyCon
 	@org.junit.jupiter.api.Test
 	public void schemaXmlResolvesParentAndSelfReferencesToCanonicalTables() throws Exception {
 		Schema schema = new Schema("public");
-		Table parent = new Table("parent"); parent.getColumns().add("id", c -> c.setDataType(DataType.INT));
-		Table child = new Table("child"); child.getColumns().add("id", c -> c.setDataType(DataType.INT));
-		schema.getTables().add(parent); schema.getTables().add(child);
-		child.getConstraints().addForeignKeyConstraint("parent_fk", child.getColumns().get("id"), parent.getColumns().get("id"));
-		child.getConstraints().addForeignKeyConstraint("self_fk", child.getColumns().get("id"), child.getColumns().get("id"));
+		Table parent = new Table("parent");
+		parent.getColumns().add("id", c -> c.setDataType(DataType.INT));
+		Table child = new Table("child");
+		child.getColumns().add("id", c -> c.setDataType(DataType.INT));
+		schema.getTables().add(parent);
+		schema.getTables().add(child);
+		child.getConstraints().addForeignKeyConstraint("parent_fk", child.getColumns().get("id"),
+				parent.getColumns().get("id"));
+		child.getConstraints().addForeignKeyConstraint("self_fk", child.getColumns().get("id"),
+				child.getColumns().get("id"));
 		Schema restored = SchemaUtils.readXml(new java.io.StringReader(schema.asXml()));
 		var restoredChild = restored.getTables().get("child");
-		assertSame(restored.getTables().get("parent"), ((ForeignKeyConstraint) restoredChild.getConstraints().get("parent_fk")).getRelatedTable());
-		assertSame(restoredChild, ((ForeignKeyConstraint) restoredChild.getConstraints().get("self_fk")).getRelatedTable());
+		assertSame(restored.getTables().get("parent"),
+				((ForeignKeyConstraint) restoredChild.getConstraints().get("parent_fk")).getRelatedTable());
+		assertSame(restoredChild,
+				((ForeignKeyConstraint) restoredChild.getConstraints().get("self_fk")).getRelatedTable());
 		Table standalone = SchemaUtils.readXml(new java.io.StringReader(child.asXml()));
 		var standaloneSelf = (ForeignKeyConstraint) standalone.getConstraints().get("self_fk");
 		assertSame(standalone, standaloneSelf.getRelatedTable());

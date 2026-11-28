@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.postgres.converter;
 
-import java.sql.SQLException;
 import com.sqlapp.data.geometry.Circle;
 import org.postgresql.geometric.PGcircle;
 
@@ -54,20 +53,16 @@ public class FromPGCircleConverter extends AbstractFromObjectConverter<Circle, P
 
 	@Override
 	protected Circle toObjectFromString(String value) {
-		String val = (String) value;
-		try {
-			PGcircle pgObject = new PGcircle(val);
-			return toObject(pgObject);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
+		// PostgreSQL の出力形式は core 側で解析する(pgjdbc の PGline(String) は2点形式の係数計算が誤っているため)
+		return new Circle().setValue(value);
 	}
 
 	@Override
 	protected Circle toObject(PGcircle value) {
-		Circle obj = new Circle();
-		obj.setValue(value.getValue());
-		return obj;
+		if (value.center == null) {
+			return null;
+		}
+		return new Circle(value.center.x, value.center.y, value.radius);
 	}
 
 	@Override

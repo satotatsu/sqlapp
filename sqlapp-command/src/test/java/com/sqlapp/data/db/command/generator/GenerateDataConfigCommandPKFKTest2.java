@@ -67,6 +67,7 @@ public class GenerateDataConfigCommandPKFKTest2 extends AbstractGeneratorCommand
 					AND WAREHOUSE_ID = /*WAREHOUSE_ID*/0
 					AND PRODUCT_ID = /*PRODUCT_ID*/0
 			)
+			;
 			""";
 
 	private String warehousSqlBalance = """
@@ -151,6 +152,7 @@ public class GenerateDataConfigCommandPKFKTest2 extends AbstractGeneratorCommand
 				WHERE 1=1
 					AND PRODUCT_CODE = /*PRODUCT_CODE*/''
 			)
+			;
 			""";
 
 	private void testPRODUCTFile(ConfigFileType fileType) {

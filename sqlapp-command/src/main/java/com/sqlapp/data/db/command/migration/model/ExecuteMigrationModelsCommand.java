@@ -19,8 +19,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Runs the unit tests of YAML-defined models and then builds the models in
- * dependency order inside the connected engine.
+ * Runs the unit tests of YAML-defined models, builds the models in dependency
+ * order inside the connected engine and then runs the data tests, committing
+ * the models only when every model was built and every ERROR test passed.
  */
 @Getter
 @Setter
@@ -42,6 +43,16 @@ public class ExecuteMigrationModelsCommand extends AbstractDataSourceCommand {
 	/** Run unit tests only and build nothing. */
 	private boolean testOnly;
 	/**
+	 * Run the data tests of the built models after a complete build. A failed ERROR
+	 * test fails the command; the built models are kept.
+	 */
+	private boolean dataTestsEnabled = true;
+	/**
+	 * Rebuild incremental models from all rows. Required when the definitions they
+	 * are computed from changed since their tables were built.
+	 */
+	private boolean fullRefresh;
+	/**
 	 * Optional transfer name mapping written after every model was built. It
 	 * carries the declared column types of table models, so that a transfer from
 	 * the engine creates target tables with those types; the engine does not keep
@@ -51,11 +62,13 @@ public class ExecuteMigrationModelsCommand extends AbstractDataSourceCommand {
 
 	private List<MigrationTransformationTestResult> unitTestResults = List.of();
 	private MigrationModelRunner.Result result;
+	private MigrationModelDataTests.Results dataTestResults;
 
 	@Override
 	protected void doRun() {
 		unitTestResults = List.of();
 		result = null;
+		dataTestResults = null;
 		if (getDataSource() == null) {
 			throw new CommandException("Migration model data source is required.");
 		}
@@ -99,16 +112,40 @@ public class ExecuteMigrationModelsCommand extends AbstractDataSourceCommand {
 			if (testOnly) {
 				return;
 			}
-			result = MigrationModelRunner.run(connection, plan, selected);
+			// Every data test runs, also with modifiedOnly: a changed test must run even
+			// when its model was not rebuilt. Models and tests share one transaction.
+			result = MigrationModelRunner.run(connection, plan, selected,
+					new MigrationModelRunner.Options(fullRefresh, dataTestsEnabled ? resolved.dataTests() : List.of()));
+			dataTestResults = dataTestsEnabled ? result.dataTests() : null;
 			for (final var model : result.models()) {
 				info("Migration model ", model.name(), " [", model.materialization(), "] ", model.status(), " ",
 						model.elapsedMillis(), "ms", model.message() == null ? "" : " " + model.message());
 			}
-			if (!result.isSuccess()) {
-				final StringBuilder message = new StringBuilder("Migration models failed:");
+			if (dataTestResults != null) {
+				for (final var test : dataTestResults.tests()) {
+					info("Migration model data test ", test.id(), " ", test.status(),
+							test.message() == null ? "" : " " + test.message());
+				}
+				info("Migration model data tests ", dataTestResults.summary());
+			}
+			if (!result.failures().isEmpty()) {
+				final StringBuilder message = new StringBuilder(
+						"Migration models failed; every model of the run was rolled back:");
 				for (final var failure : result.failures()) {
 					message.append(System.lineSeparator()).append("  ").append(failure.name()).append(": ")
 							.append(failure.message());
+				}
+				throw new CommandException(message.toString());
+			}
+			if (!result.isSuccess()) {
+				final StringBuilder message = new StringBuilder(
+						"Migration model data tests failed; every model of the run was rolled back:");
+				for (final var test : dataTestResults.tests()) {
+					if (test.status() != MigrationModelDataTests.Status.PASS
+							&& test.status() != MigrationModelDataTests.Status.WARN) {
+						message.append(System.lineSeparator()).append("  ").append(test.id()).append(": ")
+								.append(test.message());
+					}
 				}
 				throw new CommandException(message.toString());
 			}

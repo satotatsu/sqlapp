@@ -193,6 +193,10 @@ public class SchemaUtilsTest {
 
 	@Test
 	public void testNormalizeDataType() throws XMLStreamException {
+		assertEquals("STRUCT(x INTEGER, \"Mixed  Case\" MAP(VARCHAR, INTEGER))",
+				SchemaUtils.normalizeDataType(" STRUCT(x INTEGER, \"Mixed  Case\" MAP(VARCHAR, INTEGER)) "));
+		assertEquals("MAP(VARCHAR, STRUCT(x INTEGER))[]",
+				SchemaUtils.normalizeDataType("MAP(VARCHAR, STRUCT(x INTEGER))[]"));
 		assertEquals("ENUM('a','b','c')", SchemaUtils.normalizeDataType("enum( 'a', 'b', 'c' )"));
 		assertEquals("VARCHAR(MAX)", SchemaUtils.normalizeDataType("VARCHAR(max)"));
 		assertEquals("VARCHAR(MAX)", SchemaUtils.normalizeDataType(" VARCHAR ( MAX )"));

@@ -16,6 +16,7 @@ SELECT
 , sp.is_sbspace AS storage_is_sbspace
 , sp.is_blobspace AS storage_is_blobspace
 , con.constrname AS constraint_name
+, con.constrtype AS constraint_type
 , CASE WHEN SUBSTR(i.idxname,1,1)=' ' THEN '0' ELSE '1' END AS backing_named
 , f.indexname AS storage_index_name, f.strategy AS storage_strategy,
  f.partition AS storage_partition, f.exprtext AS storage_expression,
@@ -26,7 +27,7 @@ LEFT JOIN sysams am ON am.am_id=i.amid
 LEFT JOIN sysobjstate bs ON bs.objtype='I' AND bs.tabid=i.tabid AND bs.name=i.idxname AND bs.owner=i.owner
 LEFT JOIN sysfragments f ON f.fragtype='I' AND f.tabid=i.tabid AND f.indexname=i.idxname
 LEFT JOIN sysmaster:sysdbspaces sp ON sp.name=f.dbspace
-INNER JOIN sysconstraints con ON con.tabid=t.tabid AND con.idxname=i.idxname AND con.constrtype='U'
+INNER JOIN sysconstraints con ON con.tabid=t.tabid AND con.idxname=i.idxname AND con.constrtype IN ('P','U')
 WHERE t.tabtype='T'
   /*if isNotEmpty(catalogName)*/
   AND DBINFO('dbname') IN /*catalogName*/('%')

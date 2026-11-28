@@ -24,6 +24,51 @@ import java.util.Map;
  */
 public final class DuckDbDdlParser {
 
+	/** Complete engine-exported macro header and the unmodified signature/body. */
+	public record MacroDdl(String schema, String name, boolean table, String signatureAndBody) {
+	}
+
+	/**
+	 * Reads CREATE MACRO statements emitted by EXPORT DATABASE; other statements
+	 * return null.
+	 */
+	public static MacroDdl exportedMacro(final String sql) {
+		final String text = sql.strip();
+		final var prefix = java.util.regex.Pattern.compile("(?is)^CREATE\\s+MACRO\\s+").matcher(text);
+		if (!prefix.find())
+			return null;
+		final List<String> names = new ArrayList<>();
+		int end = prefix.end();
+		while (true) {
+			while (end < text.length() && Character.isWhitespace(text.charAt(end)))
+				end++;
+			final int start = end;
+			if (end < text.length() && text.charAt(end) == '"') {
+				end = skipQuoted(text, end) + 1;
+			} else {
+				while (end < text.length() && isWordChar(text.charAt(end)))
+					end++;
+			}
+			if (end <= start || end > text.length())
+				throw new IllegalArgumentException("Invalid exported macro header");
+			names.add(unquoteIdentifier(text.substring(start, end)));
+			while (end < text.length() && Character.isWhitespace(text.charAt(end)))
+				end++;
+			if (end >= text.length() || text.charAt(end) != '.')
+				break;
+			end++;
+		}
+		if (names.size() > 3 || end >= text.length() || text.charAt(end) != '(')
+			throw new IllegalArgumentException("Invalid exported macro signature");
+		final int close = matchingParenthesis(text, end);
+		if (close < 0)
+			throw new IllegalArgumentException("Unbalanced exported macro signature");
+		final boolean table = java.util.regex.Pattern.compile("(?is)^\\s*AS\\s+TABLE\\b")
+				.matcher(text.substring(close + 1)).find();
+		return new MacroDdl(names.size() > 1 ? names.get(names.size() - 2) : "main", names.getLast(), table,
+				text.substring(end));
+	}
+
 	private static final String GENERATED_ALWAYS_AS = "GENERATED ALWAYS AS";
 
 	private DuckDbDdlParser() {

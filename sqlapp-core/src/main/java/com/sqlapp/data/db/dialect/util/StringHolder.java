@@ -42,13 +42,8 @@ public class StringHolder implements Cloneable, Serializable {
 	}
 
 	private String normalize(String original) {
-		StringBuilder builder = new StringBuilder(original.length() + 1);
-		String[] splits = original.split("\n");
-		for (String arg : splits) {
-			builder.append(arg.replace("\r", ""));
-			builder.append('\n');
-		}
-		return builder.toString();
+		// Keep literal contents intact; the scanner only needs a final line boundary.
+		return original.endsWith("\n") ? original : original + '\n';
 	}
 
 	public boolean isSpace(int start, int end) {
@@ -256,7 +251,7 @@ public class StringHolder implements Cloneable, Serializable {
 	public int searchLineOf(Pattern pattern, int from, boolean inline, BiPredicate<Integer, Matcher> c) {
 		int i = from;
 		while (i < context.length() && i >= 0) {
-			int pos = this.indexOf('\n', i);
+			int pos = findLineEnd(context, i);
 			if (pos < 0) {
 				pos = context.length();
 			}
@@ -276,7 +271,7 @@ public class StringHolder implements Cloneable, Serializable {
 					return i;
 				}
 			}
-			i = pos + 1;
+			i = afterLineEnd(pos);
 		}
 		return -1;
 	}
@@ -389,11 +384,20 @@ public class StringHolder implements Cloneable, Serializable {
 	}
 
 	public int getLineEnd() {
-		int i = indexOf('\n');
-		if (i >= 0) {
-			return i;
+		return findLineEnd(context, position);
+	}
+
+	static int findLineEnd(String text, int from) {
+		for (int i = from; i < text.length(); i++) {
+			char c = text.charAt(i);
+			if (c == '\r' || c == '\n') return i;
 		}
-		return context.length();
+		return text.length();
+	}
+
+	private int afterLineEnd(int end) {
+		return end + (end + 1 < context.length() && context.charAt(end) == '\r'
+				&& context.charAt(end + 1) == '\n' ? 2 : 1);
 	}
 
 	public boolean hasNext() {
@@ -453,7 +457,7 @@ public class StringHolder implements Cloneable, Serializable {
 	public void nextLine() {
 		int pos = getLineEnd();
 		if (pos >= 0) {
-			this.setPosition(pos + 1);
+			this.setPosition(afterLineEnd(pos));
 		}
 	}
 

@@ -23,59 +23,63 @@ import java.util.Calendar;
 
 /**
  * For文の代わりに使用する<code>java.util.Calendar</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class CalendarIterator extends AbstractObjectIterator<Calendar, Integer>{
+final class CalendarIterator extends AbstractObjectIterator<Calendar, Integer> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start
 	 * @param end
 	 */
-	public CalendarIterator(final Calendar start, final Calendar end){
-		this(start, end, 3600*24);
+	public CalendarIterator(final Calendar start, final Calendar end) {
+		this(start, end, 3600 * 24);
 	}
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ(秒単位)
+	 * @param end   終了
+	 * @param step  ステップ(秒単位)
 	 */
-	public CalendarIterator(final Calendar start, final Calendar end, final Integer step){
+	public CalendarIterator(final Calendar start, final Calendar end, final Integer step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step>0){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step > 0);
 	}
 
 	@Override
 	protected Calendar getNext() {
-		Calendar cal=(Calendar)this.current.clone();
+		Calendar cal = (Calendar) this.current.clone();
 		cal.add(Calendar.SECOND, step.intValue());
 		return cal;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public CalendarIterator clone(){
-		CalendarIterator clone=new CalendarIterator(this.start, this.end, this.step);
+	public CalendarIterator clone() {
+		CalendarIterator clone = new CalendarIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

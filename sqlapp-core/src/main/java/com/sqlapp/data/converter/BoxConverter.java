@@ -26,11 +26,8 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Box;
-import com.sqlapp.data.geometry.Box3D;
 import com.sqlapp.data.geometry.Line;
-import com.sqlapp.data.geometry.Line3D;
 import com.sqlapp.data.geometry.Lseg;
-import com.sqlapp.data.geometry.Lseg3D;
 
 /**
  * BoxType Converter
@@ -51,18 +48,14 @@ public class BoxConverter extends AbstractConverter<Box> implements Supplier<Box
 			return convertObject(getSupplierValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
+		} else if (value instanceof org.geolatte.geom.Geometry<?> geometry) {
+			return SpatialGeometryConversions.fromSpatial(geometry, Box.class);
 		} else if (value instanceof Box) {
 			return (Box) value;
-		} else if (value instanceof Box3D) {
-			return ((Box3D) value).toLowerDimension();
 		} else if (value instanceof Line) {
 			return ((Line) value).toBox();
-		} else if (value instanceof Line3D) {
-			return ((Line3D) value).toBox().toLowerDimension();
 		} else if (value instanceof Lseg) {
 			return ((Lseg) value).toBox();
-		} else if (value instanceof Lseg3D) {
-			return ((Lseg3D) value).toBox().toLowerDimension();
 		}
 		Box obj = new Box();
 		obj.setValue(value.toString());

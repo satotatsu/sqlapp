@@ -44,6 +44,7 @@ public class SqliteSqlSplitter extends SqlSplitter {
 		private int position;
 		private String current;
 		private boolean comment;
+		private boolean pending;
 
 		private SqliteTokenizer(String input) {
 			super(input);
@@ -57,6 +58,9 @@ public class SqliteSqlSplitter extends SqlSplitter {
 
 		@Override
 		public boolean hasNext() {
+			// Repeated calls return the statement already found without advancing.
+			if (pending)
+				return true;
 			while (position < sql.length() && (Character.isWhitespace(sql.charAt(position))
 					|| sql.charAt(position) == ';' || position == 0 && sql.charAt(position) == '\ufeff'))
 				position++;
@@ -67,6 +71,7 @@ public class SqliteSqlSplitter extends SqlSplitter {
 			if (comment) {
 				position = tokenEnd(position);
 				current = sql.substring(start, position);
+				pending = true;
 				return true;
 			}
 			List<String> header = new ArrayList<>();
@@ -100,6 +105,7 @@ public class SqliteSqlSplitter extends SqlSplitter {
 			if (trigger && !triggerEnded)
 				fail("Unterminated CREATE TRIGGER: expected ; END");
 			current = sql.substring(start, position);
+			pending = true;
 			return true;
 		}
 
@@ -164,6 +170,7 @@ public class SqliteSqlSplitter extends SqlSplitter {
 
 		@Override
 		public String next() {
+			pending = false;
 			return current;
 		}
 

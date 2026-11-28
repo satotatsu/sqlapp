@@ -20,6 +20,7 @@ import org.testcontainers.utility.DockerImageName;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 
 import com.sqlapp.data.db.dialect.informix.DialectHolder;
+import com.sqlapp.data.db.metadata.ReaderOptions;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Index;
@@ -63,6 +64,281 @@ class InformixMetadataDockerTest {
 	@AfterAll
 	static void stop() {
 		ReusableTestcontainers.stop(INFORMIX);
+	}
+
+	@Test
+	void restoresRetainedColumnGrantsAfterAnAllColumnRevoke() throws Exception {
+		final String suffix = Long.toUnsignedString(System.nanoTime(), 36);
+		final String table = "ifx_t" + suffix;
+		final String role = "ifx_r" + suffix;
+		try (var connection = DriverManager.getConnection("jdbc:informix-sqli://localhost:"
+				+ INFORMIX.getMappedPort(9088) + "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y", "informix",
+				"in4mix"); var statement = connection.createStatement()) {
+			statement.execute("CREATE ROLE " + role);
+			try {
+				statement.execute("CREATE TABLE informix." + table + "(keep_col INTEGER, drop_col INTEGER)");
+				try {
+					statement.execute("GRANT UPDATE (keep_col, drop_col) ON informix." + table + " TO " + role);
+					var dialect = DialectHolder.defaultDialect;
+					var reader = new InformixColumnPrivilegeReader(dialect);
+					reader.setReaderOptions(new ReaderOptions());
+					var parameters = new ParametersContext();
+					parameters.put("tableName", table);
+					parameters.put("objectName", table);
+					var version = com.sqlapp.util.DbUtils.getProductVersionInfo(connection);
+					var before = new com.sqlapp.data.schemas.Catalog("sysmaster");
+					before.getColumnPrivileges().addAll(reader.doGetAll(connection, parameters, version));
+					var objectPrivileges = new InformixObjectPrivilegeReader(dialect);
+					objectPrivileges.setReaderOptions(new ReaderOptions());
+					before.getObjectPrivileges().addAll(objectPrivileges.doGetAll(connection, parameters, version));
+					var after = before.clone();
+					assertTrue(after.getColumnPrivileges().removeIf(grant -> role.equals(grant.getGranteeName())
+							&& "drop_col".equals(grant.getColumnName()) && "UPDATE".equals(grant.getPrivilege())));
+					var operations = dialect.createSqlFactoryRegistry().createSql(before.diff(after), SqlType.ALTER);
+					assertEquals(2, operations.size());
+					for (var operation : operations)
+						statement.execute(operation.getSqlText());
+					var columns = reader.doGetAll(connection, parameters, version).stream().filter(
+							grant -> role.equals(grant.getGranteeName()) && "UPDATE".equals(grant.getPrivilege()))
+							.map(grant -> grant.getColumnName()).toList();
+					assertEquals(List.of("keep_col"), columns);
+				} finally {
+					statement.execute("DROP TABLE informix." + table);
+				}
+			} finally {
+				statement.execute("DROP ROLE " + role);
+			}
+		}
+	}
+
+	@Test
+	void grantsAndRevokesOnlyTheNamedSignatureOfAnOverloadedRoutine() throws Exception {
+		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";
+		final String options = ":INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var setup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+				var statement = setup.createStatement()) {
+			statement.execute("CREATE DATABASE " + database + " WITH LOG");
+		}
+		try {
+			try (var connection = DriverManager.getConnection(endpoint + database + options, "informix", "in4mix");
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE ROLE routine_reader");
+				statement.execute(
+						"CREATE FUNCTION informix.overloaded_grant(p INTEGER) RETURNING INTEGER; RETURN 1; END FUNCTION;");
+				statement.execute(
+						"CREATE FUNCTION informix.overloaded_grant(p DATE) RETURNING INTEGER; RETURN 2; END FUNCTION;");
+				statement.execute("GRANT EXECUTE ON FUNCTION informix.overloaded_grant(INTEGER) TO routine_reader");
+				statement.execute("GRANT EXECUTE ON FUNCTION informix.overloaded_grant(DATE) TO routine_reader");
+				var dialect = DialectHolder.defaultDialect;
+				var reader = new InformixRoutinePrivilegeReader(dialect);
+				reader.setReaderOptions(new ReaderOptions());
+				var version = com.sqlapp.util.DbUtils.getProductVersionInfo(connection);
+				var parameters = new ParametersContext();
+				parameters.put("objectName", "overloaded_grant");
+				String signature = com.sqlapp.data.db.dialect.informix.InformixRoutineSignature.TYPES;
+				var grants = reader.doGetAll(connection, parameters, version).stream()
+						.filter(grant -> "routine_reader".equals(grant.getGranteeName())).toList();
+				assertEquals(2, grants.size());
+				var integerGrant = grants.stream()
+						.filter(grant -> "INTEGER".equals(grant.getSpecifics().get(signature))).findFirst()
+						.orElseThrow();
+				var registry = dialect.createSqlFactoryRegistry();
+				statement.execute(registry.createSql(integerGrant, SqlType.REVOKE).getFirst().getSqlText());
+				var remaining = reader.doGetAll(connection, parameters, version).stream()
+						.filter(grant -> "routine_reader".equals(grant.getGranteeName())).toList();
+				assertEquals(1, remaining.size());
+				assertEquals("DATE", remaining.getFirst().getSpecifics().get(signature));
+				statement.execute(registry.createSql(integerGrant, SqlType.GRANT).getFirst().getSqlText());
+				assertEquals(2, reader.doGetAll(connection, parameters, version).stream()
+						.filter(grant -> "routine_reader".equals(grant.getGranteeName())).count());
+			}
+		} finally {
+			try (var cleanup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+					var statement = cleanup.createStatement()) {
+				statement.execute("DROP DATABASE " + database);
+			}
+		}
+	}
+
+	@Test
+	void serverMetadataSequenceBatchesAndPutReplacementKeepTransactionBoundaries() throws Exception {
+		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";
+		final String options = ":INFORMIXSERVER=informix;DELIMIDENT=Y;IFX_USEPUT=1";
+		try (var setup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+				var statement = setup.createStatement()) {
+			statement.execute("CREATE DATABASE " + database + " WITH LOG");
+		}
+		try {
+			try (var connection = DriverManager.getConnection(endpoint + database + options, "informix", "in4mix");
+					var statement = connection.createStatement()) {
+				final var dialect = DialectHolder.defaultDialect;
+				final var version = com.sqlapp.util.DbUtils.getProductVersionInfo(connection);
+				final var spaceFilter = new ParametersContext();
+				spaceFilter.put("tableSpaceName", "rootdbs");
+				final var spaceReader = new InformixTableSpaceReader(dialect);
+				spaceReader.setReaderOptions(new ReaderOptions());
+				final var spaces = spaceReader.doGetAll(connection, spaceFilter, version);
+				assertEquals(1, spaces.size());
+				assertEquals("rootdbs", spaces.get(0).getName());
+				assertTrue(Integer.parseInt(spaces.get(0).getSpecifics().get("INFORMIX_PAGE_SIZE")) > 0);
+				final var settingsFilter = new ParametersContext();
+				settingsFilter.put("settingName", "DBSERVERNAME");
+				final var settingReader = new InformixSettingReader(dialect);
+				settingReader.setReaderOptions(new ReaderOptions());
+				assertEquals(1, settingReader.doGetAll(connection, settingsFilter, version).size());
+				statement.execute("CREATE SEQUENCE informix.batch_ids START WITH 10 INCREMENT BY 3 NOCACHE");
+				final var sequence = new com.sqlapp.data.schemas.Sequence("batch_ids").setSchemaName("informix")
+						.setCatalogName(database);
+				try (var generator = new com.sqlapp.jdbc.sql.SequenceGenerator(connection, dialect, sequence)) {
+					final var values = generator.get(137);
+					assertEquals(137, values.size());
+					for (int i = 0; i < values.size(); i++)
+						assertEquals(10 + 3L * i, new java.math.BigDecimal(values.get(i).toString()).longValueExact());
+					assertEquals(List.of(421L, 424L), generator.get(2).stream()
+							.map(v -> new java.math.BigDecimal(v.toString()).longValueExact()).toList());
+				}
+				try (var getter = new com.sqlapp.jdbc.sql.SequenceGetter(connection, dialect, sequence, 101)) {
+					for (int i = 0; i < 101; i++)
+						assertEquals(427 + 3L * i, getter.get(Long.class));
+				}
+				statement.execute("CREATE TABLE informix.put_target(id INTEGER PRIMARY KEY)");
+				statement.execute("CREATE RAW TABLE informix.raw_target(id INTEGER)");
+				final var target = new Table("put_target").setSchemaName("informix").setCatalogName(database);
+				target.getColumns().add("id", c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+				for (int i = 1; i <= 3; i++) {
+					final var row = target.newRow();
+					row.put("id", i);
+					target.getRows().add(row);
+				}
+				final var bulk = com.sqlapp.jdbc.bulk.BulkOption.builder()
+						.insertMethod(com.sqlapp.jdbc.bulk.BulkInsertMethod.NATIVE).keepNulls(true).keepIdentity(true)
+						.build();
+				assertEquals(3, com.sqlapp.jdbc.bulk.BulkInsertResolver.execute(connection, target, bulk));
+				final var provider = com.sqlapp.jdbc.bulk.AtomicTableReplacementProvider.resolve(dialect);
+				provider.validate(connection);
+				provider.validateTables(connection, List.of(target));
+				assertThrows(IllegalArgumentException.class, () -> provider.validateTables(connection,
+						List.of(new Table("raw_target").setSchemaName("informix").setCatalogName(database))));
+				connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+				connection.setAutoCommit(false);
+				try {
+					for (String lock : provider.lockSql(dialect, List.of(target)))
+						statement.execute(lock);
+					provider.validateTables(connection, List.of(target));
+					statement.executeUpdate("DELETE FROM informix.put_target");
+					final var replacement = target.clone();
+					replacement.getRows().clear();
+					final var row = replacement.newRow();
+					row.put("id", 99);
+					replacement.getRows().add(row);
+					assertEquals(1, com.sqlapp.jdbc.bulk.BulkInsertResolver.execute(connection, replacement, bulk));
+					connection.rollback();
+					try (var rows = statement.executeQuery("SELECT id FROM informix.put_target ORDER BY id")) {
+						for (int i = 1; i <= 3; i++) {
+							assertTrue(rows.next());
+							assertEquals(i, rows.getInt(1));
+						}
+						assertFalse(rows.next());
+					}
+				} finally {
+					connection.rollback();
+				}
+			}
+		} finally {
+			try (var cleanup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+					var statement = cleanup.createStatement()) {
+				statement.execute("DROP DATABASE " + database);
+			}
+		}
+	}
+
+	@Test
+	void catalogModifyPreservesNamedPrimaryBackingAndReplacesIndependentIndexes() throws Exception {
+		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";
+		final String options = ":INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var setup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+				var statement = setup.createStatement()) {
+			statement.execute("CREATE DATABASE " + database + " WITH LOG");
+		}
+		try {
+			try (var connection = DriverManager.getConnection(endpoint + database + options, "informix", "in4mix");
+					var statement = connection.createStatement()) {
+				statement.execute(
+						"CREATE TABLE informix.items(id INTEGER NOT NULL,parent_id INTEGER,payload INTEGER) NEXT SIZE 64 LOCK MODE PAGE");
+				statement.execute("CREATE UNIQUE INDEX informix.items_ux ON informix.items(id) IN rootdbs");
+				statement.execute(
+						"ALTER TABLE informix.items ADD CONSTRAINT PRIMARY KEY(id) CONSTRAINT informix.items_pk");
+				statement.execute(
+						"ALTER TABLE informix.items ADD CONSTRAINT FOREIGN KEY(parent_id) REFERENCES informix.items(id) CONSTRAINT informix.items_fk");
+				statement.execute("CREATE INDEX informix.items_ix ON informix.items(payload DESC) IN rootdbs");
+				statement.execute("INSERT INTO informix.items VALUES(1,NULL,10)");
+				statement.execute("INSERT INTO informix.items VALUES(2,1,20)");
+				var version = com.sqlapp.util.DbUtils.getProductVersionInfo(connection);
+				var before = new com.sqlapp.data.schemas.Catalog(database).setProductName(version.getName())
+						.setProductMajorVersion(version.getMajorVersion())
+						.setProductMinorVersion(version.getMinorVersion());
+				var schema = new com.sqlapp.data.schemas.Schema("informix");
+				before.getSchemas().add(schema);
+				var reader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName("informix");
+				reader.setObjectName("items");
+				schema.getTables().addAll(reader.getAllFull(connection));
+				var table = schema.getTables().get("items");
+				assertEquals("PAGE", table.getSpecifics().get("INFORMIX_LOCK_MODE"));
+				assertEquals("64", table.getSpecifics().get("INFORMIX_NEXT_SIZE_KB"));
+				assertEquals("items_ux", table.getConstraints().getPrimaryKeyConstraint().getIndexName());
+				var after = before.clone();
+				after.getSchemas().get("informix").getTables().get("items").getColumns().get("id").setDefaultValue("3");
+				after.getSchemas().get("informix").getTables().get("items").getIndexes().get("items_ix").getColumns()
+						.get(0).setOrder(com.sqlapp.data.schemas.Order.Asc);
+				var operations = DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(before.diff(after),
+						SqlType.ALTER);
+				assertTrue(operations.stream().anyMatch(o -> o.getSqlText().contains("IF NOT EXISTS")));
+				assertEquals(1, operations.stream().filter(o -> o.getSqlText().contains("DROP INDEX")).count());
+				for (var operation : operations) {
+					try {
+						statement.execute(operation.getSqlText());
+					} catch (java.sql.SQLException e) {
+						throw new java.sql.SQLException(operation.getSqlText(), e);
+					}
+				}
+				statement.execute("INSERT INTO informix.items(parent_id,payload) VALUES(1,30)");
+				var current = reader.getAllFull(connection).getFirst();
+				var storage = current.clone();
+				storage.getSpecifics().put("INFORMIX_LOCK_MODE", "ROW");
+				storage.getSpecifics().put("INFORMIX_NEXT_SIZE_KB", "128");
+				for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry()
+						.createSql(current.diff(storage), SqlType.ALTER))
+					statement.execute(operation.getSqlText());
+				var stored = reader.getAllFull(connection).getFirst().getSpecifics();
+				assertEquals("ROW", stored.get("INFORMIX_LOCK_MODE"));
+				assertEquals("128", stored.get("INFORMIX_NEXT_SIZE_KB"));
+				assertThrows(java.sql.SQLException.class,
+						() -> statement.execute("INSERT INTO informix.items VALUES(2,NULL,40)"));
+				assertThrows(java.sql.SQLException.class,
+						() -> statement.execute("INSERT INTO informix.items VALUES(4,999,40)"));
+				try (var rows = statement
+						.executeQuery("SELECT idxname FROM sysconstraints WHERE constrname='items_pk'")) {
+					assertTrue(rows.next());
+					assertEquals("items_ux", rows.getString(1).strip());
+				}
+				try (var rows = statement.executeQuery(
+						"SELECT COUNT(*) FROM sysindices i JOIN systables t ON t.tabid=i.tabid WHERE t.tabname='items' AND i.idxname IN ('items_ux','items_ix')")) {
+					assertTrue(rows.next());
+					assertEquals(2, rows.getInt(1));
+				}
+				assertEquals(com.sqlapp.data.schemas.Order.Asc, reader.getAllFull(connection).get(0).getIndexes()
+						.get("items_ix").getColumns().get(0).getOrder());
+			}
+		} finally {
+			try (var cleanup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+					var statement = cleanup.createStatement()) {
+				statement.execute("DROP DATABASE " + database);
+			}
+		}
 	}
 
 	@Test

@@ -61,6 +61,7 @@ public class CreateIndexFactoryTest extends AbstractStandardFactoryTest {
 		String expected = FileUtils.getResource(this, "create_index1.sql");
 		assertEquals(expected, sqlOperation.getSqlText());
 	}
+
 	@Test
 	public void respectsSchemaDecorationForIndexTarget() {
 		Table table = new Table("tableA").setSchemaName("schemaA");

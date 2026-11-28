@@ -116,7 +116,8 @@ class JavaTimeValueConverterTest {
 	@Test
 	void rejectsOutOfRangeFractionalAndOverflowingEnumNumbers() {
 		for (Class<?> type : new Class<?>[] { Month.class, DayOfWeek.class }) {
-			for (Object input : new Object[] { 0, -1, 13, new BigDecimal("1.5"), 4294967297L, Double.NaN, "nonsense" }) {
+			for (Object input : new Object[] { 0, -1, 13, new BigDecimal("1.5"), 4294967297L, Double.NaN,
+					"nonsense" }) {
 				assertThrows(RuntimeException.class, () -> converters.convertObject(input, type));
 			}
 		}

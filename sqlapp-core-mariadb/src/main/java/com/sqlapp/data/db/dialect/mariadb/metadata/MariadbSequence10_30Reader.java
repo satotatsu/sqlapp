@@ -54,8 +54,8 @@ class MariadbSequence10_30Reader extends SequenceReader {
 				// Catalog values are identifiers, never SQL expressions; quote each component
 				// independently.
 				sql.append("SELECT ").append(i).append(" AS sequence_id, minimum_value, maximum_value, start_value, ")
-						.append("`increment`, cache_size, cycle_option FROM ").append(quote(sequence.getSchemaName()))
-						.append('.').append(quote(sequence.getName()));
+						.append("`increment`, cache_size, cycle_option, next_not_cached_value FROM ")
+						.append(quote(sequence.getSchemaName())).append('.').append(quote(sequence.getName()));
 			}
 			SqlNode storageQuery = new SqlNode(sql.toString());
 			storageQuery.setParameters(java.util.Collections.emptySet());
@@ -80,6 +80,7 @@ class MariadbSequence10_30Reader extends SequenceReader {
 					sequence.setCacheSize(cache);
 					sequence.setCache(cache > 0);
 					sequence.setCycle(rs.getInt("cycle_option") != 0);
+					sequence.setLastValue(nextValue(sequence, rs.getBigDecimal("next_not_cached_value")));
 				}
 			});
 			for (int i = 0; i < seen.length; i++) {
@@ -88,6 +89,27 @@ class MariadbSequence10_30Reader extends SequenceReader {
 			}
 		}
 		return sequences;
+	}
+
+	/**
+	 * next_not_cached_value is the first value no session has cached yet: equal to
+	 * the next value without caching and an upper bound with it, which is what the
+	 * model's lastValue allows. A cycling sequence that ran past its bound
+	 * continues from the opposite bound.
+	 */
+	static java.math.BigInteger nextValue(Sequence sequence, java.math.BigDecimal notCached) {
+		if (notCached == null)
+			return null;
+		java.math.BigInteger next = notCached.toBigIntegerExact();
+		java.math.BigInteger increment = sequence.getIncrementBy();
+		if (sequence.isCycle() && increment != null && sequence.getMinValue() != null
+				&& sequence.getMaxValue() != null) {
+			if (increment.signum() > 0 && next.compareTo(sequence.getMaxValue()) > 0)
+				return sequence.getMinValue();
+			if (increment.signum() < 0 && next.compareTo(sequence.getMinValue()) < 0)
+				return sequence.getMaxValue();
+		}
+		return next;
 	}
 
 	static String quote(String identifier) {

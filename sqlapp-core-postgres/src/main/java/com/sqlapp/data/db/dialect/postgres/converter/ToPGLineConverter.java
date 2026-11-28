@@ -47,13 +47,31 @@ public class ToPGLineConverter extends AbstractToObjectConverter<PGline, Line> {
 
 	@Override
 	protected PGline toDbType(Line obj) {
-		return new PGline(obj.getPoints()[0].getX(), obj.getPoints()[0].getY(), obj.getPoints()[1].getX(),
-				obj.getPoints()[1].getY());
+		final double x = obj.getPoints()[0].getX();
+		final double y = obj.getPoints()[0].getY();
+		final double dx = obj.getPoints()[1].getX() - x;
+		final double dy = obj.getPoints()[1].getY() - y;
+		if (!Double.isFinite(dx) || !Double.isFinite(dy) || (dx == 0d && dy == 0d)) {
+			throw new IllegalArgumentException("Line requires two distinct points with finite coordinate differences.");
+		}
+		// The driver's two-point constructor always divides by dx. A nearly
+		// vertical line can overflow even when finite coefficients are available.
+		final double a = Math.abs(dx) >= Math.abs(dy) ? dy / dx : -1d;
+		final double b = Math.abs(dx) >= Math.abs(dy) ? -1d : dx / dy;
+		final double c = -Math.fma(a, x, b * y);
+		if (!Double.isFinite(c)) {
+			throw new IllegalArgumentException("Line cannot be represented by finite PostgreSQL coefficients.");
+		}
+		return new PGline(a, b, c);
 	}
 
 	@Override
 	protected void setValue(PGline obj, String value) throws SQLException {
-		obj.setValue(value);
+		// pgjdbc の PGline#setValue は2点形式の係数計算が誤っているため、core 側で解析してから係数を求める
+		final PGline line = toDbType(new Line().setValue(value));
+		obj.a = line.a;
+		obj.b = line.b;
+		obj.c = line.c;
 	}
 
 	/*

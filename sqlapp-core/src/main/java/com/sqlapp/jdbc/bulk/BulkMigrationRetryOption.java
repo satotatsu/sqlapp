@@ -66,7 +66,7 @@ public class BulkMigrationRetryOption implements Serializable {
 	}
 
 	boolean shouldRetry(final SQLException failure, final int retriesAlreadyAttempted) {
-		if (retriesAlreadyAttempted >= maxRetries) {
+		if (retriesAlreadyAttempted >= maxRetries || BulkUpsertTransaction.hasCompletionFailure(failure)) {
 			return false;
 		}
 		for (SQLException current = failure; current != null;

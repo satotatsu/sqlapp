@@ -25,44 +25,46 @@ import java.util.Date;
 
 /**
  * For文の代わりに使用する<code>java.util.Date</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class DateIterator extends AbstractObjectIterator<Date, Integer>{
+final class DateIterator extends AbstractObjectIterator<Date, Integer> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start
 	 * @param end
 	 */
-	public DateIterator(final Date start, final Date end){
-		this(start, end, 3600*24);
+	public DateIterator(final Date start, final Date end) {
+		this(start, end, 3600 * 24);
 	}
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ(秒単位)
+	 * @param end   終了
+	 * @param step  ステップ(秒単位)
 	 */
-	public DateIterator(final Date start, final Date end, final Integer step){
+	public DateIterator(final Date start, final Date end, final Integer step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step>0){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step > 0);
 	}
 
 	@Override
@@ -70,12 +72,14 @@ final class DateIterator extends AbstractObjectIterator<Date, Integer>{
 		return addSeconds(this.current, step.intValue());
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public DateIterator clone(){
-		DateIterator clone=new DateIterator(this.start, this.end, this.step);
+	public DateIterator clone() {
+		DateIterator clone = new DateIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

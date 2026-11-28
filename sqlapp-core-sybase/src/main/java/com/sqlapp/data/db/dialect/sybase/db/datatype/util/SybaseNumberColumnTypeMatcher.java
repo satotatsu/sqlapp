@@ -55,6 +55,11 @@ public class SybaseNumberColumnTypeMatcher implements ColumnTypeMatcher, ColumnT
 	}
 
 	@Override
+	public ColumnTypeMatcher copy() {
+		return new SybaseNumberColumnTypeMatcher(internalMatcher.copy());
+	}
+
+	@Override
 	public ColumnTypeMatcher getInternal() {
 		return internalMatcher;
 	}

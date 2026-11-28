@@ -15,6 +15,9 @@ import com.sqlapp.data.schemas.Table;
  * stored verbatim and are interpreted only by this source.</p>
  */
 public interface BulkMigrationKeysetSource {
+	/** Modeled ordered keys for JDBC target verification; empty when unavailable. */
+	default java.util.List<String> getKeyColumnNames() { return java.util.List.of(); }
+
 	/** Schema and target identity used to build migration chunks. */
 	Table getTable();
 

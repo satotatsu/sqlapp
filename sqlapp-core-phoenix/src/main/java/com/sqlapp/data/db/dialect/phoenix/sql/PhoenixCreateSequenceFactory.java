@@ -19,6 +19,13 @@ public class PhoenixCreateSequenceFactory extends AbstractCreateSequenceFactory<
 
 	@Override
 	protected void addCreateObject(Sequence sequence, PhoenixSqlBuilder builder) {
+		requireName(sequence);
+		if (sequence.getLastValue() != null)
+			throw new UnsupportedOperationException("Phoenix cannot restore a sequence counter from lastValue; "
+					+ "set startValue to the verified next value for the new sequence and clear lastValue: "
+					+ sequence.getName());
+		if (sequence.getDataType() != null && sequence.getDataType() != com.sqlapp.data.db.datatype.DataType.BIGINT)
+			throw new UnsupportedOperationException("Phoenix sequences use BIGINT: " + sequence.getName());
 		for (var value : new java.math.BigInteger[] { sequence.getStartValue(), sequence.getIncrementBy(),
 				sequence.getMinValue(), sequence.getMaxValue() }) {
 			if (value != null)
@@ -50,5 +57,10 @@ public class PhoenixCreateSequenceFactory extends AbstractCreateSequenceFactory<
 		addCycle(sequence, builder);
 		if (sequence.getCacheSize() != null)
 			addCache(sequence, builder);
+	}
+
+	static void requireName(Sequence sequence) {
+		if (sequence.getName() == null || sequence.getName().isBlank())
+			throw new IllegalArgumentException("Phoenix sequence name must not be blank");
 	}
 }

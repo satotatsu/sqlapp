@@ -50,6 +50,57 @@ public class Phoenix extends Dialect {
 	private static final long SIZE_MAX = LEN_2GB - 1;
 
 	/**
+	 * Executes bulk UPSERT using the data source mapped to the table's tenant. Use
+	 * the empty key for a global connection. The selected connection is closed
+	 * here.
+	 */
+	public long executeTenantBulkUpsert(java.util.Map<String, ? extends javax.sql.DataSource> sources,
+			com.sqlapp.data.schemas.Table table, com.sqlapp.jdbc.bulk.BulkUpsertOption options)
+			throws java.sql.SQLException {
+		return withTenantConnection(sources, table.getCatalogName(), connection -> {
+			if (!connection.getAutoCommit())
+				throw new IllegalArgumentException("Routed Phoenix bulk UPSERT requires auto-commit");
+			return com.sqlapp.jdbc.bulk.BulkUpsertResolver.resolve(this).execute(connection, table, options);
+		});
+	}
+
+	@FunctionalInterface
+	public interface TenantConnectionWork<T> {
+		T execute(java.sql.Connection connection) throws java.sql.SQLException;
+	}
+
+	/**
+	 * Runs work on a verified tenant connection selected from the supplied map. A
+	 * null or empty tenant selects the global mapping. Resources obtained from the
+	 * connection must be consumed before the callback returns.
+	 */
+	public <T> T withTenantConnection(java.util.Map<String, ? extends javax.sql.DataSource> sources, String tenantId,
+			TenantConnectionWork<T> work) throws java.sql.SQLException {
+		java.util.Objects.requireNonNull(work, "work");
+		final String tenant = java.util.Objects.requireNonNullElse(tenantId, "");
+		final var source = sources.get(tenant);
+		if (source == null)
+			throw new IllegalArgumentException("No Phoenix data source configured for the requested tenant");
+		try (var connection = source.getConnection()) {
+			if (!tenant.equals(java.util.Objects.requireNonNullElse(connection.getCatalog(), "")))
+				throw new IllegalArgumentException("Configured Phoenix connection does not match the requested tenant");
+			return work.execute(connection);
+		}
+	}
+
+	@Override
+	public String getObjectFullName(String catalogName, String schemaName, String objectName) {
+		// Phoenix exposes tenant identity as JDBC catalog metadata, but selects it on
+		// the connection.
+		return super.getObjectFullName(null, schemaName, objectName);
+	}
+
+	@Override
+	protected String doQuote(final String target) {
+		return getOpenQuote() + target.replace("\"", "\"\"") + getCloseQuote();
+	}
+
+	/**
 	 * コンストラクタ
 	 * 
 	 * @param nextVersionDialectSupplier 次のバージョンのDialect
@@ -116,10 +167,16 @@ public class Phoenix extends Dialect {
 		// Date
 		getDbDataTypes().addDate(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+			final var converter = new com.sqlapp.data.db.dialect.phoenix.converter.PhoenixTemporalConverter(false);
+			type.setConverter(converter).setFormatter(converter).setJdbcTypeHandler(
+					new com.sqlapp.data.db.datatype.DefaultJdbcTypeHandler(java.sql.JDBCType.DATE, converter));
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
+			final var converter = new com.sqlapp.data.db.dialect.phoenix.converter.PhoenixTemporalConverter(true);
+			type.setConverter(converter).setFormatter(converter).setJdbcTypeHandler(
+					new com.sqlapp.data.db.datatype.DefaultJdbcTypeHandler(java.sql.JDBCType.TIME, converter));
 		});
 		// Timestamp
 		getDbDataTypes().addTimestamp(type -> {
@@ -150,7 +207,10 @@ public class Phoenix extends Dialect {
 		final boolean isArray = array.matches();
 		if (isArray)
 			name = array.group(1).strip();
+		if (name.equals("VARBINARY_ENCODED") && !supportsEncodedBinary())
+			throw new UnsupportedOperationException("Phoenix VARBINARY_ENCODED requires version 5.3 or later");
 		final String base = switch (name) {
+		case "VARBINARY_ENCODED" -> "VARBINARY";
 		case "UNSIGNED_FLOAT" -> "FLOAT";
 		case "UNSIGNED_DOUBLE" -> "DOUBLE";
 		case "UNSIGNED_DATE" -> "DATE";
@@ -218,6 +278,38 @@ public class Phoenix extends Dialect {
 	}
 
 	@Override
+	public com.sqlapp.data.converter.Converter<?> getColumnValueConverter(final com.sqlapp.data.schemas.Column column) {
+		if (column.getArrayDimension() == 0
+				&& (column.getDataType() == DataType.DATE || column.getDataType() == DataType.TIME))
+			return (com.sqlapp.data.converter.Converter<?>) getDbDataType(column).getConverter();
+		return super.getColumnValueConverter(column);
+	}
+
+	@Override
+	public boolean supportsLimit() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsSequence() {
+		return true;
+	}
+
+	@Override
+	public String getSqlValueDefinition(final com.sqlapp.data.schemas.Column column, final Object value) {
+		if ("VARBINARY_ENCODED".equalsIgnoreCase(column.getDataTypeName())) {
+			if (!supportsEncodedBinary())
+				throw new UnsupportedOperationException("Phoenix VARBINARY_ENCODED requires version 5.3 or later");
+			if (value != null) {
+				if (!(value instanceof byte[] bytes))
+					throw new IllegalArgumentException("Phoenix VARBINARY_ENCODED SQL literals require byte[] values");
+				return "X'" + java.util.HexFormat.of().formatHex(bytes) + "'";
+			}
+		}
+		return super.getSqlValueDefinition(column, value);
+	}
+
+	@Override
 	public boolean supportsWith() {
 		return true;
 	}
@@ -262,7 +354,12 @@ public class Phoenix extends Dialect {
 		final BigInteger increment = sequence.getIncrementBy() != null ? sequence.getIncrementBy() : BigInteger.ONE;
 		final List<Object> result = CommonUtils.list(count);
 		for (int i = 0; i < count; i++) {
-			result.add(first.add(increment.multiply(BigInteger.valueOf(i))).longValueExact());
+			final BigInteger value = first.add(increment.multiply(BigInteger.valueOf(i)));
+			if ((sequence.getMinValue() != null && value.compareTo(sequence.getMinValue()) < 0)
+					|| (sequence.getMaxValue() != null && value.compareTo(sequence.getMaxValue()) > 0))
+				throw new IllegalStateException(
+						"Phoenix sequence reservation exceeds modeled bounds: " + sequence.getName());
+			result.add(value.longValueExact());
 		}
 		return result;
 	}
@@ -310,6 +407,38 @@ public class Phoenix extends Dialect {
 
 	/** Whether column DEFAULT declarations are available on this version. */
 	public boolean supportsColumnDefault() {
+		return false;
+	}
+
+	/** Whether the server supports the escaped variable-length binary encoding. */
+	public boolean supportsEncodedBinary() {
+		return false;
+	}
+
+	/** Whether native CREATE INDEX keys may contain expressions. */
+	public boolean supportsFunctionalIndexes() {
+		return false;
+	}
+
+	public boolean supportsUpdateCacheFrequency() {
+		return false;
+	}
+
+	public boolean supportsGuidePostsWidth() {
+		return false;
+	}
+
+	/** Server capability; provider-aware transactional CREATE remains guarded. */
+	public boolean supportsTransactionalTables() {
+		return false;
+	}
+
+	public boolean supportsStoreNulls() {
+		return false;
+	}
+
+	/** Whether CREATE TABLE accepts APPEND_ONLY_SCHEMA. */
+	public boolean supportsAppendOnlySchema() {
 		return false;
 	}
 }

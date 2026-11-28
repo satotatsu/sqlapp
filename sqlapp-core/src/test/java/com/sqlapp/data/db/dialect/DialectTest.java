@@ -75,8 +75,9 @@ public class DialectTest {
 
 	@Test
 	public void preservesQuotedQualifiedNamesInMatchingAndColumnSetters() {
-		for (String name : new String[] { "\"Other.Schema\".\"Type \"\"Name\"\"\"",
-				"public.\"Mixed Case\"", "\"Space  Schema\".\"Type  Name\"" }) {
+		for (String name : new String[] { "\"Type  Name\"", "\"Mixed Case\"", "\"Type \"\"Name\"\"\"",
+				"\"Other.Schema\".\"Type \"\"Name\"\"\"", "public.\"Mixed Case\"",
+				"\"Space  Schema\".\"Type  Name\"" }) {
 			Column matched = createColumn();
 			dialect.setDbType("  " + name + "  ", null, null, matched);
 			assertEquals(name, matched.getDataTypeName());
@@ -94,6 +95,67 @@ public class DialectTest {
 		Column column = new Column();
 		column.setDialect(dialect);
 		return column;
+	}
+
+	@Test
+	public void quotedUserTypeSurvivesXmlAndDdl() throws Exception {
+		try (var connection = java.sql.DriverManager.getConnection("jdbc:hsqldb:mem:quotedUserType", "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE DOMAIN \"Type  Name\" AS INTEGER");
+			Column column = createColumn();
+			column.setName("C");
+			column.setDataTypeName("\"Type  Name\"");
+			Column restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(column.asXml()));
+			assertEquals("\"Type  Name\"", restored.getDataTypeName());
+			assertEquals("\"Type  Name\"", column.clone().getDataTypeName());
+			statement.execute("CREATE TABLE T (C " + dialect.createSqlBuilder().definition(restored, false) + ")");
+			statement.execute("INSERT INTO T VALUES(7)");
+			try (var result = statement.executeQuery("SELECT C FROM T")) {
+				result.next();
+				assertEquals(7, result.getInt(1));
+			}
+		}
+	}
+
+	@Test
+	public void quotedIdentifiersExecuteAndKeepTheirNames() throws Exception {
+		try (var connection = java.sql.DriverManager.getConnection("jdbc:hsqldb:mem:quotedIdentifiers", "SA", "");
+				var statement = connection.createStatement()) {
+			for (String name : new String[] { "A\"B", "1ABC", "A B", "\"", "\"EDGE", "EDGE\"" }) {
+				String quoted = dialect.quote(name);
+				assertEquals(name, dialect.unQuote(quoted));
+				statement.execute("CREATE TABLE " + quoted + " (" + quoted + " INTEGER)");
+				try (var result = statement.executeQuery("SELECT " + quoted + " FROM " + quoted)) {
+					assertEquals(name, result.getMetaData().getColumnName(1));
+				}
+				statement.execute("DROP TABLE " + quoted);
+			}
+		}
+		assertEquals("ABC_123$", dialect.quote("ABC_123$"));
+		assertEquals("\"1ABC\"", dialect.quote("1ABC"));
+		assertEquals("\"A\"\"B\"", dialect.quote("A\"B"));
+		assertNull(dialect.quote(null));
+		assertNull(dialect.unQuote(null));
+		assertEquals("", dialect.unQuote(""));
+		assertEquals("A B", dialect.unQuote("\"A B\""));
+		assertEquals("\"A\"", dialect.unQuote("\"\"\"A\"\"\""));
+	}
+
+	@Test
+	public void bracketAndBacktickIdentifiersRoundTrip() {
+		for (char open : new char[] { '[', '`' }) {
+			Dialect custom = new Dialect(null) {
+				@Override
+				public char getOpenQuote() { return open; }
+				@Override
+				public char getCloseQuote() { return open == '[' ? ']' : open; }
+			};
+			for (String name : new String[] { "A B", "A]B", "A`B", "1ABC" }) {
+				assertEquals(name, custom.unQuote(custom.quote(name)));
+			}
+			String quoted = open + "A B" + custom.getCloseQuote();
+			assertEquals(quoted, custom.quote(quoted));
+		}
 	}
 
 }

@@ -65,6 +65,11 @@ public class Oracle12cColumnReader extends Oracle11gColumnReader {
 			column.setSequenceName(getString(rs, "SEQUENCE_NAME"));
 			String identityOptions = getString(rs, "IDENTITY_OPTIONS");
 			setIdentityOptions(column, identityOptions);
+			// LAST_NUMBER is the cache allocation boundary: at or above the next value.
+			java.math.BigDecimal next = com.sqlapp.data.converter.Converters.getDefault()
+					.convertObject(rs.getObject("IDENTITY_LAST_NUMBER"), java.math.BigDecimal.class);
+			if (next != null)
+				column.setIdentityLastValue(next.longValueExact());
 		}
 		return column;
 	}

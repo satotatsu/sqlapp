@@ -64,12 +64,13 @@ public class DurationConverter extends AbstractConverter<Duration> implements Su
 			final Calendar cst = Calendar.class.cast(value);
 			return Duration.ofSeconds(toSecond(cst), toNano(cst));
 		} else if (value instanceof java.util.Date) {
-			final java.sql.Date dt = java.sql.Date.class.cast(value);
+			// any java.util.Date (Timestamp, java.sql.Date, ...), not only java.sql.Date
+			final java.util.Date dt = java.util.Date.class.cast(value);
 			final Calendar cst = DateUtils.toCalendar(dt);
 			return Duration.ofSeconds(toSecond(cst), toNano(cst));
 		} else if (value instanceof String) {
 			final String lowerVal = ((String) value).toLowerCase();
-			if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+			if (lowerVal.length() >= 2 && lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
 				final String val = cast(value);
 				return parse(val.substring(1, val.length() - 1));
 			}
@@ -98,10 +99,29 @@ public class DurationConverter extends AbstractConverter<Duration> implements Su
 		return dateConverter;
 	}
 
+	/** [+-][days ]hours:minutes[:seconds[.fraction]] such as "01:30:00" or "1 02:00:00.5" */
+	private static final java.util.regex.Pattern CLOCK_TEXT = java.util.regex.Pattern
+			.compile("([+-])?(?:(\\d+)\\s+)?(\\d+):(\\d{1,2})(?::(\\d{1,2})(?:\\.(\\d{1,9}))?)?");
+
 	private Duration parse(final String text) {
 		try {
 			return Duration.parse(text);
 		} catch (final DateTimeParseException e) {
+			final java.util.regex.Matcher clock = CLOCK_TEXT.matcher(text.trim());
+			if (clock.matches()) {
+				Duration duration = Duration.ofHours(Long.parseLong(clock.group(3)))
+						.plusMinutes(Long.parseLong(clock.group(4)));
+				if (clock.group(2) != null) {
+					duration = duration.plusDays(Long.parseLong(clock.group(2)));
+				}
+				if (clock.group(5) != null) {
+					duration = duration.plusSeconds(Long.parseLong(clock.group(5)));
+				}
+				if (clock.group(6) != null) {
+					duration = duration.plusNanos(Long.parseLong((clock.group(6) + "00000000").substring(0, 9)));
+				}
+				return "-".equals(clock.group(1)) ? duration.negated() : duration;
+			}
 			final Interval interval = Interval.parse(text);
 			return Duration.ofSeconds(toSecond(interval.getHours(), interval.getMinutes(), interval.getSeconds()),
 					interval.getNanos());

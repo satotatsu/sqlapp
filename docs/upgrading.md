@@ -7,6 +7,63 @@ XML and SQL even when application source still compiles.
 This guide describes consumer-side verification. It does not require a live
 production database and does not replace database-vendor upgrade guidance.
 
+## SQL generation
+
+The generic JDBC column reader now rejects generated columns when their expression
+cannot be preserved. Use a vendor metadata reader that reads the generation formula
+or complete table DDL. A derived reader can populate `Column.formula` in
+`createColumn` or `completeColumn`; the latter runs before validation and allows
+Access metadata to supply calculated-column expressions from its native file.
+Readers that enrich metadata in bulk can override
+`validateGeneratedColumn` and validate after enrichment.
+
+For standard JDBC TIME and TIMESTAMP declarations, column and routine-argument display widths are
+converted to fractional-second precision. Unrecognized widths fail with an
+actionable error rather than producing an invalid precision. Vendor-specific
+datetime declarations remain the responsibility of their metadata reader.
+
+Quoted user type names retain their quotes, case and internal whitespace through
+Schema XML and SQL generation. SQL line comments recognize CR, LF and CRLF line
+endings while literal values retain their original characters.
+
+Unique indexes with expressions or unresolved key components are excluded from
+row-key selection instead of using only their resolved columns. Explicit
+`NOT_NULL_UNIQUE_INDEX` selection now throws `MissingWhereClauseKeyException`
+when no usable index exists, preventing an unconditional UPDATE or DELETE.
+Constraint deletion accompanying a table rename uses the renamed owner.
+
+Condition-based `UPDATE_TABLE`, `UPDATE_FOR_APP` and `DELETE_FOR_APP` generation
+also supports tables without a usable key. Available keys remain excluded from
+UPDATE assignments; ordinary keyed UPDATE and DELETE still require a usable key.
+Root-row DELETE generation now uses distinct parent aliases across multiple
+ancestor levels, including the root-row predicate.
+
+Partial unique indexes are no longer used as unconditional row keys by the
+shared SQL factories. Provide a primary key or a full-table unique key when
+generating keyed UPDATE, DELETE, MERGE or INSERT SELECT NOT EXISTS statements.
+UPDATE generation now throws `IllegalArgumentException` when no updatable
+non-key columns remain, instead of returning SQL with an empty SET clause.
+Table differences follow foreign-key dependency order for creation and deletion;
+combined column renames and definition changes rename the column first.
+Public method signatures and Schema XML formats are unchanged.
+
+## JDBC SQL template execution
+
+`JdbcBatchUpdateHandler` now rejects dynamic templates on its default fast batch
+path instead of reusing the first row's SQL structure for later rows. Fixed SQL
+continues to use `reEval()`. Set `evaluateSqlPerRow` through
+`setEvaluateSqlPerRow(true)` when using conditionals, loops, variable-length bind
+lists, SQL replacement/output, includes, custom nodes or parameter operator
+overrides. See [JDBC SQL templates](data/jdbc-sql.md) for examples and transaction
+boundaries. Batch size 1 or less already evaluates every row independently.
+
+Generated-key callbacks supplied in handler constructors now run on ordinary
+context-based execution. SQL registry single-string registration, cache loading,
+include expansion, conditional branches, mixed JDBC results and INOUT binding
+also have corrected behavior. Collection clones now have independent bind
+parameter containers; their values and stream references remain shared.
+Public method signatures and Schema XML formats are preserved.
+
 ## Legacy Graphviz renderer removal
 
 The legacy `sqlapp-graphviz` module has been removed from this source tree and

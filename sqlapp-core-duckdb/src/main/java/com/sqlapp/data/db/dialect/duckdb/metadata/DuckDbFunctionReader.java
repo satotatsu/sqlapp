@@ -12,6 +12,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.duckdb.util.DuckDbMacros;
@@ -30,14 +32,35 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * Reads DuckDB scalar and table macros from {@code duckdb_functions()} in a
  * single query.
  * <p>
- * All overloads of a macro belong to one catalog entry, so they are combined
- * into one {@link Function} whose {@code definition} is the complete
- * {@code CREATE MACRO} statement. DuckDB does not expose parameter default
- * values; parameters declared with {@code :=} are reconstructed without their
- * default.
+ * All overloads belong to one catalog entry. DuckDB exposes neither parameter
+ * defaults nor a flag identifying defaulted parameters. Parameterized macros
+ * are therefore marked as incomplete rather than generating a lossy CREATE
+ * definition. Supply the original definition or opt in to complete schema
+ * snapshot/export extraction to recreate those macros.
  * </p>
  */
 public class DuckDbFunctionReader extends FunctionReader {
+	private boolean readCompleteDefinitions;
+
+	/**
+	 * Opt in to a temporary, data-free schema snapshot/export on an auto-commit
+	 * connection.
+	 */
+	public void setReadCompleteDefinitions(final boolean value) {
+		this.readCompleteDefinitions = value;
+	}
+
+	public boolean isReadCompleteDefinitions() {
+		return readCompleteDefinitions;
+	}
+
+	/** Metadata cannot distinguish required parameters from defaulted ones. */
+	public static final String INCOMPLETE_SIGNATURE = "duckdb.macro.incompleteSignature";
+	/**
+	 * Available overloads/bodies for inspection only; parameter defaults are
+	 * missing.
+	 */
+	public static final String PARTIAL_DEFINITION = "duckdb.macro.partialDefinition";
 
 	protected DuckDbFunctionReader(final Dialect dialect) {
 		super(dialect);
@@ -81,6 +104,32 @@ public class DuckDbFunctionReader extends FunctionReader {
 			result.add(builder.build());
 		}
 		markSharedNames(result);
+		if (readCompleteDefinitions) {
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.duckdb.DuckDbVersions.DuckDb20))
+				throw new UnsupportedOperationException("Complete macro extraction requires DuckDB 2.0+");
+			final Map<String, Map<DuckDbMacroDefinitions.Key, String>> exports = new HashMap<>();
+			for (final Function function : result) {
+				if (!"true".equals(function.getSpecifics().get(INCOMPLETE_SIGNATURE)))
+					continue;
+				Map<DuckDbMacroDefinitions.Key, String> definitions = exports.get(function.getCatalogName());
+				if (definitions == null) {
+					try {
+						definitions = DuckDbMacroDefinitions.read(connection, getDialect(), function.getCatalogName());
+					} catch (SQLException e) {
+						throw new IllegalStateException("Cannot recover complete DuckDB macro definitions", e);
+					}
+					exports.put(function.getCatalogName(), definitions);
+				}
+				final String definition = definitions.get(new DuckDbMacroDefinitions.Key(function.getSchemaName(),
+						function.getName(), function.getFunctionType() == FunctionType.Table));
+				if (definition == null)
+					throw new IllegalStateException(
+							"Complete DuckDB macro definition was not exported: " + function.getName());
+				function.setDefinition(definition);
+				function.getSpecifics().remove(INCOMPLETE_SIGNATURE);
+				function.getSpecifics().remove(PARTIAL_DEFINITION);
+			}
+		}
 		return result;
 	}
 
@@ -146,7 +195,13 @@ public class DuckDbFunctionReader extends FunctionReader {
 				}
 				function.setStatement(overload.body());
 			}
-			function.setDefinition(DuckDbMacros.createMacro(getDialect(), schema, name, table, overloads));
+			if (overloads.stream().anyMatch(overload -> !overload.parameterNames().isEmpty())) {
+				function.getSpecifics().put(INCOMPLETE_SIGNATURE, "true");
+				function.getSpecifics().put(PARTIAL_DEFINITION,
+						DuckDbMacros.createMacro(getDialect(), catalog, schema, name, table, overloads));
+			} else {
+				function.setDefinition(DuckDbMacros.createMacro(getDialect(), catalog, schema, name, table, overloads));
+			}
 			return function;
 		}
 	}

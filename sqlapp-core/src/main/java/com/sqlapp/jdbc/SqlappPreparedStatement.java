@@ -29,18 +29,15 @@ import java.sql.Statement;
  * @author satoh
  * 
  */
-public class SqlappPreparedStatement extends
-		AbstractPreparedStatement<PreparedStatement> implements
-		PreparedStatement {
+public class SqlappPreparedStatement extends AbstractPreparedStatement<PreparedStatement> implements PreparedStatement {
 
-	public SqlappPreparedStatement(PreparedStatement nativeStatement,
-			String sql, SqlappConnection connection) {
+	public SqlappPreparedStatement(PreparedStatement nativeStatement, String sql, SqlappConnection connection) {
 		super(nativeStatement, sql, connection);
 	}
 
 	@Override
 	protected ResultSet getResultSet(ResultSet rs, Statement statement) {
-		SqlappResultSet<Statement> resultSet= new SqlappResultSet<Statement>(rs, statement);
+		SqlappResultSet<Statement> resultSet = new SqlappResultSet<Statement>(rs, statement);
 		this.initializeChild(resultSet);
 		return resultSet;
 	}

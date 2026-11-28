@@ -34,6 +34,7 @@ public class DbPlugin implements Plugin<Project> {
 	public static final String GROUP_MIGRATION_ASSESSMENT = "sqlapp migration assessment";
 	public static final String GROUP_BULK_MIGRATION = "sqlapp bulk migration";
 	public static final String GROUP_MIGRATION_SNAPSHOT = "sqlapp migration snapshot";
+	public static final String GROUP_MIGRATION_MODEL = "sqlapp migration model";
 	public static final String GROUP_TRANSFER = "sqlapp transfer";
 	public static final String GROUP_LEGACY_MIGRATION = "sqlapp legacy migration";
 
@@ -122,6 +123,11 @@ public class DbPlugin implements Plugin<Project> {
 				"Verifies a migration snapshot report.");
 		registerTask(project, "verifyMigrationSnapshotFailureReport", VerifyMigrationSnapshotFailureReportTask.class, GROUP_MIGRATION_SNAPSHOT,
 				"Verifies a migration snapshot failure report.");
+		// sqlapp migration model
+		registerTask(project, "executeMigrationModels", ExecuteMigrationModelsTask.class, GROUP_MIGRATION_MODEL,
+				"Tests and builds SELECT-defined migration models.");
+		registerTask(project, "runMigrationPipeline", RunMigrationPipelineTask.class, GROUP_MIGRATION_MODEL,
+				"Loads the engine, builds the migration models and publishes them as one job.");
 		// sqlapp transfer
 		registerTask(project, "transferDatabase", TransferDatabaseTask.class, GROUP_TRANSFER,
 				"Reviews or runs a direct database-to-database transfer.");
@@ -131,11 +137,17 @@ public class DbPlugin implements Plugin<Project> {
 				"Imports a transfer file package into the target database.");
 		registerTask(project, "compareTransferStaging", CompareTransferStagingTask.class, GROUP_TRANSFER,
 				"Compares retained staging data with the target database.");
+		registerTask(project, "generateLogicMigrationRequest", GenerateLogicMigrationRequestTask.class, GROUP_TRANSFER,
+				"Writes a trigger conversion request for an AI or a reviewer (Oracle to PostgreSQL).");
+		registerTask(project, "importLogicMigrationResponse", ImportLogicMigrationResponseTask.class, GROUP_TRANSFER,
+				"Imports and checks a trigger conversion response into the request work directory.");
 		// sqlapp legacy migration
 		registerTask(project, "pliSchemaImport", PliSchemaImportTask.class, GROUP_LEGACY_MIGRATION,
 				"Imports PL/I record definitions as Schema XML.");
 		registerTask(project, "cobolSchemaImport", CobolSchemaImportTask.class, GROUP_LEGACY_MIGRATION,
 				"Imports COBOL copybook records as Schema XML.");
+		registerTask(project, "extractCobolCsv", ExtractCobolCsvTask.class, GROUP_LEGACY_MIGRATION,
+				"Extracts contract CSV files from a host data set with a COBOL record layout.");
 		registerTask(project, "generateLegacyMigrationContract", GenerateLegacyMigrationContractTask.class, GROUP_LEGACY_MIGRATION,
 				"Generates an extraction and load contract from a mapping.");
 		registerTask(project, "generatePliCsvExtractor", GeneratePliCsvExtractorTask.class, GROUP_LEGACY_MIGRATION,

@@ -38,9 +38,13 @@ public class DialectResolverTest {
 
 	@Test
 	public void testGetDialect() {
-		Dialect dialect = DialectResolver.getInstance().getDialect("Firebird", 2, 3, 0);
-		System.out.println(dialect);
-		assertTrue(dialect instanceof Firebird20);
+		Dialect dialect = DialectResolver.getInstance().getDialect("Firebird", 2, 0, 0);
+		assertEquals(Firebird20.class, dialect.getClass());
+		for (int minor : new int[] { 1, 3 }) {
+			dialect = DialectResolver.getInstance().getDialect("Firebird", 2, minor, 0);
+			assertEquals(com.sqlapp.data.db.dialect.firebird.Firebird21.class, dialect.getClass());
+			assertTrue(dialect.supportsWith());
+		}
 		dialect = DialectResolver.getInstance().getDialect("Firebird", 2, 5, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Firebird25);
@@ -63,6 +67,7 @@ public class DialectResolverTest {
 		}
 		assertCatalogReader("FirebirdCatalogReader", 1, 5, 0);
 		assertCatalogReader("Firebird20CatalogReader", 2, 0, 0);
+		assertCatalogReader("Firebird20CatalogReader", 2, 1, 0);
 		assertCatalogReader("Firebird25CatalogReader", 2, 5, 0);
 		assertCatalogReader("Firebird30CatalogReader", 3, 0, 0);
 		assertCatalogReader("Firebird40CatalogReader", 4, 0, 0);

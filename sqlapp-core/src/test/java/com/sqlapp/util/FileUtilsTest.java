@@ -19,9 +19,12 @@
 
 package com.sqlapp.util;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -33,6 +36,26 @@ class FileUtilsTest {
 	@Test
 	void testGetFileNameWithoutExtension() {
 		assertEquals("abc.def", FileUtils.getFileNameWithoutExtension("abc.def.xlsx"));
+	}
+
+	@Test
+	void pathOverloadCreatesOnlyParentDirectories() throws IOException {
+		Path file = tempDir.toPath().resolve("nested/parent/result.txt");
+		FileUtils.createParentDirectory(file);
+		assertTrue(Files.isDirectory(file.getParent()));
+		assertFalse(Files.exists(file));
+		Files.writeString(file, "preserved");
+		FileUtils.createParentDirectory(file);
+		assertEquals("preserved", Files.readString(file));
+		FileUtils.createParentDirectory(Path.of("parentless.txt"));
+	}
+
+	@Test
+	void pathOverloadPropagatesInvalidParentFailure() throws IOException {
+		Path file = tempDir.toPath().resolve("ordinary-file");
+		Files.writeString(file, "data");
+		assertThrows(RuntimeException.class,
+				() -> FileUtils.createParentDirectory(file.resolve("child.txt")));
 	}
 
 }

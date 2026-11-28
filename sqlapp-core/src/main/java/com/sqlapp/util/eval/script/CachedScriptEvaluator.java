@@ -38,22 +38,22 @@ public class CachedScriptEvaluator extends AbstractCachedEvaluator {
 		this("JavaScript");
 	}
 
+	/**
+	 * @throws IllegalArgumentException if no script engine is registered for the name
+	 */
 	public CachedScriptEvaluator(String engineName) {
 		this.engineName = engineName;
-		ScriptEngineManager manager = new ScriptEngineManager();
-		engine = manager.getEngineByName(engineName);
-		if (getEngine() instanceof Compilable) {
-			this.compilable = true;
-		} else {
-			this.compilable = false;
-		}
-		getEngine();
+		this.compilable = getEngine() instanceof Compilable;
 	}
 
 	public ScriptEngine getEngine() {
 		if (engine == null) {
 			ScriptEngineManager manager = new ScriptEngineManager();
 			engine = manager.getEngineByName(engineName);
+			if (engine == null) {
+				throw new IllegalArgumentException("No script engine registered for '" + engineName
+						+ "'. Add a JSR-223 engine provider to the classpath.");
+			}
 		}
 		return engine;
 	}

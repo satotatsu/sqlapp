@@ -107,7 +107,6 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 			final Optional<TypeInformation> op = columnTypeMatcher.match(dataTypeName);
 			if (op.isPresent()) {
 				op.get().setDbDataType(this);
-				op.get().setDataTypeName(this.getTypeName());
 				return op;
 			}
 		}
@@ -727,7 +726,18 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	@Override
 	public T clone() {
 		try {
-			return (T) super.clone();
+			final DbDataType<?> copy = (DbDataType<?>) super.clone();
+			copy.columnTypeMatchers = list();
+			for (ColumnTypeMatcher matcher : columnTypeMatchers) {
+				ColumnTypeMatcher copiedMatcher = matcher.copy();
+				if (copiedMatcher != matcher) {
+					copy.setDefaultValueRecursive(copiedMatcher);
+				}
+				copy.columnTypeMatchers.add(copiedMatcher);
+			}
+			copy.sizeSarrogatedType = CommonUtils.cloneMap(sizeSarrogatedType);
+			copy.supportCharacterSemantics = CommonUtils.linkedSet(supportCharacterSemantics);
+			return (T) copy;
 		} catch (final CloneNotSupportedException e) {
 			throw new RuntimeException(e);
 		}
@@ -800,12 +810,12 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	}
 
 	/**
-	 * Jdbcタイプハンドラーを設定します
+	 * Jdbcタイプハンドラーを設定します。NULLのバインドには{@link #getJdbcType()}を使用します。
 	 * 
 	 * @param converter
 	 */
 	public T setJdbcTypeHandler(final Converter<?> converter) {
-		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
+		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getJdbcType(), converter));
 		return this.instance();
 	}
 
@@ -815,7 +825,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	 */
 	public T setJdbcTypeHandler(final Converter<?> statementConverter, final Converter<?> resultSetconverter) {
 		this.setJdbcTypeHandler(
-				new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), statementConverter, resultSetconverter));
+				new DefaultJdbcTypeHandler(this.getJdbcType(), statementConverter, resultSetconverter));
 		return this.instance();
 	}
 
@@ -1070,7 +1080,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	 */
 	public T setPetternColumnTypeMatcher(String pattern, MatcherColumn... matcherColumns) {
 		this.getColumnTypeMatchers().clear();
-		this.addColumnTypeMatcher(new RegexColumnTypeMatcher(pattern));
+		this.addColumnTypeMatcher(new RegexColumnTypeMatcher(pattern, matcherColumns));
 		return instance();
 	}
 
@@ -1082,7 +1092,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	 * @return this
 	 */
 	public T addPetternColumnTypeMatcher(String pattern, MatcherColumn... matcherColumns) {
-		this.addColumnTypeMatcher(new RegexColumnTypeMatcher(pattern));
+		this.addColumnTypeMatcher(new RegexColumnTypeMatcher(pattern, matcherColumns));
 		return instance();
 	}
 

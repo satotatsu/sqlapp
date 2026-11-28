@@ -15,8 +15,8 @@ final class SpannerCounterRestart {
 				throw new NumberFormatException();
 			return counter.longValueExact();
 		} catch (ArithmeticException | NumberFormatException exception) {
-			throw new IllegalArgumentException("Spanner counter restart requires an explicit positive INT64 for " + object,
-					exception);
+			throw new IllegalArgumentException(
+					"Spanner counter restart requires an explicit positive INT64 for " + object, exception);
 		}
 	}
 }

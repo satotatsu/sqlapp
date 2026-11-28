@@ -108,7 +108,9 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends 
 		return lineNumber;
 	}
 
+	/** Reads the next row, starting parsing on the first call. */
 	public String[] read() throws IOException {
+		beginParsing();
 		return parser.parseNext();
 	}
 

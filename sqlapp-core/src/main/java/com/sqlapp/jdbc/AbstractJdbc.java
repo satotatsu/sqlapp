@@ -32,8 +32,8 @@ public abstract class AbstractJdbc<T extends Wrapper> implements Wrapper {
 
 	protected T nativeObject = null;
 
-	private boolean debug=false;
-	
+	private boolean debug = false;
+
 	public AbstractJdbc(T nativeObject) {
 		this.nativeObject = nativeObject;
 	}
@@ -68,28 +68,28 @@ public abstract class AbstractJdbc<T extends Wrapper> implements Wrapper {
 	 * @param text
 	 */
 	protected void info(String text) {
-		if (CommonUtils.isEmpty(text)){
+		if (CommonUtils.isEmpty(text)) {
 			return;
 		}
 		logBefore();
 		logger.info(text);
-		if (this.isDebug()){
+		if (this.isDebug()) {
 			System.out.println(text);
 		}
 	}
-	
+
 	/**
 	 * infoレベルのログ出力
 	 * 
 	 * @param text
 	 */
 	protected void warn(String text) {
-		if (CommonUtils.isEmpty(text)){
+		if (CommonUtils.isEmpty(text)) {
 			return;
 		}
 		logBefore();
 		logger.warn(text);
-		if (this.isDebug()){
+		if (this.isDebug()) {
 			System.out.println(text);
 		}
 	}
@@ -100,7 +100,7 @@ public abstract class AbstractJdbc<T extends Wrapper> implements Wrapper {
 	 * @param text
 	 */
 	protected void trace(String text) {
-		if (CommonUtils.isEmpty(text)){
+		if (CommonUtils.isEmpty(text)) {
 			return;
 		}
 		logBefore();
@@ -113,7 +113,7 @@ public abstract class AbstractJdbc<T extends Wrapper> implements Wrapper {
 	 * @param text
 	 */
 	protected void debug(String text) {
-		if (CommonUtils.isEmpty(text)){
+		if (CommonUtils.isEmpty(text)) {
 			return;
 		}
 		logBefore();
@@ -128,34 +128,34 @@ public abstract class AbstractJdbc<T extends Wrapper> implements Wrapper {
 	protected void error(String text, Throwable t) {
 		logBefore();
 		logger.error(text, t);
-		if (this.isDebug()){
-			if (CommonUtils.isEmpty(text)){
+		if (this.isDebug()) {
+			if (CommonUtils.isEmpty(text)) {
 				System.err.println(text);
 			}
 			t.printStackTrace(System.err);
 		}
 	}
-	
+
 	/**
 	 * SQLログが有効
 	 * 
 	 */
 	protected boolean isSqlLogEnabled() {
-		return this.isDebug()||logger.isInfoEnabled();
+		return this.isDebug() || logger.isInfoEnabled();
 	}
-	
-	protected boolean isErrorEnabled(){
+
+	protected boolean isErrorEnabled() {
 		return logger.isErrorEnabled();
 	}
 
-	protected boolean isInfoEnabled(){
+	protected boolean isInfoEnabled() {
 		return logger.isInfoEnabled();
 	}
 
-	protected boolean isTraceEnabled(){
+	protected boolean isTraceEnabled() {
 		return logger.isTraceEnabled();
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -196,8 +196,8 @@ public abstract class AbstractJdbc<T extends Wrapper> implements Wrapper {
 	protected void setDebug(boolean debug) {
 		this.debug = debug;
 	}
-	
-	protected void initializeChild(AbstractJdbc<?> child){
+
+	protected void initializeChild(AbstractJdbc<?> child) {
 		child.setDebug(this.isDebug());
 	}
 

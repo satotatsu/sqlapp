@@ -26,6 +26,7 @@ import static com.sqlapp.util.CommonUtils.linkedSet;
 import static com.sqlapp.util.DateUtils.DEFAULT_DATETIME_FORMAT;
 
 import java.text.ParsePosition;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,7 +40,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
 import java.time.temporal.Temporal;
 import java.time.temporal.TemporalAccessor;
@@ -89,7 +89,36 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 
 	protected T parseDate(final String value) {
 		final int size = parseFormats.length;
-		DateTimeParseException ext = null;
+		// DateTimeException too: "2026-02-30" matches a format but is not a date
+		DateTimeException ext = null;
+		// Prefer a format that reads the whole text, so that a shorter format
+		// listed first (for example ".SSS" before ".nnnnnnnnn") cannot silently
+		// drop the rest of the value.
+		// parseTemporal returns null for a prefix match while WHOLE_TEXT is set, so
+		// each format is parsed once per pass.
+		final Boolean previous = WHOLE_TEXT.get();
+		WHOLE_TEXT.set(Boolean.TRUE);
+		try {
+			for (int i = 0; i < size; i++) {
+				try {
+					final T dateTime = parse(value, parseFormats[i]);
+					if (dateTime != null) {
+						return dateTime;
+					}
+				} catch (final DateTimeException e) {
+					if (ext == null) {
+						ext = e;
+					}
+				}
+			}
+		} finally {
+			if (previous == null) {
+				WHOLE_TEXT.remove();
+			} else {
+				WHOLE_TEXT.set(previous);
+			}
+		}
+		// Otherwise keep the lenient behavior: the first format that reads a prefix.
 		for (int i = 0; i < size; i++) {
 			try {
 				final DateTimeFormatter dateTimeFormatter = parseFormats[i];
@@ -97,7 +126,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 				if (dateTime != null) {
 					return dateTime;
 				}
-			} catch (final DateTimeParseException e) {
+			} catch (final DateTimeException e) {
 				if (ext == null) {
 					ext = e;
 				}
@@ -107,6 +136,9 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 		throw new UnsupportedOperationException(message, ext);
 	}
 
+	/** Set by parseDate while only formats that read the whole text are accepted. */
+	private static final ThreadLocal<Boolean> WHOLE_TEXT = new ThreadLocal<>();
+
 	protected abstract T parse(String value, DateTimeFormatter dateTimeFormatter);
 
 	public DateTimeFormatter[] getParseFormats() {
@@ -114,7 +146,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 	}
 
 	public S setParseFormats(final String... parseFormats) {
-		return setParseFormats(Java8DateUtils.getDateTimeFormatters(parseFormats));
+		return setParseFormats(Java8DateUtils.getParseDateTimeFormatters(parseFormats));
 	}
 
 	protected abstract String format(T temporal, DateTimeFormatter formatter);
@@ -158,7 +190,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 			if (parseFormat instanceof DateTimeFormatter) {
 				formatters.add((DateTimeFormatter) parseFormat);
 			} else if (parseFormat instanceof String) {
-				formatters.add(Java8DateUtils.getDateTimeFormatter((String) parseFormat));
+				formatters.add(Java8DateUtils.getParseDateTimeFormatter((String) parseFormat));
 			} else {
 				throw new IllegalArgumentException(
 						"parseFormats must String or DateTimeFormatter.[" + Arrays.toString(parseFormats) + "]");
@@ -184,7 +216,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 		if (parseFormat instanceof DateTimeFormatter) {
 			formatters.add(index, (DateTimeFormatter) parseFormat);
 		} else if (parseFormat instanceof String) {
-			formatters.add(index, Java8DateUtils.getDateTimeFormatter((String) parseFormat));
+			formatters.add(index, Java8DateUtils.getParseDateTimeFormatter((String) parseFormat));
 		} else {
 			throw new IllegalArgumentException(
 					"parseFormats must String or DateTimeFormatter.[" + Arrays.toString(parseFormats) + "]");
@@ -195,9 +227,6 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 	public S setParseFormats(final DateTimeFormatter... parseFormats) {
 		if (!isEmpty(parseFormats)) {
 			this.parseFormats = linkedSet(parseFormats).toArray(new DateTimeFormatter[0]);
-			if (this.getFormat() != null) {
-				this.setFormat(CommonUtils.first(parseFormats));
-			}
 		} else {
 			this.parseFormats = parseFormats;
 		}
@@ -353,7 +382,8 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 	protected Temporal parseTemporal(final String value, final DateTimeFormatter dateTimeFormatter) {
 		final ParsePosition position = new ParsePosition(0);
 		final TemporalAccessor temporalAccessor = dateTimeFormatter.parseUnresolved(value, position);
-		if (position.getErrorIndex() < 0) {
+		if (position.getErrorIndex() < 0
+				&& (!Boolean.TRUE.equals(WHOLE_TEXT.get()) || position.getIndex() == value.length())) {
 			final int year = getYear(temporalAccessor);
 			final int month = getMonth(temporalAccessor);
 			final int dayOfMonth = getDayOfMonth(temporalAccessor);
@@ -405,11 +435,8 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 					return ZonedDateTime.ofStrict(localDateTime, zoneOffset, zoneId);
 				}
 			}
-			if (zoneId == null) {
-				return LocalDateTime.of(year, month, dayOfMonth, hour, minute, second);
-			} else {
-				return ZonedDateTime.of(year, month, dayOfMonth, hour, minute, second, nanoOfSecond, zoneId);
-			}
+			// zone without offset (zoneId == null cases returned above)
+			return ZonedDateTime.of(year, month, dayOfMonth, hour, minute, second, nanoOfSecond, zoneId);
 		} else {
 			return null;
 		}
@@ -496,7 +523,8 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 	}
 
 	protected OffsetDateTime toOffsetDateTime(final LocalDateTime date) {
-		return OffsetDateTime.of(date, getDefaultZoneOffset());
+		// the offset in effect at that date, not the current one (daylight saving time)
+		return ZonedDateTime.of(date, getDefaultZoneId()).toOffsetDateTime();
 	}
 
 	protected ZonedDateTime toZonedDateTime(final Temporal temporal) {
@@ -539,15 +567,17 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 		}
 	}
 
+	/**
+	 * current date/time keywords (lower case): now, current..., sys...,
+	 * getdate(), localtimestamp ... written as one word (or "current date"), with
+	 * optional parentheses such as {@code now()} or {@code current_timestamp(3)}.
+	 * Sentences such as "system error" are no longer treated as the current time.
+	 */
+	private static final Pattern CURRENT_TEXT_PATTERN = Pattern.compile(
+			"(now|today|current(?:[_ ]?[a-z0-9_]+)?|sys[a-z0-9_]*|getdate|getutcdate|localtimestamp|localtime)\\s*(?:\\(\\s*[0-9]*\\s*\\))?");
+
 	protected boolean isCurrentText(final String text) {
-		if ("now".equals(text)) {
-			return true;
-		} else if (text.startsWith("current")) {
-			return true;
-		} else if (text.startsWith("sys")) {
-			return true;
-		}
-		return false;
+		return CURRENT_TEXT_PATTERN.matcher(text.trim()).matches();
 	}
 
 	protected boolean isNumberPattern(final String text) {
@@ -555,9 +585,50 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 		return matcher.matches();
 	}
 
+	/**
+	 * Converts digits to an instant. Compact local date-times are read as such
+	 * ({@code uuuuMMdd}, {@code uuuuMMddHHmmss}, {@code uuuuMMddHHmmssSSS}, in the
+	 * default zone) when they are valid; other digits are epoch milliseconds as
+	 * before.
+	 */
 	protected Instant toInstant(final String value) {
-		final Instant ins = Instant.ofEpochMilli(Long.parseLong(value));
-		return ins;
+		final LocalDateTime compact = parseCompactDigits(value);
+		if (compact != null) {
+			return ZonedDateTime.of(compact, getDefaultZoneId()).toInstant();
+		}
+		try {
+			return Instant.ofEpochMilli(Long.parseLong(value));
+		} catch (final NumberFormatException e) {
+			throw new ConverterException("Cannot convert to " + getClass().getSimpleName() + ": " + value, e);
+		}
+	}
+
+	/**
+	 * @return the local date-time written as uuuuMMdd[HHmmss[SSS]], or null
+	 */
+	protected static LocalDateTime parseCompactDigits(final String value) {
+		final int length = value.length();
+		if (length != 8 && length != 14 && length != 17) {
+			return null;
+		}
+		for (int i = 0; i < length; i++) {
+			final char c = value.charAt(i);
+			if (c < '0' || c > '9') {
+				return null;
+			}
+		}
+		try {
+			final LocalDate date = LocalDate.of(Integer.parseInt(value.substring(0, 4)),
+					Integer.parseInt(value.substring(4, 6)), Integer.parseInt(value.substring(6, 8)));
+			if (length == 8) {
+				return date.atStartOfDay();
+			}
+			final int nano = length == 17 ? Integer.parseInt(value.substring(14, 17)) * 1_000_000 : 0;
+			return date.atTime(Integer.parseInt(value.substring(8, 10)), Integer.parseInt(value.substring(10, 12)),
+					Integer.parseInt(value.substring(12, 14)), nano);
+		} catch (final DateTimeException e) {
+			return null;
+		}
 	}
 
 	/*

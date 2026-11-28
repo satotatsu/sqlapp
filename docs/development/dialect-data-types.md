@@ -32,6 +32,25 @@ these offline checks.
 
 ## Validation
 
+Common type matching retains an explicit native type name supplied by a matcher;
+otherwise it uses the registered type name. Both regex matcher convenience
+methods execute their supplied callbacks. PostgreSQL range and multirange
+declarations therefore retain their concrete names in Schema columns.
+ENUM/SET lists split only at commas outside quoted values, retaining the existing
+quoted representation and escapes; unterminated quoted values raise an error.
+Explicit character lengths apply even without a configured maximum, while
+configured defaults and maximum lengths keep their existing behavior.
+The prefix/middle/suffix precision matcher does not require a named type group.
+
+Focused regression commands for these common changes:
+
+```powershell
+.\gradlew.bat :sqlapp-core:test --tests 'com.sqlapp.data.db.datatype.*' --offline
+.\gradlew.bat :sqlapp-core-postgres:test --tests '*PostgresTest' --tests '*PostgresModernSchemaSqlTest' --tests '*PostgresDataTypeMatrixTest' --offline
+.\gradlew.bat :sqlapp-core-mysql:test --tests '*MysqlDataTypeMatrixTest' --offline
+.\gradlew.bat :sqlapp-command:test --tests '*ConfigFileTypeTest' --tests '*GeneratorSettingFileTypeTest' --offline
+```
+
 Run the smallest scope with the repository wrapper and Java 25, for example:
 
 ```powershell

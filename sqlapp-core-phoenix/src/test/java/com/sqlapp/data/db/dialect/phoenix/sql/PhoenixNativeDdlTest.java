@@ -11,6 +11,58 @@ import com.sqlapp.data.schemas.*;
 
 class PhoenixNativeDdlTest {
 	@Test
+	void appendsOnlyAnIsolatedNullableTrailingPrimaryKey() {
+		final var original = new Table("EVENTS");
+		final var id = new Column("ID").setDataType(DataType.VARCHAR).setNotNull(true);
+		original.getColumns().add(id);
+		original.getConstraints().addPrimaryKeyConstraint("PK", id);
+		final var target = original.clone();
+		target.getColumns().add(new Column("SUFFIX").setDataType(DataType.VARCHAR));
+		target.getPrimaryKeyConstraint().getColumns().add("SUFFIX");
+		final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
+		final var sql = registry.createSql(original.diff(target), SqlType.ALTER);
+		assertEquals(1, sql.size());
+		assertEquals("ALTER TABLE EVENTS ADD SUFFIX VARCHAR NULL PRIMARY KEY", sql.get(0).getSqlText());
+		target.getColumns().get("SUFFIX").setDataType(DataType.CHAR).setLength(8);
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
+		target.getColumns().get("SUFFIX").setDataType(DataType.VARCHAR);
+		assertThrows(UnsupportedOperationException.class, () -> DialectHolder.defaultDialect.createSqlFactoryRegistry()
+				.createSql(original.diff(target), SqlType.ALTER));
+		target.getColumns().get("SUFFIX").setNotNull(true);
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
+	}
+
+	@Test
+	void requiresAnExplicitVerifiedStartInsteadOfIgnoringRecordedSequenceProgress() throws Exception {
+		final var sequence = new Sequence("descending").setStartValue(BigInteger.TEN)
+				.setIncrementBy(BigInteger.valueOf(-2)).setMinValue(BigInteger.ZERO).setMaxValue(BigInteger.TEN)
+				.setLastValue(BigInteger.valueOf(6));
+		final Sequence restored = SchemaUtils.readXml(new java.io.StringReader(sequence.asXml()));
+		final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(restored, SqlType.CREATE));
+		restored.setLastValue(null).setStartValue(BigInteger.valueOf(6));
+		final String sql = registry.createSql(restored, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(sql.contains("START WITH 6 INCREMENT BY -2 MINVALUE 0 MAXVALUE 10"), sql);
+	}
+
+	@Test
+	void sequenceChangesFailDuringSchemaMigrationAndInvalidDeclarationsFailEarly() {
+		final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
+		final var source = new Schema("APP");
+		source.getSequences().add(new Sequence("seq").setStartValue(BigInteger.ONE));
+		final var target = source.clone();
+		target.getSequences().get(0).setIncrementBy(BigInteger.TWO);
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(source.diff(target), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(new Sequence("seq").setDataType(DataType.VARCHAR), SqlType.CREATE));
+		assertThrows(IllegalArgumentException.class,
+				() -> registry.createSql(new Sequence(" "), SqlType.SEQUENCE_NEXT_VALUES));
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(new Sequence(" "), SqlType.DROP));
+	}
+
+	@Test
 	void rejectsUnrepresentableIndexStateAndLocalSalting() {
 		final var table = new Table("t");
 		final var index = new Index("idx");

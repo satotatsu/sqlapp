@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,7 +63,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	/**
 	 * パラメタ
 	 */
-	private final List<BindParameterHolder> parameters = new ArrayList<BindParameterHolder>();
+	private List<BindParameterHolder> parameters = new ArrayList<BindParameterHolder>();
 	private StringBuilder sql = new StringBuilder();
 	/** フェッチサイズ */
 	private Integer fetchSize;
@@ -106,7 +107,27 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 
 	private Map<CommentNode, String> sqlParts = CommonUtils.linkedMap();
 
+	private Set<String> evaluatedParameterNames = CommonUtils.linkedSet();
+
+	/** Records a parameter used to emit SQL or bind a value; declarations alone do not count. */
+	public void registerEvaluatedParameter(String name) {
+		if (name != null) {
+			if (evaluatedParameterNames == null) {
+				evaluatedParameterNames = CommonUtils.linkedSet();
+			}
+			evaluatedParameterNames.add(name.trim());
+		}
+	}
+
+	/** Includes literal substitutions, not only JDBC bind values. */
+	public boolean hasEvaluatedParameter(String name) {
+		return evaluatedParameterNames != null && evaluatedParameterNames.contains(name);
+	}
+
 	public Map<CommentNode, String> getSqlParts() {
+		if (sqlParts == null) {
+			sqlParts = CommonUtils.linkedMap();
+		}
 		return sqlParts;
 	}
 
@@ -330,6 +351,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		parameter.setBindingName("?");
 		parameter.setOrdinal(pos);
 		parameters.add(new BindParameterHolder(parameter));
+		registerEvaluatedParameter(parameter.getName());
 		appendSqlPart(parameter.getBindingName());
 		parameterSize++;
 	}
@@ -359,6 +381,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	 */
 	public void add(BindParameterHolder parameter) {
 		parameters.add(parameter);
+		parameter.stream().forEach(value -> registerEvaluatedParameter(value.getName()));
 		if (parameter.getBindParameter() != null) {
 			parameterSize++;
 		} else {
@@ -410,8 +433,13 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	 */
 	public SqlParameterCollection merge(SqlParameterCollection sqlParameters) {
 		this.sql.append(sqlParameters.getSql());
-		for (BindParameterHolder parameter : sqlParameters.getBindParameters()) {
-			this.parameters.add(parameter);
+		if (sqlParameters.evaluatedParameterNames != null) {
+			sqlParameters.evaluatedParameterNames.forEach(this::registerEvaluatedParameter);
+		}
+		getSqlParts().putAll(sqlParameters.getSqlParts());
+		// Snapshot supports self-merge and add() maintains the physical bind count.
+		for (BindParameterHolder parameter : new ArrayList<>(sqlParameters.getBindParameters())) {
+			add(parameter);
 		}
 		return this;
 	}
@@ -612,12 +640,17 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 				statement = connection.prepareStatement(getSql());
 			}
 		}
-		if (getFetchSize() != null) {
-			statement.setFetchSize(getFetchSize().intValue());
+		try {
+			if (getFetchSize() != null) {
+				statement.setFetchSize(getFetchSize().intValue());
+			}
+			statement.setFetchDirection(
+					getFetchDirection() != null ? getFetchDirection().getValue() : FetchDirection.getDefault().getValue());
+			return statement;
+		} catch (SQLException | RuntimeException | Error failure) {
+			FileUtils.close(statement);
+			throw failure;
 		}
-		statement.setFetchDirection(
-				getFetchDirection() != null ? getFetchDirection().getValue() : FetchDirection.getDefault().getValue());
-		return statement;
 	}
 
 	/**
@@ -677,6 +710,10 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	 */
 	private void setParameters(final PreparedStatement statement, final Dialect dialect,
 			final BindParameter bindParameter, final int index) throws SQLException {
+		if (bindParameter.getColumn() != null && bindParameter.getColumn().getDataType() == bindParameter.getDataType()) {
+			JdbcParameterBinder.bindColumn(statement, dialect, bindParameter.getColumn(), index, bindParameter.getValue());
+			return;
+		}
 		JdbcParameterBinder.bind(statement, dialect, bindParameter.getDataType(), index, bindParameter.getValue());
 	}
 
@@ -685,9 +722,24 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		try {
 			SqlParameterCollection clone = (SqlParameterCollection) super.clone();
 			clone.sql = new StringBuilder(this.sql);
-			List<BindParameterHolder> parameters = CommonUtils.list(this.parameters);
-			clone.parameters.clear();
-			clone.parameters.addAll(parameters);
+			clone.sqlParts = CommonUtils.linkedMap();
+			if (this.sqlParts != null) {
+				clone.sqlParts.putAll(this.sqlParts);
+			}
+			clone.evaluatedParameterNames = CommonUtils.linkedSet();
+			if (this.evaluatedParameterNames != null) {
+				clone.evaluatedParameterNames.addAll(this.evaluatedParameterNames);
+			}
+			clone.parameters = new ArrayList<>(this.parameters.size());
+			for (BindParameterHolder holder : this.parameters) {
+				if (holder.getBindParameter() != null) {
+					clone.parameters.add(new BindParameterHolder(holder.getBindParameter().clone()));
+				} else {
+					BindParameterHolder copy = new BindParameterHolder(holder.getRowCount());
+					holder.getBindParameters().forEach(parameter -> copy.getBindParameters().add(parameter.clone()));
+					clone.parameters.add(copy);
+				}
+			}
 			return clone;
 		} catch (CloneNotSupportedException e) {
 			throw new RuntimeException(e);

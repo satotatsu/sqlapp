@@ -31,6 +31,10 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -38,6 +42,29 @@ class ExcelUtilsTest {
 
 	@TempDir
 	protected File testProjectDir;
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void returnsEvaluatedFormulaValuesInsteadOfStaleCaches(final boolean xlsx) throws Exception {
+		try (Workbook workbook = xlsx ? new XSSFWorkbook() : new HSSFWorkbook()) {
+			final Row row = workbook.createSheet("items").createRow(0);
+			row.createCell(0).setCellValue(1);
+			final Cell number = row.createCell(1);
+			number.setCellFormula("A1+1");
+			final Cell bool = row.createCell(2);
+			bool.setCellFormula("A1=2");
+			final Cell text = row.createCell(3);
+			text.setCellFormula("IF(A1=2,\"new\",\"old\")");
+			workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
+			row.getCell(0).setCellValue(2);
+			assertEquals(2d, number.getNumericCellValue());
+			assertEquals(false, bool.getBooleanCellValue());
+			assertEquals("old", text.getStringCellValue());
+			assertEquals(3, ExcelUtils.getCellValue(number));
+			assertEquals(true, ExcelUtils.getCellValue(bool));
+			assertEquals("new", ExcelUtils.getCellValue(text));
+		}
+	}
 
 	@Test
 	void test() throws FileNotFoundException, IOException, InvalidFormatException {

@@ -1522,4 +1522,149 @@ class ChunkedBulkMigrationTest {
 			return java.util.Objects.toString(row.get("ID"));
 		}
 	}
+
+	@Test
+	void failedChunkRollbackDoesNotCommitOrRetry() throws Exception {
+		verifyRollbackFailureStopsChunkMigration(false);
+	}
+
+	@Test
+	void failedCompletionRollbackDoesNotCommitOrRetry() throws Exception {
+		verifyRollbackFailureStopsChunkMigration(true);
+	}
+
+	private void verifyRollbackFailureStopsChunkMigration(final boolean completion) throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE TX_FAILURE (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final var wrapped = (java.sql.Connection) java.lang.reflect.Proxy.newProxyInstance(
+					getClass().getClassLoader(), new Class<?>[] { java.sql.Connection.class },
+					(proxy, method, arguments) -> {
+						if (method.getName().equals("rollback"))
+							throw new SQLException("injected rollback failure", "08006");
+						try {
+							return method.invoke(connection, arguments);
+						} catch (java.lang.reflect.InvocationTargetException cause) {
+							throw cause.getCause();
+						}
+					});
+			final Table source = table("TX_FAILURE");
+			if (!completion)
+				source.getRows().add(row -> {
+					row.put("ID", 1);
+					row.put("TXT", "one");
+				});
+			final var option = ChunkedBulkMigrationOption.builder().migrationId("rollback-failure")
+					.sourceFingerprint("source").targetFingerprint("target").chunkSize(1)
+					.retryOption(BulkMigrationRetryOption.builder().maxRetries(2).initialBackoffMillis(0)
+							.maxBackoffMillis(0).sqlState("40001").build())
+					.build();
+			final var delegate = new JdbcBulkMigrationCheckpointStore(connection, option.getCheckpointTableName());
+			final int[] saves = { 0 };
+			final var store = new TransactionalBulkMigrationCheckpointStore() {
+				@Override
+				public boolean participatesIn(java.sql.Connection c) {
+					return c == wrapped;
+				}
+
+				@Override
+				public java.util.Optional<com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint> load(String id)
+						throws SQLException {
+					return delegate.load(id);
+				}
+
+				@Override
+				public void save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint checkpoint) throws SQLException {
+					saves[0]++;
+					delegate.save(checkpoint);
+					throw new java.sql.SQLTransientException("injected checkpoint failure", "40001");
+				}
+
+				@Override
+				public void delete(String id) throws SQLException {
+					delegate.delete(id);
+				}
+			};
+			final SQLException failure = org.junit.jupiter.api.Assertions.assertThrows(SQLException.class,
+					() -> ChunkedBulkMigrationExecutor.execute(wrapped, source, option, store));
+			org.junit.jupiter.api.Assertions.assertFalse(connection.getAutoCommit());
+			assertEquals(1, saves[0]);
+			assertEquals("40001", failure.getSQLState());
+			connection.rollback();
+			connection.setAutoCommit(true);
+			try (var rows = statement.executeQuery("SELECT COUNT(*) FROM TX_FAILURE")) {
+				rows.next();
+				assertEquals(0, rows.getInt(1));
+			}
+			org.junit.jupiter.api.Assertions.assertTrue(delegate.load("rollback-failure").isEmpty());
+		}
+	}
+
+	@Test
+	void committedChunkWithLostAcknowledgementIsNotRetried() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ACK_FAILURE (ID INTEGER PRIMARY KEY, TXT TEXT)");
+			final var wrapped = (java.sql.Connection) java.lang.reflect.Proxy.newProxyInstance(
+					getClass().getClassLoader(), new Class<?>[] { java.sql.Connection.class },
+					(proxy, method, arguments) -> {
+						if (method.getName().equals("commit")) {
+							connection.commit();
+							throw new SQLException("injected lost commit acknowledgement", "08006", 902);
+						}
+						try {
+							return method.invoke(connection, arguments);
+						} catch (java.lang.reflect.InvocationTargetException cause) {
+							throw cause.getCause();
+						}
+					});
+			final Table source = table("ACK_FAILURE");
+			source.getRows().add(row -> {
+				row.put("ID", 1);
+				row.put("TXT", "one");
+			});
+			final var option = ChunkedBulkMigrationOption.builder().migrationId("ack-failure")
+					.sourceFingerprint("source").targetFingerprint("target").chunkSize(1)
+					.retryOption(BulkMigrationRetryOption.builder().maxRetries(2).initialBackoffMillis(0)
+							.maxBackoffMillis(0).sqlState("08006").build())
+					.build();
+			final var delegate = new JdbcBulkMigrationCheckpointStore(connection, option.getCheckpointTableName());
+			final int[] saves = { 0 };
+			final var store = new TransactionalBulkMigrationCheckpointStore() {
+				@Override
+				public boolean participatesIn(java.sql.Connection c) {
+					return c == wrapped;
+				}
+
+				@Override
+				public java.util.Optional<com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint> load(String id)
+						throws SQLException {
+					return delegate.load(id);
+				}
+
+				@Override
+				public void save(com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint checkpoint) throws SQLException {
+					saves[0]++;
+					delegate.save(checkpoint);
+				}
+
+				@Override
+				public void delete(String id) throws SQLException {
+					delegate.delete(id);
+				}
+			};
+			final SQLException failure = org.junit.jupiter.api.Assertions.assertThrows(SQLException.class,
+					() -> ChunkedBulkMigrationExecutor.execute(wrapped, source, option, store));
+			assertTrue(failure.getMessage().contains("unknown"));
+			assertEquals(902, failure.getErrorCode());
+			assertEquals(1, saves[0]);
+			assertTrue(connection.getAutoCommit());
+			try (var rows = statement.executeQuery("SELECT COUNT(*) FROM ACK_FAILURE")) {
+				rows.next();
+				assertEquals(1, rows.getInt(1));
+			}
+			assertEquals(1, delegate.load("ack-failure").orElseThrow().getProcessedRows());
+		}
+	}
+
 }

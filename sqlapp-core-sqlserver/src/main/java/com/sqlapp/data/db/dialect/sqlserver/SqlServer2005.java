@@ -181,7 +181,7 @@ public class SqlServer2005 extends SqlServer2000 {
 		});
 		// Binary
 		getDbDataTypes().addVarBinary(LEN_2GB - 1, type -> {
-			type.setPetternColumnTypeMatcher("(VARBINARY\\s*\\(\\s*MAX\\s*\\)|IMAGE)");
+			type.setPetternColumnTypeMatcher("(VARBINARY\\s*\\(\\s*MAX\\s*\\))");
 			type.setDefaultLength(LEN_2GB - 1).setCreateFormat("VARBINARY(MAX)").setFixedLength(false).setLiteral("0x",
 					"");
 		});

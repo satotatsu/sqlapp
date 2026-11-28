@@ -118,6 +118,14 @@ public abstract class AbstractMergeTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addMergeTableWhenMatched(final Table obj, final SqlSignature sqlSignature,
 			final String targetTableAlias, final String sourceTableAlias, final S builder) {
 		final SqlSignature.ColumnsHolder columnsHolder = sqlSignature.getSelectedColumnsHolder();
+		final List<Column> updateColumns = obj.getColumns().stream()
+				.filter(this::isUpdateable)
+				.filter(column -> !columnsHolder.getKeyColumns().contains(column))
+				.filter(column -> !columnsHolder.isUniqueKey() || sqlSignature.getPrimaryKey() == null
+						|| !sqlSignature.getPrimaryKey().getKeyColumns().contains(column)).toList();
+		if (updateColumns.isEmpty()) {
+			return;
+		}
 		builder.lineBreak();
 		addWhenMatched(obj, sqlSignature, targetTableAlias, sourceTableAlias, builder);
 		builder.indent(() -> {
@@ -125,23 +133,15 @@ public abstract class AbstractMergeTableFactory<S extends AbstractSqlBuilder<?>>
 			builder.then().update();
 			builder.indent(() -> {
 				int i = 0;
-				for (final Column column : obj.getColumns()) {
-					if (!isUpdateable(column)) {
-						continue;
-					}
-					if (columnsHolder.getKeyColumns().contains(column)) {
-						continue;
-					}
-					if (columnsHolder.isUniqueKey()) {
-						if (sqlSignature.getPrimaryKey().getKeyColumns().contains(column)) {
-							continue;
-						}
-					}
+				for (final Column column : updateColumns) {
 					builder.lineBreak().set(i == 0).comma(i > 0);
 					builder.name(targetTableAlias + ".", column).eq();
 					final String value = this.getTableOptions().getUpdateTableColumnValue().apply(column);
 					if (value != null && !Objects.equals(value, column.getName())) {
 						builder._add(value);
+					} else if (column.getDataType() != null && column.getDataType().isNumeric()
+							&& isOptimisticLockColumn(column)) {
+						builder.space()._add(getOptimisticLockColumnUpdateDefinition(targetTableAlias + ".", column));
 					} else {
 						builder.name(sourceTableAlias + ".", column);
 					}

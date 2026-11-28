@@ -23,9 +23,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
 
 import com.sqlapp.util.CommonUtils;
 
@@ -52,21 +49,15 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 		}
 		if (isSupplier(value)) {
 			return convertObject(getSupplierValue(value));
+		} else if (isOptional(value)) {
+			// any kind of Optional: empty is the default value
+			return convertObject(getOptionalValue(value));
 		} else if (value instanceof Float) {
 			return (Float) value;
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
-			return ((Number) value).floatValue();
-		} else if (value instanceof OptionalInt) {
-			final OptionalInt op = (OptionalInt) value;
-			return op.isPresent() ? Float.valueOf(op.getAsInt()) : null;
-		} else if (value instanceof OptionalLong) {
-			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? Float.valueOf(op.getAsLong()) : null;
-		} else if (value instanceof OptionalDouble) {
-			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? Float.valueOf((float) op.getAsDouble()) : null;
+			return toFloat(((Number) value).doubleValue(), value);
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return ONE;
@@ -84,9 +75,26 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 			return null;
 		}
 		if (getNumberFormat() == null) {
-			return Double.valueOf(value).floatValue();
+			try {
+				return toFloat(Double.parseDouble(value), value);
+			} catch (final NumberFormatException e) {
+				throw new ConverterException("Cannot convert to Float: " + value, e);
+			}
 		}
-		return parse(value).floatValue();
+		return toFloat(parse(value).doubleValue(), value);
+	}
+
+	/**
+	 * A finite value beyond the float range is an error, as for the integral
+	 * types, instead of silently becoming Infinity. NaN and Infinity themselves
+	 * are kept.
+	 */
+	private static Float toFloat(final double number, final Object original) {
+		final float result = (float) number;
+		if (Float.isInfinite(result) && !Double.isInfinite(number)) {
+			throw new ConverterException("Value out of range for Float: " + original);
+		}
+		return result;
 	}
 
 	@Override
@@ -103,7 +111,12 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 	public static float toFloat(final byte[] bytes) {
 		final ByteBuffer keyBuffer = ByteBuffer.wrap(bytes);
 		keyBuffer.order(ByteOrder.BIG_ENDIAN);
-		return keyBuffer.getFloat();
+		if (bytes.length == Float.BYTES) {
+			return keyBuffer.getFloat();
+		} else if (bytes.length == Double.BYTES) {
+			return (float) keyBuffer.getDouble();
+		}
+		throw new ConverterException("Cannot convert " + bytes.length + " bytes to Float (4 or 8 bytes expected)");
 	}
 
 	/*
@@ -116,7 +129,7 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof FloatConverter)) {

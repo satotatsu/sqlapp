@@ -101,7 +101,7 @@ public class OptionalIntConverter extends AbstractNumberConverter<OptionalInt> {
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof OptionalIntConverter)) {

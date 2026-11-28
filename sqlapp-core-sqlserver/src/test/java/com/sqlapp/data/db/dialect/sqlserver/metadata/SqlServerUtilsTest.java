@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 
@@ -133,4 +134,80 @@ public class SqlServerUtilsTest extends AbstractTest {
 				SqlServerUtils.replaceNames("([EndDate]>=[StartDate] OR [EndDate] IS NULL)"));
 	}
 
+	@Test
+	public void testReplaceNamesKeepsDelimitedNamesThatNeedBrackets() {
+		assertEquals("[c)]>(0)", SqlServerUtils.replaceNames("[c)]>(0)"));
+		assertEquals("[a-b]>(0)", SqlServerUtils.replaceNames("[a-b]>(0)"));
+		assertEquals("[order]>(0) AND [Select] IS NULL",
+				SqlServerUtils.replaceNames("[order]>(0) AND [Select] IS NULL"));
+		assertEquals("[1st]>(0)", SqlServerUtils.replaceNames("[1st]>(0)"));
+		assertEquals("[#t]>(0) AND [@v]>(0)", SqlServerUtils.replaceNames("[#t]>(0) AND [@v]>(0)"));
+		assertEquals("[a]]b]>(0)", SqlServerUtils.replaceNames("[a]]b]>(0)"));
+		assertEquals("[my col]>(0)", SqlServerUtils.replaceNames("[my col]>(0)"));
+	}
+
+	@Test
+	public void testReplaceNamesUnquotesRegularIdentifiers() {
+		assertEquals("CONVERT(varchar(8),getdate(),(112))",
+				SqlServerUtils.replaceNames("CONVERT([varchar](8),getdate(),(112))"));
+		assertEquals("dbo.f(a_1$#@)", SqlServerUtils.replaceNames("[dbo].[f]([a_1$#@])"));
+		assertEquals("\u5217\u540d>(0)", SqlServerUtils.replaceNames("[\u5217\u540d]>(0)"));
+		assertEquals("_x>(0)", SqlServerUtils.replaceNames("[_x]>(0)"));
+	}
+
+	@Test
+	public void testReplaceNamesIgnoresStringLiteralsAndQuotedIdentifiers() {
+		assertEquals("a like '[abc]%'", SqlServerUtils.replaceNames("[a] like '[abc]%'"));
+		assertEquals("a like N'[0-9]''[x]'", SqlServerUtils.replaceNames("[a] like N'[0-9]''[x]'"));
+		assertEquals("\"[x]\">(0)", SqlServerUtils.replaceNames("\"[x]\">(0)"));
+		assertEquals("[a", SqlServerUtils.replaceNames("[a"));
+		assertEquals("a='[b", SqlServerUtils.replaceNames("[a]='[b"));
+		assertNull(SqlServerUtils.replaceNames(null));
+	}
+
+	@Test
+	public void testReplaceNamesForColumn() {
+		assertEquals("A>(0) AND [B]>(0)", SqlServerUtils.replaceNames("[A]>(0) AND [B]>(0)", "A"));
+		assertEquals("[order]>(0)", SqlServerUtils.replaceNames("[order]>(0)", "order"));
+		assertEquals("[c)]>(0)", SqlServerUtils.replaceNames("[c)]>(0)", "c)"));
+		assertEquals("A>(0) AND B>(0)", SqlServerUtils.replaceNames("[A]>(0) AND [B]>(0)", null));
+	}
+
+	@Test
+	public void testUnwrapParenthesesSimple() {
+		assertEquals("0", SqlServerUtils.unwrapParentheses("((0))"));
+		assertEquals("getdate()", SqlServerUtils.unwrapParentheses("(getdate())"));
+		assertEquals("N'abc'", SqlServerUtils.unwrapParentheses("(N'abc')"));
+		assertEquals("", SqlServerUtils.unwrapParentheses("()"));
+		assertEquals("getdate()", SqlServerUtils.unwrapParentheses("getdate()"));
+		assertNull(SqlServerUtils.unwrapParentheses(null));
+		assertEquals("", SqlServerUtils.unwrapParentheses(""));
+	}
+
+	@Test
+	public void testUnwrapParenthesesKeepsUnenclosedExpressions() {
+		assertEquals("(1)+(2)", SqlServerUtils.unwrapParentheses("((1)+(2))"));
+		assertEquals("(1)+(2)", SqlServerUtils.unwrapParentheses("(1)+(2)"));
+		assertEquals("([a])>(0)", SqlServerUtils.unwrapParentheses("(([a])>(0))"));
+		assertEquals("[a]>(0) AND [b]<(10)", SqlServerUtils.unwrapParentheses("([a]>(0) AND [b]<(10))"));
+		assertEquals("dateadd(day,(1),getdate())", SqlServerUtils.unwrapParentheses("(dateadd(day,(1),getdate()))"));
+	}
+
+	@Test
+	public void testUnwrapParenthesesIgnoresQuotedText() {
+		assertEquals("'a)'", SqlServerUtils.unwrapParentheses("('a)')"));
+		assertEquals("'(a'", SqlServerUtils.unwrapParentheses("('(a')"));
+		assertEquals("'it''s )'", SqlServerUtils.unwrapParentheses("('it''s )')"));
+		assertEquals("('a')+(')')", SqlServerUtils.unwrapParentheses("(('a')+(')'))"));
+		assertEquals("[c)]>(0)", SqlServerUtils.unwrapParentheses("([c)]>(0))"));
+		assertEquals("[c]](]>(0)", SqlServerUtils.unwrapParentheses("([c]](]>(0))"));
+		assertEquals("\"c)\">(0)", SqlServerUtils.unwrapParentheses("(\"c)\">(0))"));
+	}
+
+	@Test
+	public void testUnwrapParenthesesKeepsUnbalancedInput() {
+		assertEquals("((0)", SqlServerUtils.unwrapParentheses("((0)"));
+		assertEquals("('a)", SqlServerUtils.unwrapParentheses("('a)"));
+		assertEquals("([a)", SqlServerUtils.unwrapParentheses("([a)"));
+	}
 }

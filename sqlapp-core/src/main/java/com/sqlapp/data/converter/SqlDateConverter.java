@@ -46,7 +46,9 @@ public class SqlDateConverter extends AbstractDateConverter<java.sql.Date, SqlDa
 
 	@Override
 	public java.sql.Date convertObject(final Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof java.sql.Date) {
 			return new java.sql.Date(((java.sql.Date) value).getTime());
@@ -55,15 +57,14 @@ public class SqlDateConverter extends AbstractDateConverter<java.sql.Date, SqlDa
 		} else if (value instanceof LocalDate) {
 			return java.sql.Date.valueOf((LocalDate) value);
 		} else if (value instanceof ChronoLocalDate) {
-			return DateUtils.toSqlDate(((ChronoLocalDate) value).toEpochDay());
+			// JapaneseDate etc.: the same day in the ISO calendar
+			return java.sql.Date.valueOf(LocalDate.ofEpochDay(((ChronoLocalDate) value).toEpochDay()));
 		} else if (value instanceof LocalDateTime) {
-			return DateUtils.toSqlDate(((LocalDateTime) value).toLocalDate().toEpochDay());
+			return java.sql.Date.valueOf(((LocalDateTime) value).toLocalDate());
 		} else if (value instanceof OffsetDateTime) {
-			final OffsetDateTime dateTime = OffsetDateTime.class.cast(value);
-			return DateUtils.toSqlDate(dateTime.toLocalDate().toEpochDay());
+			return java.sql.Date.valueOf(((OffsetDateTime) value).toLocalDate());
 		} else if (value instanceof ZonedDateTime) {
-			final ZonedDateTime dateTime = ZonedDateTime.class.cast(value);
-			return DateUtils.toSqlDate(dateTime.toLocalDate().toEpochDay());
+			return java.sql.Date.valueOf(((ZonedDateTime) value).toLocalDate());
 		} else if (value instanceof Calendar) {
 			return DateUtils.toSqlDate((Calendar) value);
 		} else if (value instanceof Long) {
@@ -83,7 +84,9 @@ public class SqlDateConverter extends AbstractDateConverter<java.sql.Date, SqlDa
 		if (dateTime == null) {
 			return null;
 		}
-		return DateUtils.toSqlDate(dateTime.toInstant().toEpochMilli());
+		// the date as written ("2026-11-21 23:00 -05:00" is 2026-11-21), as for a
+		// ZonedDateTime value; not the date of that instant in the default zone
+		return java.sql.Date.valueOf(dateTime.toLocalDate());
 	}
 
 	public static SqlDateConverter newInstance() {

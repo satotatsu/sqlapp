@@ -9,7 +9,8 @@ SELECT
 	, seqcls.relname AS sequence_name
 	, seq.seqstart AS identity_start, seq.seqincrement AS identity_increment
 	, seq.seqmax AS identity_maximum, seq.seqmin AS identity_minimum
-	, seq.seqcycle AS identity_cycle, a.attidentity, a.attgenerated
+	, seq.seqcycle AS identity_cycle
+	, CASE WHEN pg_catalog.has_sequence_privilege(seq.seqrelid, 'SELECT,USAGE') THEN pg_catalog.pg_sequence_last_value(seq.seqrelid) END AS identity_last_value, a.attidentity, a.attgenerated
 	, nn.conname AS not_null_constraint_name
 	, nn.connoinherit AS not_null_no_inherit
 	, COALESCE(nn.convalidated, true) AS not_null_validated

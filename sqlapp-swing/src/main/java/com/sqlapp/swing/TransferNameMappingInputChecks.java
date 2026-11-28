@@ -32,9 +32,9 @@ final class TransferNameMappingInputChecks {
 			String table = value(columns, row, 0), source = value(columns, row, 1), target = value(columns, row, 2);
 			check(issues, 1, row, 0, "Source table", () -> tableName(table));
 			check(issues, 1, row, 1, "Source column",
-					() -> new TransferNameMappingIO.TableMapping(null, Map.of(source, "valid")));
+					() -> TransferNameMappingIO.TableMapping.names(null, Map.of(source, "valid")));
 			check(issues, 1, row, 2, "Target column",
-					() -> new TransferNameMappingIO.TableMapping(null, Map.of("valid", target)));
+					() -> TransferNameMappingIO.TableMapping.names(null, Map.of("valid", target)));
 			var previous = columnRows.computeIfAbsent(table, key -> new HashMap<>()).putIfAbsent(source, row);
 			if (previous != null && !table.isBlank() && !source.isBlank())
 				issues.add(new Issue(1, row, 1,

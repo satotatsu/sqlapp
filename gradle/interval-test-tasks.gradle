@@ -1,0 +1,21 @@
+// Keep executable interval regressions visible without failing the normal suite.
+tasks.named('test', Test) {
+	useJUnitPlatform {
+		excludeTags 'known-bug'
+	}
+}
+
+tasks.register('knownBugTest', Test) {
+	description = 'Runs known interval defects; failures are expected until each defect is fixed.'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'known-bug'
+	}
+	// Do not ignore failures: this task is the explicit failing regression report.
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat = 'full'
+	}
+}

@@ -45,16 +45,14 @@ public class BindVariableNode extends AbstractColumnNode {
 
 	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
-		BindParameter parameter = sqlParameters.getBindParameter(this);
 		String operatorText = this.getColumnOperator(bindParameter.getName(), context);
 		addColumnOperator(sqlParameters, operatorText);
-		if (parameter == null) {
-			parameter = this.bindParameter.clone();
-			parameter.setCommentNode(this);
-			Object val = evalValueAndSetDataType(context, parameter);
-			parameter.setValue(val);
-			sqlParameters.add(parameter);
-		}
+		// A loop can evaluate this node more than once with different values.
+		BindParameter parameter = this.bindParameter.clone();
+		parameter.setCommentNode(this);
+		Object val = evalValueAndSetDataType(context, parameter);
+		parameter.setValue(val);
+		sqlParameters.add(parameter);
 		return true;
 	}
 

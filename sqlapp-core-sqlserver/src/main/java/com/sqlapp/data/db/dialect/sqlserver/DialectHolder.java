@@ -22,7 +22,8 @@ package com.sqlapp.data.db.dialect.sqlserver;
 import com.sqlapp.data.db.dialect.Dialect;
 
 public class DialectHolder {
-	public final static Dialect defaultDialect2022 = new SqlServer2022(() -> null);
+	public final static Dialect defaultDialect2025 = new SqlServer2025(() -> null);
+	public final static Dialect defaultDialect2022 = new SqlServer2022(() -> defaultDialect2025);
 	public final static Dialect defaultDialect2019 = new SqlServer2019(() -> defaultDialect2022);
 	public final static Dialect defaultDialect2017 = new SqlServer2017(() -> defaultDialect2019);
 	public final static Dialect defaultDialect2016Sp1 = new SqlServer2016Sp1(() -> defaultDialect2017);

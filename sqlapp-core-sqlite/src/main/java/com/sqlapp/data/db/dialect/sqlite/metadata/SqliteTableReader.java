@@ -46,9 +46,12 @@ public class SqliteTableReader extends JdbcTableReader {
 		try (var statement = connection.prepareStatement(sql)) {
 			if (tableList)
 				statement.setString(1, schemaName);
+			final java.util.Set<String> shadowTables = new java.util.HashSet<>();
 			try (var resultSet = statement.executeQuery()) {
 				while (resultSet.next()) {
 					final String tableName = resultSet.getString("name");
+					if (!tableList)
+						addShadowTables(tableName, resultSet.getString("sql"), shadowTables);
 					if (requestedTable != null && !requestedTable.equalsIgnoreCase(tableName)) {
 						continue;
 					}
@@ -61,10 +64,16 @@ public class SqliteTableReader extends JdbcTableReader {
 						table.getSpecifics().put("sqlite.virtual", "true");
 						if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement())
 							table.setDefinition(definition);
+					} else {
+						// Already read here; avoids reading every CREATE statement again.
+						setTableOptions(table, definition);
 					}
 					tables.add(table);
 				}
 			}
+			if (!shadowTables.isEmpty())
+				tables.removeIf(table -> !"true".equals(table.getSpecifics().get("sqlite.virtual"))
+						&& shadowTables.contains(table.getName().toLowerCase(java.util.Locale.ROOT)));
 			return tables;
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -122,13 +131,6 @@ public class SqliteTableReader extends JdbcTableReader {
 			uniques.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
 			checks.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
 			foreignKeys.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
-			try (var statement = SqliteMetadataQueries.prepare(connection, bulkContext, "m.name", "", "");
-					var rs = statement.executeQuery()) {
-				while (rs.next()) {
-					Table table = tableMap.get(rs.getString("table_name"));
-					setTableOptions(table, rs.getString("table_sql"));
-				}
-			}
 			return;
 		}
 
@@ -148,32 +150,38 @@ public class SqliteTableReader extends JdbcTableReader {
 			load(connection, table, getUniqueConstraintReader());
 			load(connection, table, getCheckConstraintReader());
 			load(connection, table, getForeignKeyConstraintReader());
-			loadTableOptions(connection, table);
 		}
+	}
+
+	/** Shadow-table suffixes of the virtual-table modules built into SQLite. */
+	private static final java.util.Map<String, List<String>> SHADOW_SUFFIXES = java.util.Map.of("fts3",
+			List.of("_content", "_segments", "_segdir", "_docsize", "_stat"), "fts4",
+			List.of("_content", "_segments", "_segdir", "_docsize", "_stat"), "fts5",
+			List.of("_data", "_idx", "_content", "_docsize", "_config"), "rtree", List.of("_node", "_parent", "_rowid"),
+			"rtree_i32", List.of("_node", "_parent", "_rowid"), "geopoly", List.of("_node", "_parent", "_rowid"));
+
+	/**
+	 * Before 3.37, PRAGMA table_list cannot identify shadow tables. Derive them for
+	 * the built-in modules so they are not read as ordinary tables; shadow tables
+	 * of other modules cannot be identified there.
+	 */
+	private static void addShadowTables(String tableName, String definition, java.util.Set<String> shadowTables) {
+		if (!SqliteDdl.isVirtualTable(definition))
+			return;
+		String module = SqliteDdl.virtualTableModule(definition);
+		if (module == null)
+			return;
+		for (String suffix : SHADOW_SUFFIXES.getOrDefault(module.toLowerCase(java.util.Locale.ROOT), List.of()))
+			shadowTables.add((tableName + suffix).toLowerCase(java.util.Locale.ROOT));
 	}
 
 	private void setTableOptions(Table table, String definition) {
 		if (definition == null)
 			return;
 		if (SqliteDdl.hasTableOption(definition, "WITHOUT", "ROWID"))
-			table.getSpecifics().put("without_rowid", "true");
+			table.getSpecifics().put(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.WITHOUT_ROWID, "true");
 		if (SqliteDdl.hasTableOption(definition, "STRICT"))
-			table.getSpecifics().put("strict", "true");
-	}
-
-	private void loadTableOptions(final Connection connection, final Table table) throws SQLException {
-		final String schemaName = table.getSchemaName() == null ? "main" : table.getSchemaName();
-		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
-				+ ".sqlite_master WHERE type='table' AND name=?";
-		try (var statement = connection.prepareStatement(sql)) {
-			statement.setString(1, table.getName());
-			try (var resultSet = statement.executeQuery()) {
-				if (!resultSet.next()) {
-					return;
-				}
-				setTableOptions(table, resultSet.getString(1));
-			}
-		}
+			table.getSpecifics().put(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.STRICT, "true");
 	}
 
 	private String quoteIdentifier(final String value) {

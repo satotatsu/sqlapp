@@ -195,8 +195,8 @@ class BulkMigrationJobVerifierTest {
 			}
 		};
 
-		assertThrows(SQLException.class, () -> BulkMigrationVerifier.verify(expected, actual,
-				List.of("ID"), List.of("TARGET_ID"), 10));
+		assertThrows(SQLException.class,
+				() -> BulkMigrationVerifier.verify(expected, actual, List.of("ID"), List.of("TARGET_ID"), 10));
 		assertTrue(expectedRows.closed);
 	}
 
@@ -573,8 +573,8 @@ class BulkMigrationJobVerifierTest {
 		final Table targetParent = table("PARENT", "parent");
 		final Table targetChild = table("CHILD", "child");
 		final BulkMigrationVerificationResult verification = new BulkMigrationVerificationResult(1, 0, 0, List.of());
-		final var childTask = BulkMigrationJobRepairTask.builder().taskId("child").expected(child)
-				.target(targetChild).verificationResult(verification).build();
+		final var childTask = BulkMigrationJobRepairTask.builder().taskId("child").expected(child).target(targetChild)
+				.verificationResult(verification).build();
 		final var parentTask = BulkMigrationJobRepairTask.builder().taskId("parent").expected(parent)
 				.target(targetParent).verificationResult(verification).build();
 		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),

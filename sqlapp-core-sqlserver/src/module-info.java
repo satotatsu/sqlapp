@@ -28,6 +28,8 @@ module com.sqlapp.core.sqlserver {
 			com.sqlapp.data.db.dialect.sqlserver.bulk.SqlServerBulkInsertProvider;
 	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
 		com.sqlapp.data.db.dialect.sqlserver.bulk.SqlServerBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.GeneratedKeyCounterProvider with
+		com.sqlapp.data.db.dialect.sqlserver.bulk.SqlServerGeneratedKeyCounterProvider;
 	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
 		com.sqlapp.data.db.dialect.sqlserver.bulk.SqlServerSetBasedMigrationSnapshotProvider;
 }

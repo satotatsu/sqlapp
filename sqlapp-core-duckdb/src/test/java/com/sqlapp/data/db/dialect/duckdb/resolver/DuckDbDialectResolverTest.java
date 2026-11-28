@@ -33,7 +33,7 @@ class DuckDbDialectResolverTest {
 		assertSame(DialectHolder.duckdb12, resolver.getDialect("DuckDB", 1, 3, 2));
 		assertSame(DialectHolder.duckdb14, resolver.getDialect("DuckDB", 1, 4, 4));
 		assertSame(DialectHolder.duckdb14, resolver.getDialect("DuckDB", 1, 5, 0));
-		assertSame(DialectHolder.duckdb14, resolver.getDialect("DuckDB", 2, 0, 0));
+		assertSame(DialectHolder.duckdb20, resolver.getDialect("DuckDB", 2, 0, 0));
 	}
 
 	@Test
@@ -44,6 +44,8 @@ class DuckDbDialectResolverTest {
 		assertTrue(((DuckDb) DialectHolder.duckdb12).supportsAlterTableAddPrimaryKey());
 		assertFalse(DialectHolder.duckdb12.supportsMerge());
 		assertTrue(DialectHolder.duckdb14.supportsMerge());
+		assertFalse(((DuckDb) DialectHolder.duckdb14).supportsAlterTableAddUnique());
+		assertTrue(((DuckDb) DialectHolder.duckdb20).supportsAlterTableAddUnique());
 	}
 
 	@Test
@@ -51,7 +53,7 @@ class DuckDbDialectResolverTest {
 		final DuckDbDialectResolver resolver = new DuckDbDialectResolver();
 		assertSame(DialectHolder.duckdb11, resolver.resolveDatabaseMetaData(metadata("DuckDB", "v1.1.3")));
 		assertSame(DialectHolder.duckdb14, resolver.resolveDatabaseMetaData(metadata("DuckDB", "1.4.4")));
-		assertSame(DialectHolder.duckdb14, resolver.resolveDatabaseMetaData(metadata("DuckDB", "v2.0.0")));
+		assertSame(DialectHolder.duckdb20, resolver.resolveDatabaseMetaData(metadata("DuckDB", "v2.0.0")));
 		assertNull(resolver.resolveDatabaseMetaData(metadata("H2", "2.3.232")));
 		assertNull(resolver.resolveDatabaseMetaData(metadata("DuckDB", "unknown")));
 	}

@@ -49,21 +49,23 @@ public class SqlServer2012CreateTableFactory extends SqlServer2008CreateTableFac
 		final List<SqlOperation> sqlList = list();
 		final SqlServerSqlBuilder builder = createSqlBuilder();
 		addCreateObject(table, builder);
-		builder.as().filetable().with().lineBreak()._add("(");
-		builder.appendIndent(1);
-		String value = table.getSpecifics().get("directory_name");
-		boolean first = true;
-		if (CommonUtils.isEmpty(value)) {
-			builder.comma(!first).filetableDirectory().eq()._add("'")._add(value)._add("'");
-			first = false;
+		builder.as().filetable();
+		String directory = table.getSpecifics().get("directory_name");
+		String collation = table.getSpecifics().get("filename_collation_name");
+		if (!CommonUtils.isEmpty(directory) || !CommonUtils.isEmpty(collation)) {
+			builder.with().space().brackets(() -> {
+				if (!CommonUtils.isEmpty(directory))
+					builder.filetableDirectory().eq()._add(SqlServerDdlSupport.nchar(directory));
+				if (!CommonUtils.isEmpty(collation)) {
+					builder.comma(!CommonUtils.isEmpty(directory)).filetableCollateFilename().eq();
+					if ("database_default".equalsIgnoreCase(collation))
+						builder._add("database_default");
+					else
+						builder.name(collation);
+				}
+			});
 		}
-		value = table.getSpecifics().get("filename_collation_name");
-		if (CommonUtils.isEmpty(value)) {
-			builder.comma(!first).filetableCollateFilename().eq()._add("'")._add(value)._add("'");
-			first = false;
-		}
-		builder.appendIndent(-1);
-		builder.lineBreak()._add(")");
+		addSql(sqlList, builder, com.sqlapp.data.db.sql.SqlType.CREATE, table);
 		return sqlList;
 	}
 }

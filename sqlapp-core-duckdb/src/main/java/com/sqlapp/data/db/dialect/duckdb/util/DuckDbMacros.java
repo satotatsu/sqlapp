@@ -40,14 +40,17 @@ public final class DuckDbMacros {
 	 */
 	public static String createMacro(final Dialect dialect, final String schema, final String name, final boolean table,
 			final List<Overload> overloads) {
+		return createMacro(dialect, null, schema, name, table, overloads);
+	}
+
+	/** Builds a macro with an explicitly resolved attached catalog when present. */
+	public static String createMacro(final Dialect dialect, final String catalog, final String schema,
+			final String name, final boolean table, final List<Overload> overloads) {
 		if (overloads.isEmpty()) {
 			throw new IllegalArgumentException("DuckDB macro requires at least one overload: " + name);
 		}
 		final StringBuilder builder = new StringBuilder("CREATE MACRO ");
-		if (schema != null && !schema.isEmpty()) {
-			builder.append(dialect.quote(schema)).append('.');
-		}
-		builder.append(dialect.quote(name));
+		builder.append(dialect.getObjectFullName(catalog, schema, name));
 		for (int i = 0; i < overloads.size(); i++) {
 			final Overload overload = overloads.get(i);
 			if (overload.body() == null || overload.body().isBlank()) {

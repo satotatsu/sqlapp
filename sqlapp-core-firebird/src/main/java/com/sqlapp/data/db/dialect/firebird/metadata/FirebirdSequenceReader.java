@@ -62,8 +62,8 @@ public class FirebirdSequenceReader extends SequenceReader {
 		String name = trim(getString(rs, "RDB$GENERATOR_NAME"));
 		Sequence sequence = new Sequence(name);
 		sequence.setCycle(false);
-		if (rs.contains("RDB$GENERATOR_INCREMENT"))
-			sequence.setIncrementBy(rs.getBigDecimal("RDB$GENERATOR_INCREMENT"));
+		// RDB$GENERATOR_INCREMENT exists from 3.0 and is read by
+		// Firebird30SequenceReader; older generators always increment by 1.
 		return sequence;
 	}
 

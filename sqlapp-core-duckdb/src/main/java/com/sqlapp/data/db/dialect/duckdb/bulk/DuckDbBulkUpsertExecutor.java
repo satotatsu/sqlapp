@@ -88,7 +88,7 @@ public class DuckDbBulkUpsertExecutor implements BulkUpsertExecutor {
 			final List<Column> updates, final boolean update) {
 		final StringBuilder sql = new StringBuilder("INSERT INTO ").append(name(table)).append(" (")
 				.append(list(writable)).append(") VALUES (")
-				.append(String.join(", ", java.util.Collections.nCopies(writable.size(), "?")))
+				.append(writable.stream().map(this::parameter).collect(java.util.stream.Collectors.joining(", ")))
 				.append(") ON CONFLICT (").append(list(keys)).append(") DO ");
 		if (!update || updates.isEmpty()) {
 			return sql.append("NOTHING").toString();
@@ -104,17 +104,24 @@ public class DuckDbBulkUpsertExecutor implements BulkUpsertExecutor {
 	private String updateSql(final Table table, final List<Column> updates, final List<Column> keys) {
 		final StringBuilder sql = new StringBuilder("UPDATE ").append(name(table)).append(" SET ");
 		for (int i = 0; i < updates.size(); i++) {
-			sql.append(i > 0 ? ", " : "").append(dialect.quote(updates.get(i).getName())).append(" = ?");
+			sql.append(i > 0 ? ", " : "").append(dialect.quote(updates.get(i).getName())).append(" = ")
+					.append(parameter(updates.get(i)));
 		}
 		sql.append(" WHERE ");
 		for (int i = 0; i < keys.size(); i++) {
-			sql.append(i > 0 ? " AND " : "").append(dialect.quote(keys.get(i).getName())).append(" = ?");
+			sql.append(i > 0 ? " AND " : "").append(dialect.quote(keys.get(i).getName())).append(" = ")
+					.append(parameter(keys.get(i)));
 		}
 		return sql.toString();
 	}
 
 	private String name(final Table table) {
-		return dialect.getObjectFullName(table.getSchemaName(), table.getName());
+		return dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
+	}
+
+	private String parameter(final Column column) {
+		final var type = dialect.getDbDataType(column);
+		return type == null ? "?" : type.getJdbcTypeHandler().writeExpression("?", column);
 	}
 
 	private String list(final List<Column> columns) {

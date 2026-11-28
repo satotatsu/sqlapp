@@ -318,6 +318,16 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 	 */
 	@Override
 	public SqlServerSqlBuilder definition(final Column column, final boolean withRemarks) {
+		final boolean sparse = Boolean.TRUE.equals(column.getSpecifics().get("is_sparse", Boolean.class));
+		if (sparse && (getDialect().compareTo(com.sqlapp.data.db.dialect.sqlserver.DialectHolder.defaultDialect2008) < 0
+				|| column.isNotNull() || column.isIdentity() || !CommonUtils.isEmpty(column.getFormula())
+				|| !CommonUtils.isEmpty(column.getDefaultValue())
+				|| java.util.Set
+						.of(DataType.GEOMETRY, DataType.GEOGRAPHY, DataType.ROWVERSION, DataType.LONGVARCHAR,
+								DataType.LONGNVARCHAR, DataType.BLOB, DataType.DOMAIN, DataType.OTHER)
+						.contains(column.getDataType()))) {
+			throw new IllegalArgumentException("Unsupported SPARSE column: " + column.getName());
+		}
 		if (column.getTable() != null
 				&& (!column.getTable().getTemporalPeriods().isEmpty()
 						|| column.getTable().getSystemVersioning() != null)
@@ -332,7 +342,12 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 			as().space()._add(column.getFormula());
 			if (column.isFormulaPersisted()) {
 				persisted();
+				notNullDefinition(column);
+			} else if (column.isNotNull()) {
+				throw new IllegalArgumentException("Computed NOT NULL requires PERSISTED: " + column.getName());
 			}
+			if (!CommonUtils.isEmpty(column.getCheck()))
+				checkConstraintDefinition(column);
 			return instance();
 		}
 		if (column.getDataType() == DataType.DOMAIN) {
@@ -341,6 +356,17 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 			typeDefinition(column);
 			characterSetDefinition(column);
 			collateDefinition(column);
+		}
+		if (sparse)
+			space()._add("SPARSE");
+		if (!CommonUtils.isEmpty(column.getMaskingFunction())) {
+			if (getDialect().compareTo(sqlserver2016) < 0)
+				throw new IllegalArgumentException(
+						"Dynamic data masking requires SQL Server 2016 or later: " + column.getName());
+			masked().with().space().brackets(() -> {
+				function().space().eq().space()._add("'")._add(column.getMaskingFunction().replace("'", "''"))
+						._add("'");
+			});
 		}
 		if (column.getTable() != null && getDialect().compareTo(sqlserver2016) >= 0) {
 			for (var period : column.getTable().getTemporalPeriods()) {
@@ -357,22 +383,18 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 				}
 			}
 		}
-		if (!CommonUtils.isEmpty(column.getMaskingFunction())) {
-			if (this.getDialect().compareTo(sqlserver2016) >= 0) {
-				masked().with().space().brackets(() -> {
-					function().space().eq().space()._add("'")._add(column.getMaskingFunction())._add("'");
-				});
-			}
-		}
 		if (!column.isIdentity()) {
 			if (!CommonUtils.isEmpty(column.getDefaultValue())) {
+				String defaultName = column.getSpecifics().get("default_name");
+				if (!CommonUtils.isEmpty(defaultName))
+					constraint().name(defaultName);
 				defaultDefinition(column);
 			}
 		}
-		notNullDefinition(column);
 		if (column.isIdentity()) {
 			autoIncrement(column);
 		}
+		notNullDefinition(column);
 		if (!CommonUtils.isEmpty(column.getOnUpdate())) {
 			onUpdateDefinition(column);
 		}
@@ -398,6 +420,46 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 	@Override
 	protected SqlServerSqlBuilder autoIncrement(final AbstractColumn<?> column) {
 		identity();
+		if (column.getIdentityStartValue() != null || column.getIdentityStep() != null) {
+			long seed = column.getIdentityStartValue() == null ? 1 : column.getIdentityStartValue();
+			long step = column.getIdentityStep() == null ? 1 : column.getIdentityStep();
+			if (step == 0)
+				throw new IllegalArgumentException("IDENTITY increment must not be zero: " + column.getName());
+			_add("(")._add(seed)._add(",")._add(step)._add(")");
+		}
+		return instance();
+	}
+
+	@Override
+	protected SqlServerSqlBuilder typeDefinition(final Column column) {
+		if (column.getDataType() != DataType.VECTOR)
+			return super.typeDefinition(column);
+		if (getDialect().compareTo(com.sqlapp.data.db.dialect.sqlserver.DialectHolder.defaultDialect2025) < 0)
+			throw new IllegalArgumentException("Native VECTOR requires SQL Server 2025 or later");
+		Integer dimension = column.getVectorDimension();
+		String baseType = column.getSpecifics().get("vector_base_type");
+		int maximum = "FLOAT16".equalsIgnoreCase(baseType) ? 3996 : 1998;
+		if (dimension == null || dimension < 1 || dimension > maximum)
+			throw new IllegalArgumentException(
+					"SQL Server VECTOR requires dimensions between 1 and " + maximum + ": " + column.getName());
+		if (baseType != null && !"FLOAT16".equalsIgnoreCase(baseType))
+			throw new IllegalArgumentException("Unsupported SQL Server VECTOR base type: " + baseType);
+		if (column.getVectorElementDataType() != null && column.getVectorElementDataType() != DataType.REAL)
+			throw new IllegalArgumentException(
+					"Unsupported SQL Server VECTOR element type: " + column.getVectorElementDataType());
+		_add("VECTOR(")._add(dimension);
+		if (baseType != null)
+			_add(", FLOAT16");
+		return _add(")");
+	}
+
+	@Override
+	public SqlServerSqlBuilder definitionForAlterColumn(final Column column) {
+		Column stored = column.clone().setDefaultValue(null).setIdentity(false).setCheckConstraint(null)
+				.setRemarks(null);
+		super.definitionForAlterColumn(stored);
+		if (!column.isNotNull())
+			_add(" NULL");
 		return instance();
 	}
 }

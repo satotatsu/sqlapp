@@ -23,11 +23,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public abstract class AbstractHandler<T> {
-	
+
 	protected abstract T handle(ResultSet resultSet);
-	
-	protected RuntimeException handleException(SQLException e){
-		RuntimeException re=new RuntimeException(e);
+
+	protected RuntimeException handleException(SQLException e) {
+		RuntimeException re = new RuntimeException(e);
 		return re;
 	}
 }

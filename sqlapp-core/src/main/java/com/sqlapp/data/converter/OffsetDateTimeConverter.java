@@ -55,13 +55,10 @@ public class OffsetDateTimeConverter extends AbstractJava8OffsetConverter<Offset
 		} else if (value instanceof Instant) {
 			return toZonedDateTime((Instant) value).toOffsetDateTime();
 		} else if (value instanceof ChronoLocalDate) {
-			ChronoLocalDate localDate = ChronoLocalDate.class.cast(value);
-			Instant ins = Instant.ofEpochMilli(localDate.toEpochDay());
-			return toZonedDateTime(ins).toOffsetDateTime();
+			// Start of the day in the default zone.
+			return toZonedDateTime((ChronoLocalDate) value).toOffsetDateTime();
 		} else if (value instanceof LocalDateTime) {
 			return toZonedDateTime((LocalDateTime) value).toOffsetDateTime();
-		} else if (value instanceof OffsetDateTime) {
-			return toZonedDateTime((OffsetDateTime) value).toOffsetDateTime();
 		} else if (value instanceof ZonedDateTime) {
 			ZonedDateTime zonedDateTime = ZonedDateTime.class.cast(value);
 			return zonedDateTime.toOffsetDateTime();
@@ -79,7 +76,7 @@ public class OffsetDateTimeConverter extends AbstractJava8OffsetConverter<Offset
 			String lowerVal = ((String) value).toLowerCase();
 			if (isCurrentText(lowerVal)) {
 				return OffsetDateTime.now();
-			} else if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+			} else if (lowerVal.length() >= 2 && lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
 				String val = cast(value);
 				return parseDate(val.substring(1, val.length() - 1));
 			} else if (isNumberPattern(lowerVal)) {

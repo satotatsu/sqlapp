@@ -29,10 +29,8 @@ class SpannerSynonymFactoryTest {
 		assertEquals(2, operations.size());
 		assertEquals(SqlType.DROP, operations.getFirst().getSqlType());
 		assertEquals(SqlType.CREATE, operations.getLast().getSqlType());
-		assertEquals("ALTER TABLE `Sales`.`Orders` DROP SYNONYM `Sales`.`Select`",
-				operations.getFirst().getSqlText());
-		assertEquals("ALTER TABLE `Sales`.`Archive` ADD SYNONYM `Sales`.`Select`",
-				operations.getLast().getSqlText());
+		assertEquals("ALTER TABLE `Sales`.`Orders` DROP SYNONYM `Sales`.`Select`", operations.getFirst().getSqlText());
+		assertEquals("ALTER TABLE `Sales`.`Archive` ADD SYNONYM `Sales`.`Select`", operations.getLast().getSqlText());
 		assertEquals("Orders", original.getObjectName());
 		assertEquals("Archive", target.getObjectName());
 		final var renamed = original.clone().setName("Legacy");
@@ -51,8 +49,7 @@ class SpannerSynonymFactoryTest {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		final var operations = registry.createSql(original.diff(target));
 		assertEquals(2, operations.size());
-		assertEquals("ALTER TABLE `Sales`.`Orders` DROP SYNONYM `Sales`.`Legacy`",
-				operations.getFirst().getSqlText());
+		assertEquals("ALTER TABLE `Sales`.`Orders` DROP SYNONYM `Sales`.`Legacy`", operations.getFirst().getSqlText());
 		assertEquals("ALTER TABLE `Sales`.`ArchivedOrders` ADD SYNONYM `Sales`.`Legacy`",
 				operations.getLast().getSqlText());
 	}
@@ -61,14 +58,14 @@ class SpannerSynonymFactoryTest {
 	void rejectsInvalidOrUnrepresentedSynonymChangesBeforeReturningSql() {
 		final var original = new Synonym("Legacy").setSchemaName("Sales").setObjectName("Orders");
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
-		assertThrows(IllegalArgumentException.class, () -> registry.createSql(
-				original.diff(original.clone().setObjectName(" ")), SqlType.ALTER));
-		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(
-				original.diff(original.clone().setObjectSchemaName("Archive")), SqlType.ALTER));
-		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(
-				original.diff(original.clone().setDbLinkName("remote")), SqlType.ALTER));
-		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(
-				original.diff(original.clone().setSchemaName("Archive")), SqlType.ALTER));
+		assertThrows(IllegalArgumentException.class,
+				() -> registry.createSql(original.diff(original.clone().setObjectName(" ")), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class, () -> registry
+				.createSql(original.diff(original.clone().setObjectSchemaName("Archive")), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(original.clone().setDbLinkName("remote")), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(original.clone().setSchemaName("Archive")), SqlType.ALTER));
 		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original, SqlType.ALTER));
 	}
 
@@ -84,8 +81,7 @@ class SpannerSynonymFactoryTest {
 		final var operations = registry.createSql(restored, SqlType.CREATE);
 		assertEquals(3, operations.size());
 		assertTrue(operations.get(1).getSqlText().contains("`Sales`.`Orders`"));
-		assertEquals("ALTER TABLE `Sales`.`Orders` ADD SYNONYM `Sales`.`Select`",
-				operations.getLast().getSqlText());
+		assertEquals("ALTER TABLE `Sales`.`Orders` ADD SYNONYM `Sales`.`Select`", operations.getLast().getSqlText());
 		assertEquals("ALTER TABLE `Sales`.`Orders` DROP SYNONYM `Sales`.`Select`",
 				registry.createSql(restored.getSynonyms().getFirst(), SqlType.DROP).getFirst().getSqlText());
 	}

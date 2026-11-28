@@ -115,9 +115,10 @@ public class IntervalMinuteToSecond extends IntervalHourToSecond {
 		if (interval == null) {
 			return null;
 		}
-		IntervalMinuteToSecond result = new IntervalMinuteToSecond(interval.getMinutes() * MINUTE_SECONDS,
-				interval.getSeconds(), interval.getNanos());
-		if (!interval.isPositive()) {
+		final Interval value = interval.toInterval();
+		IntervalMinuteToSecond result = new IntervalMinuteToSecond(value.getMinutesFull(),
+				value.getSeconds(), (long) value.getNanos());
+		if (!value.isPositive()) {
 			result.scale(-1);
 		}
 		return result;
@@ -162,14 +163,7 @@ public class IntervalMinuteToSecond extends IntervalHourToSecond {
 		}
 		builder.append(this.getMinutesFull());
 		builder.append(":");
-		if (this.getNanos() > 0) {
-			synchronized (secondsFormat) {
-				double val = (double) this.getNanos() / NANO_LIMIT + this.getSeconds();
-				builder.append(secondsFormat.format(val));
-			}
-		} else {
-			builder.append(this.getSeconds());
-		}
+		builder.append(formatSeconds(this.getSeconds()));
 		builder.append("");
 		return builder.toString();
 	}

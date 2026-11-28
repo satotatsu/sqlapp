@@ -21,9 +21,15 @@ package com.sqlapp.data.db.dialect.mysql.sql;
 
 import static com.sqlapp.util.CommonUtils.list;
 
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
+import com.sqlapp.data.db.dialect.mysql.MySql8019;
 import com.sqlapp.data.db.sql.AbstractMergeFactory;
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.db.sql.SqlOperation;
@@ -39,6 +45,26 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
 		final MySqlSqlBuilder builder = createSqlBuilder();
+		final boolean rowAlias = getDialect() instanceof MySql8019;
+		final String insertedRow = "sqlapp_new_row".equalsIgnoreCase(table.getName()) ? "sqlapp_new_row_"
+				: "sqlapp_new_row";
+		// Separate column aliases keep existing unqualified update expressions
+		// unambiguous.
+		final Map<Column, String> insertedColumns = new LinkedHashMap<>();
+		if (rowAlias) {
+			final Set<String> names = new HashSet<>();
+			table.getColumns().forEach(column -> names.add(column.getName().toLowerCase(Locale.ROOT)));
+			int index = 0;
+			for (final Column column : table.getColumns()) {
+				if (isFormulaColumn(column) || CommonUtils.isEmpty(getValueDefinitionForInsert(column)))
+					continue;
+				String name;
+				do {
+					name = "sqlapp_value_" + index++;
+				} while (!names.add(name));
+				insertedColumns.put(column, name);
+			}
+		}
 		final SqlSignature sqlSignature = this.createSqlSignature(table);
 		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
 				.getMergeKeyColumnsMatchingStrategy().apply(table);
@@ -78,6 +104,13 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 			}
 		});
 		builder.lineBreak();
+		if (rowAlias) {
+			builder._add("AS ").name(insertedRow).space().brackets(() -> {
+				int index = 0;
+				for (final String name : insertedColumns.values())
+					builder.comma(index++ > 0).name(name);
+			}).lineBreak();
+		}
 		builder.on().duplicate().key();
 		builder.lineBreak();
 		builder.update();
@@ -94,8 +127,12 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 				if (this.isOptimisticLockColumn(column)) {
 					if (this.withCoalesceAtUpdate(column)) {
 						builder.lineBreak();
-						builder.comma(i > 0).name(column).eq().coalesce()._add('(').space().values().space()._add('(');
-						builder.name(column).space()._add("), ");
+						builder.comma(i > 0).name(column).eq().coalesce()._add('(').space();
+						if (rowAlias) {
+							builder.name(insertedRow)._add('.').name(insertedColumns.get(column))._add(", ");
+						} else {
+							builder.values().space()._add('(').name(column).space()._add("), ");
+						}
 						builder._add(getDefaultValueDefinition(column));
 						builder._add(") + 1");
 					} else {
@@ -115,9 +152,14 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 				}
 				if (def != null) {
 					builder.lineBreak();
-					builder.comma(i > 0).name(column).eq().values().brackets(() -> {
-						builder.name(column).space();
-					});
+					builder.comma(i > 0).name(column).eq();
+					if (rowAlias) {
+						builder.name(insertedRow)._add('.').name(insertedColumns.get(column));
+					} else {
+						builder.values().brackets(() -> {
+							builder.name(column).space();
+						});
+					}
 					i++;
 				}
 			}

@@ -35,7 +35,9 @@ public class SqliteCreateForeignKeyConstraintFactory
 		if (!constraint.getRelatedColumns().isEmpty()
 				&& constraint.getRelatedColumns().size() != constraint.getColumns().size())
 			throw new IllegalArgumentException("SQLite foreign key child and parent column counts must match");
-		if (!CommonUtils.isEmpty(constraint.getName()))
+		// A name generated when reading an unnamed key is not part of the DDL.
+		if (!CommonUtils.isEmpty(constraint.getName())
+				&& !com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.isUnnamed(constraint))
 			builder.constraint().name(constraint, false).space();
 		builder.foreignKey().space()._add("(").names(constraint.getColumns())._add(")").references()
 				.name(constraint.getRelatedTableName());

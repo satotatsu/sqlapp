@@ -112,6 +112,7 @@ public class FirebirdProcedureArgumentReader extends RoutineArgumentReader<Proce
 		FirebirdUtils.setDbType(obj, type, subType, length, precision, scale, segmentLength);
 		if (type == 14 || type == 37)
 			obj.setLength(rs.getInt("CHAR_LEN"));
+		FirebirdUtils.setBinaryIfOctets(obj);
 		int direction = rs.getInt("PARAMETER_TYPE");
 		if (direction == 0) {
 			obj.setDirection(ParameterDirection.Input);

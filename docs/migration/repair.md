@@ -149,3 +149,10 @@ or one with no corresponding expected rows, is reported by
 missing or extra row to shift later chunk boundaries. Always reread and verify
 the target after repair; use key-aware reconciliation before deleting any
 remaining target-only rows.
+
+Before any target write, repair resolves duplicate match keys across all selected
+replay chunks using the shared bulk UPSERT selection rules. `ERROR` rejects
+cross-chunk duplicates; `KEEP_FIRST`, `KEEP_LAST`, and `CUSTOM` select rows across
+the complete replay set before repartitioning them for writes. This also applies
+when matched-row updates are disabled. The replay set contains only mismatched
+chunks, so it does not reconcile duplicate candidates in unselected source chunks.

@@ -152,18 +152,50 @@ class SqliteForeignKeyRoundTripTest {
 	}
 
 	@Test
-	void unresolvedImplicitParentFailsWithActionableError() throws Exception {
+	void unresolvedImplicitParentIsKeptAndMarked() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 				var statement = connection.createStatement()) {
 			statement.execute("CREATE TABLE parent(a INT,b INT,PRIMARY KEY(a,b))");
-			statement.execute("CREATE TABLE child(x INT REFERENCES parent)");
+			statement.execute("CREATE TABLE nokey(a INT)");
+			statement.execute("CREATE TABLE single(id INTEGER PRIMARY KEY)");
+			// SQLite accepts all four; only w can be enforced.
+			statement.execute("CREATE TABLE child(x INT REFERENCES parent, y INT REFERENCES nokey,"
+					+ " z INT REFERENCES missing, w INT REFERENCES single)");
 			var context = new ParametersContext();
 			context.put("tableName", "child");
 			var reader = new SqliteForeignKeyConstraintReader(DialectHolder.defaultDialect);
 			for (int minor : List.of(15, 53)) {
-				var error = assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(connection, context,
-						new ProductVersionInfo().setMajorVersion(3).setMinorVersion(minor)));
-				assertTrue(error.getMessage().contains("child -> parent"));
+				var keys = reader.doGetAll(connection, context,
+						new ProductVersionInfo().setMajorVersion(3).setMinorVersion(minor));
+				assertEquals(4, keys.size());
+				for (var key : keys) {
+					if ("single".equals(key.getRelatedTableName())) {
+						assertEquals("id", key.getRelatedColumns().get(0).getName());
+						assertNull(key.getSpecifics().get(SqliteForeignKeyConstraintReader.PARENT_UNRESOLVED));
+					} else {
+						assertTrue(key.getRelatedColumns().isEmpty(), key.getRelatedTableName());
+						assertEquals("true", key.getSpecifics().get(SqliteForeignKeyConstraintReader.PARENT_UNRESOLVED),
+								key.getRelatedTableName());
+					}
+				}
+			}
+			var tableReader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTableReader();
+			tableReader.setSchemaName("main");
+			tableReader.setObjectName("child");
+			Table restored = SchemaUtils
+					.readXml(new java.io.StringReader(tableReader.getAllFull(connection).get(0).asXml()));
+			assertEquals(3, restored.getConstraints().getForeignKeyConstraints().stream().filter(
+					key -> "true".equals(key.getSpecifics().get(SqliteForeignKeyConstraintReader.PARENT_UNRESOLVED)))
+					.count());
+			statement.execute("DROP TABLE child");
+			for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(restored,
+					SqlType.CREATE))
+				statement.execute(operation.getSqlText());
+			try (var rs = statement
+					.executeQuery("SELECT count(*), sum(\"to\" IS NULL) FROM pragma_foreign_key_list('child')")) {
+				assertTrue(rs.next());
+				assertEquals(4, rs.getInt(1));
+				assertEquals(3, rs.getInt(2));
 			}
 		}
 	}

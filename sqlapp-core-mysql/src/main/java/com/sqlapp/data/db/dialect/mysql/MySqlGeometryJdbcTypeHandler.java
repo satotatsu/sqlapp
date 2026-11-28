@@ -26,9 +26,11 @@ import java.sql.SQLException;
 import org.geolatte.geom.ByteBuffer;
 import org.geolatte.geom.ByteOrder;
 import org.geolatte.geom.Geometry;
+import org.geolatte.geom.GeometryCollection;
 import org.geolatte.geom.codec.Wkb;
 import org.geolatte.geom.codec.WkbDecoder;
 import org.geolatte.geom.codec.WkbEncoder;
+import org.geolatte.geom.codec.Wkt;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.JdbcTypeHandler;
@@ -64,10 +66,52 @@ public class MySqlGeometryJdbcTypeHandler implements JdbcTypeHandler {
 
 	@Override
 	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
-		WkbEncoder encoder = Wkb.newEncoder(Wkb.Dialect.MYSQL_WKB);
+		if (x == null) {
+			stmt.setBytes(parameterIndex, null);
+			return;
+		}
 		Geometry<?> geometry = Converters.getDefault().convertObject(x, Geometry.class);
-		ByteBuffer buffer = encoder.encode(geometry, ByteOrder.NDR);
-		byte[] bytes = buffer == null ? null : buffer.toByteArray();
-		stmt.setBytes(parameterIndex, bytes);
+		if (geometry == null) {
+			throw new IllegalArgumentException("Non-null MySQL geometry value cannot be converted to null");
+		}
+		stmt.setBytes(parameterIndex, toMySqlBytes(geometry));
+	}
+
+	/**
+	 * MySQL の内部形式(SRID + WKB)に変換します。通常の INSERT と LOAD DATA で同じ表現を使うために共有します。
+	 * <p>
+	 * MySQL は Z/M 座標と、空の Point などの GEOMETRYCOLLECTION 以外の空の図形を保存できません。 符号化すると Z/M
+	 * が黙って落ちたり、別の種類の図形に変わったりするため、変換せずにエラーにします。
+	 * </p>
+	 * 
+	 * @param geometry 図形
+	 * @return MySQL の内部形式
+	 * @throws IllegalArgumentException MySQL で表現できない図形の場合
+	 */
+	public static byte[] toMySqlBytes(final Geometry<?> geometry) {
+		if (geometry.hasZ() || geometry.hasM()) {
+			throw new IllegalArgumentException(
+					"MySQL geometry does not support Z or M coordinates. value=" + Wkt.toWkt(geometry));
+		}
+		validateEmpty(geometry);
+		final WkbEncoder encoder = Wkb.newEncoder(Wkb.Dialect.MYSQL_WKB);
+		final ByteBuffer buffer = encoder.encode(geometry, ByteOrder.NDR);
+		return buffer == null ? null : buffer.toByteArray();
+	}
+
+	private static void validateEmpty(final Geometry<?> geometry) {
+		if (geometry instanceof GeometryCollection<?> collection) {
+			for (int i = 0; i < collection.getNumGeometries(); i++) {
+				validateEmpty(collection.getGeometryN(i));
+			}
+			if (geometry.getGeometryType() == org.geolatte.geom.GeometryType.GEOMETRYCOLLECTION) {
+				return;
+			}
+		}
+		if (geometry.isEmpty()) {
+			throw new IllegalArgumentException(
+					"MySQL geometry supports only GEOMETRYCOLLECTION EMPTY as an empty value. value="
+							+ Wkt.toWkt(geometry));
+		}
 	}
 }

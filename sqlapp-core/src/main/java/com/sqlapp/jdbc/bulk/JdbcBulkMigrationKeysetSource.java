@@ -34,9 +34,12 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 	private final BulkMigrationKeysetCodec codec;
 	private final int fetchSize;
 
-	/** Override value extraction for a projection while retaining shared SQL, ordering and cursor lifetime. Index is one-based. */
+	/**
+	 * Override value extraction for a projection while retaining shared SQL,
+	 * ordering and cursor lifetime. Index is one-based.
+	 */
 	protected Object readColumn(ResultSet resultSet, int index, Column column, DbDataType<?> type) throws SQLException {
-		return type.getJdbcTypeHandler().getObject(resultSet, index);
+		return type.getJdbcTypeHandler().getObject(resultSet, index, column);
 	}
 
 	/** Uses the table's complete primary key in declared order. */
@@ -60,8 +63,7 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 	}
 
 	public JdbcBulkMigrationKeysetSource(final Connection connection, final Table table,
-			final List<String> keyColumnNames, final BulkMigrationKeysetCodec codec,
-			final int fetchSize) {
+			final List<String> keyColumnNames, final BulkMigrationKeysetCodec codec, final int fetchSize) {
 		this.connection = Objects.requireNonNull(connection, "connection");
 		this.table = Objects.requireNonNull(table, "table");
 		this.codec = Objects.requireNonNull(codec, "codec");
@@ -90,25 +92,22 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 	private static void validateKeyColumns(final Table table, final List<Column> columns) {
 		for (final Column column : columns) {
 			if (!column.isNotNull()) {
-				throw new IllegalArgumentException("Keyset column must be NOT NULL: "
-						+ column.getName());
+				throw new IllegalArgumentException("Keyset column must be NOT NULL: " + column.getName());
 			}
 		}
 		final boolean uniqueConstraint = table.getConstraints().getUniqueConstraints().stream()
 				.anyMatch(constraint -> matchesKeyColumns(table, constraint.getColumns(), columns));
-		final boolean uniqueIndex = table.getIndexes().stream().filter(index -> index.isUnique())
-				.anyMatch(index -> matchesKeyColumns(table, index.getColumns().stream()
-						.filter(column -> !column.isIncludedColumn()).toList(), columns));
+		final boolean uniqueIndex = table.getIndexes().stream().filter(index -> index.isUnique()
+				&& com.sqlapp.util.CommonUtils.isEmpty(index.getWhere()))
+				.anyMatch(index -> matchesKeyColumns(table,
+						index.getColumns().stream().filter(column -> !column.isIncludedColumn()).toList(), columns));
 		if (!uniqueConstraint && !uniqueIndex) {
-			throw new IllegalArgumentException(
-					"Keyset columns must exactly match a primary key, unique constraint, "
-							+ "or unique index: "
-							+ columns.stream().map(Column::getName).toList());
+			throw new IllegalArgumentException("Keyset columns must exactly match a primary key, unique constraint, "
+					+ "or unique index: " + columns.stream().map(Column::getName).toList());
 		}
 	}
 
-	private static boolean matchesKeyColumns(final Table table,
-			final Collection<? extends ReferenceColumn> references,
+	private static boolean matchesKeyColumns(final Table table, final Collection<? extends ReferenceColumn> references,
 			final List<Column> columns) {
 		if (references.size() != columns.size()) {
 			return false;
@@ -118,20 +117,19 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 			if (resolved != null && columns.contains(resolved)) {
 				return true;
 			}
-			return columns.stream().anyMatch(column -> table.getColumns().isCaseSensitive()
-					? Objects.equals(column.getName(), reference.getName())
-					: column.getName().equalsIgnoreCase(reference.getName()));
+			return columns.stream()
+					.anyMatch(column -> table.getColumns().isCaseSensitive()
+							? Objects.equals(column.getName(), reference.getName())
+							: column.getName().equalsIgnoreCase(reference.getName()));
 		});
 	}
 
 	private static List<String> primaryKeyNames(final Table table) {
 		Objects.requireNonNull(table, "table");
-		if (table.getPrimaryKeyConstraint() == null
-				|| table.getPrimaryKeyConstraint().getColumns().isEmpty()) {
+		if (table.getPrimaryKeyConstraint() == null || table.getPrimaryKeyConstraint().getColumns().isEmpty()) {
 			throw new IllegalArgumentException("The table has no primary key; specify unique keyset columns");
 		}
-		return table.getPrimaryKeyConstraint().getColumns().stream()
-				.map(column -> column.getName()).toList();
+		return table.getPrimaryKeyConstraint().getColumns().stream().map(column -> column.getName()).toList();
 	}
 
 	@Override
@@ -148,12 +146,10 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 	public String getConfigurationFingerprint() {
 		final String codecFingerprint = codec.getConfigurationFingerprint();
 		if (codecFingerprint == null || codecFingerprint.isBlank()) {
-			throw new IllegalStateException(
-					"Keyset codec configuration fingerprint must not be blank");
+			throw new IllegalStateException("Keyset codec configuration fingerprint must not be blank");
 		}
-		return JsonUtils.toJsonString(List.of(
-				keyColumns.stream().map(Column::getName).toList(),
-				codecFingerprint, fetchSize));
+		return JsonUtils
+				.toJsonString(List.of(keyColumns.stream().map(Column::getName).toList(), codecFingerprint, fetchSize));
 	}
 
 	@Override
@@ -169,7 +165,9 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 		try {
 			statement.setFetchSize(fetchSize);
 			parameters.setBind(statement);
-			return new KeysetIterator(statement, statement.executeQuery(), dialect);
+			try (var scope = com.sqlapp.data.db.datatype.JdbcReadScope.prepare(statement, table, dialect)) {
+				return new KeysetIterator(statement, statement.executeQuery(), dialect);
+			}
 		} catch (SQLException | RuntimeException e) {
 			DbUtils.close(statement);
 			throw e;
@@ -185,13 +183,12 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 			throw new IllegalArgumentException("Keyset codec returned null values");
 		}
 		if (values.size() != keyColumns.size()) {
-			throw new IllegalArgumentException("Keyset codec returned " + values.size()
-					+ " values but " + keyColumns.size() + " key columns are configured");
+			throw new IllegalArgumentException("Keyset codec returned " + values.size() + " values but "
+					+ keyColumns.size() + " key columns are configured");
 		}
 		for (int i = 0; i < values.size(); i++) {
 			if (values.get(i) == null) {
-				throw new IllegalArgumentException(
-						"Keyset codec returned a null value at index " + i);
+				throw new IllegalArgumentException("Keyset codec returned a null value at index " + i);
 			}
 		}
 		return List.copyOf(values);
@@ -208,13 +205,14 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 		for (final Column column : table.getColumns()) {
 			query.getColumns().add(column.clone());
 		}
-		query.setPrimaryKey((String) null, keyColumns.stream()
-				.map(column -> query.getColumns().get(column.getName())).toArray(Column[]::new));
+		query.setPrimaryKey((String) null,
+				keyColumns.stream().map(column -> query.getColumns().get(column.getName())).toArray(Column[]::new));
 		return query;
 	}
 
 	private SqlNode selectNode(final Dialect dialect, final TableRelation relation) {
 		final var registry = dialect.createSqlFactoryRegistry();
+		registry.getOptions().setJdbcRead(true);
 		return registry.getTableOptions().useSelectByRowComparisonOperatorStrategy(
 				table -> RowComparisonOperator.GREATER_THAN,
 				() -> registry.createSqlNodes(relation, SqlType.SELECT_BY_ROW).get(0));
@@ -234,16 +232,14 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 		private final List<DbDataType<?>> types;
 		private Boolean available;
 
-		private KeysetIterator(final PreparedStatement statement, final ResultSet resultSet,
-				final Dialect dialect) {
+		private KeysetIterator(final PreparedStatement statement, final ResultSet resultSet, final Dialect dialect) {
 			this.statement = statement;
 			this.resultSet = resultSet;
 			final List<DbDataType<?>> resolvedTypes = new ArrayList<>(table.getColumns().size());
 			for (final Column column : table.getColumns()) {
 				final DbDataType<?> type = dialect.getDbDataType(column);
 				if (type == null) {
-					throw new IllegalArgumentException("No JDBC type is available for column: "
-							+ column.getName());
+					throw new IllegalArgumentException("No JDBC type is available for column: " + column.getName());
 				}
 				resolvedTypes.add(type);
 			}

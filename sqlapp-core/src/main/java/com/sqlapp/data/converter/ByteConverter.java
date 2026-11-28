@@ -21,9 +21,6 @@ package com.sqlapp.data.converter;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
 
 import com.sqlapp.util.CommonUtils;
 
@@ -50,21 +47,15 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 		}
 		if (isSupplier(value)) {
 			return convertObject(getSupplierValue(value));
+		} else if (isOptional(value)) {
+			// any kind of Optional: empty is the default value
+			return convertObject(getOptionalValue(value));
 		} else if (value instanceof Byte) {
 			return (Byte) value;
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
 			return toByte((Number) value, value);
-		} else if (value instanceof OptionalInt) {
-			final OptionalInt op = (OptionalInt) value;
-			return op.isPresent() ? toByte(op.getAsInt(), value) : null;
-		} else if (value instanceof OptionalLong) {
-			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? toByte(op.getAsLong(), value) : null;
-		} else if (value instanceof OptionalDouble) {
-			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? toByte(op.getAsDouble(), value) : null;
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return ONE;
@@ -107,7 +98,7 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof ByteConverter)) {

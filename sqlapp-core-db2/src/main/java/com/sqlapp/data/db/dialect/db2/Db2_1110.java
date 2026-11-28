@@ -66,10 +66,15 @@ public class Db2_1110 extends Db2_1050 {
 			type.setLiteral("X'", "'").setDefaultValueLiteral("X'00'");
 		});
 		getDbDataTypes().addVarBinary("VARBINARY", 32672, type -> {
-			type.setLiteral("X'", "'").setDefaultValueLiteral("X'00'");
+			// A missing length uses the maximum so data of unknown size is not truncated.
+			type.setLiteral("X'", "'").setDefaultValueLiteral("X'00'").setDefaultLength(32672);
 			type.addColumnTypeMatcher(
 					new com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher("VARCHAR", "FOR\\s+BIT\\s+DATA"));
 		});
+		// The base dialect deprecated LONGVARBINARY in favor of VARCHAR FOR BIT DATA;
+		// use the native VARBINARY so both binary string types generate the same DDL.
+		getDbDataTypes().getDbTypeStrict(com.sqlapp.data.db.datatype.DataType.LONGVARBINARY)
+				.setDeprecated(getDbDataTypes().getDbTypeStrict(com.sqlapp.data.db.datatype.DataType.VARBINARY));
 	}
 
 	/*

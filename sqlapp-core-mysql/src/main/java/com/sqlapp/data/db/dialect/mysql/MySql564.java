@@ -49,9 +49,14 @@ public class MySql564 extends MySql {
 		super.registerDataType();
 		// DateTime
 		getDbDataTypes().addTimestamp("DATETIME", type -> {
+			type.setJdbcTypeHandler(new MySqlDatetimeJdbcTypeHandler());
 			type.setCreateFormat("DATETIME({p})").setLiteral("'", "'")
 					.setDefaultValueLiteral(getCurrentDateTimeFunction()).setDefaultPrecision(0).setMaxPrecision(6);
 		});
+		final MySqlTimestampVersionType timestamp = new MySqlTimestampVersionType();
+		getDbDataTypes().register(timestamp);
+		timestamp.setMaxPrecision(6).setDefaultValueLiteral(getCurrentTimestampFunction());
+
 		// Time
 		getDbDataTypes().addTime(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction()).setDefaultPrecision(0)

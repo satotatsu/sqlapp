@@ -47,6 +47,26 @@ JDBC labels. The CHECK reader skips reserved `CK_IS_NOT_NULL_` entries
 because their semantics are already represented by column nullability.
 Hosted-service option discovery requires separate verification.
 
+## Database role metadata
+
+The Catalog reader loads user-defined database roles in one query against
+GoogleSQL `INFORMATION_SCHEMA.ROLES`. The current principal's visibility limits
+the result. If the service explicitly reports that this catalog table is absent,
+the role list is empty. Explicit role memberships are loaded in one additional
+query against `INFORMATION_SCHEMA.ROLE_GRANTEES` with the same visibility and
+missing-table behavior. The Catalog reader also loads table and column grants
+from `TABLE_PRIVILEGES` and `COLUMN_PRIVILEGES`, one query per catalog view.
+The resulting models can regenerate individual GRANT statements. Other SQL
+errors propagate. Individual change stream SELECT grants are also loaded from
+`CHANGE_STREAM_PRIVILEGES` in one query. An absent change stream privilege view
+does not discard table grants. Grants on views, sequences and whole schemas
+are outside this metadata reader's coverage.
+
+The reader also loads Change Stream read-function grants from
+`ROUTINE_PRIVILEGES`. These use `ObjectPrivilege` with `OBJECT_TYPE` set to
+`TABLE FUNCTION` and privilege `EXECUTE`. Supply the function name as the
+object name. The returned model supports both GRANT and REVOKE.
+
 ## Table synonyms
 
 Add a table alias to a Schema with its target table name:
@@ -82,6 +102,58 @@ does not specify a target table field, so the reader cannot reconstruct
 that relationship. Specify the target explicitly in the model or Schema XML.
 See [Manage table names](https://docs.cloud.google.com/spanner/docs/table-name-synonym)
 and [GoogleSQL catalog metadata](https://docs.cloud.google.com/spanner/docs/information-schema#tables).
+
+## Advanced migrations
+
+Set `RESTART_COUNTER_WITH` on the target Sequence or
+`IDENTITY_RESTART_COUNTER_WITH` on the target identity Column in `specifics`,
+then generate an original/target diff. Supply a positive INT64 counter that
+avoids reusing existing keys. The sequence diff also needs `SEQUENCE_DDL_STYLE`
+to identify the original DDL syntax. These are explicit migration requests.
+Metadata snapshots do not capture the current allocation counter.
+
+Schema diffs stage cyclic foreign keys by adding them after table creation or
+removing them before table deletion. INTERLEAVE cycles are rejected. Scalar
+non-key STRING/BYTES conversions require an explicit target length and a
+separate step to remove conflicting dependencies. Spanner validates existing data.
+
+Catalog diffs support modeled database roles, role membership, and selected
+database options. Supported option keys are `DEFAULT_SEQUENCE_KIND`,
+`VERSION_RETENTION_PERIOD`, `OPTIMIZER_VERSION`, `OPTIMIZER_STATISTICS_PACKAGE`
+and `DEFAULT_LEADER`. Use the short database ID as the Catalog name.
+Once configured, `DEFAULT_SEQUENCE_KIND` must be retained in the target model.
+
+To grant or revoke access to an individual object, use an `ObjectPrivilege`
+with a database role as the grantee and set `hierachy` to false on the model
+(`setHierachy(false)` in Java). Set its `OBJECT_TYPE` specific to `TABLE`,
+`VIEW`, `SEQUENCE`, or `CHANGE STREAM`. Use `SqlType.GRANT` or
+`SqlType.REVOKE` directly, or add/remove the privilege in a Catalog diff.
+Catalog diffs revoke before removing objects or roles and grant after adding
+them. The catalog reader loads the object and column grants exposed by the
+GoogleSQL information schema. The documented views expose object-level rows
+for bulk grants, without the original bulk-grant statement.
+
+Use `SchemaPrivilege` with `USAGE` and a database role for schema access.
+A missing or empty schema name targets `SCHEMA DEFAULT`. Direct GRANT and
+REVOKE and Catalog differences are supported. USAGE does not grant access
+to tables or other objects inside the schema.
+For grants covering all objects of one kind in a schema, set the privilege
+value to `SELECT ON ALL TABLES`, `SELECT ON ALL VIEWS`,
+`SELECT ON ALL SEQUENCES`, or `SELECT ON ALL CHANGE STREAMS`.
+Tables also accept `INSERT`, `UPDATE`, and `DELETE`, and sequences accept
+`UPDATE`. The scope is part of the privilege value, so several kinds can
+coexist for the same role and schema in a Catalog diff.
+The tested local emulator rejects the schema grant syntax. SQL generation is
+covered by unit tests. Hosted execution remains unverified.
+The documented information schema does not expose direct schema USAGE grant
+rows. Schema visibility in SCHEMATA is insufficient to reconstruct which
+role received a direct grant.
+
+Use `ColumnPrivilege` with a table, column, and grantee role to grant or revoke
+`SELECT`, `INSERT`, or `UPDATE` on an individual table column. Direct operations
+and Catalog diffs use the same validation and dependency ordering as object grants.
+The tested local emulator rejects column-level access controls. Column privilege
+generation is covered by unit tests, with hosted execution still unverified.
 
 ## Interleaved tables
 
@@ -193,7 +265,8 @@ var operations = dialect.createSqlFactoryRegistry()
 The native ALTER factory supports ADD COLUMN (including optional IF NOT EXISTS),
 DROP COLUMN, default-only changes using SET DEFAULT / DROP DEFAULT, and
 non-key nullability changes as described below.
-Scalar STRING/BYTES length changes are also supported.
+STRING/BYTES length changes are also supported for scalars and one-dimensional
+arrays.
 ADD reuses the same type, generated-expression and options renderer as CREATE.
 NOT NULL additions require a scalar column with a default or a stored expression;
 NOT NULL array additions are rejected. Identity additions and key-column changes
@@ -238,8 +311,9 @@ Reference: [GoogleSQL DDL](https://docs.cloud.google.com/spanner/docs/reference/
 
 ## STRING/BYTES length changes
 
-Change `length` on a non-key scalar VARCHAR (GoogleSQL STRING) or VARBINARY
-(BYTES) column in the target Table and use the ordinary diff entry point.
+Change `length` on a non-key VARCHAR (GoogleSQL STRING) or VARBINARY (BYTES)
+column in the target Table and use the ordinary diff entry point. For a
+one-dimensional array with either element type, this changes the element limit.
 Expansion and shrinking generate one typed ALTER COLUMN; target DEFAULT and
 NOT NULL are restated so a length-only change does not clear them. Length,
 nullability and default changes can be combined in one statement.
@@ -255,8 +329,8 @@ changes as length changes or mutate the caller's model.
 The shared STRING(MAX) CREATE format is also corrected: it no longer appends
 a second numeric length after MAX, including when used as an array element.
 
-Array element lengths, primary-key lengths, STRING/BYTES conversions, generated,
-identity and ON UPDATE columns remain separate migrations. Server-side checks
+Primary-key lengths, type conversions involving arrays, and length changes on
+generated, identity and ON UPDATE columns require separate migrations. Server-side checks
 still apply to dependent objects and existing values. Shrinking may require
 background validation and fail when stored values are too long; no truncation,
 conversion, preflight query, implicit commit or data rewrite is performed.
@@ -294,6 +368,76 @@ The diff emits `ALTER COLUMN … ALTER IDENTITY SET SKIP RANGE` or
 Changing the start counter, identity generation mode or other properties
 of the same column requires a separate migration.
 See the [GoogleSQL ALTER TABLE reference](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language#alter_table).
+
+## Primary key replacement
+
+For an independent GoogleSQL table, call
+`SpannerPrimaryKeyMigration.plan(source, List.of("new_key"), stagingName, backupName)`
+with a complete source table definition and a list of existing scalar columns
+in the desired key order. The replacement uses ascending key order and makes
+the new key columns NOT NULL.
+The plan supplies CREATE, INSERT SELECT, a source/staging row count query,
+and an atomic RENAME TABLE statement. The original table is retained under
+the backup name.
+
+Use free staging and backup names in the source schema. Before executing the
+plan, check for inbound references and other dependencies such as views,
+synonyms, grants and change streams. Pause source writes from before the copy
+until cutover. Compare both counts before running the rename. A duplicate
+or NULL target key makes the copy fail. The single INSERT SELECT must fit Spanner's
+transaction and mutation limits.
+
+For tables with ordinary secondary indexes, named CHECK constraints, or
+named foreign keys, use
+`SpannerPrimaryKeyMigration.planWithDependencies(...)`. After the copy and
+count check, execute `cutoverStatements()` in order and stop on any error.
+The sequence drops the affected foreign keys, moves indexes and CHECK
+constraints, swaps the table names, and restores the foreign keys. Keep applications paused throughout, including
+writes on every table involved in those foreign keys. The replacement has the
+original names and definitions. The retained backup keeps its rows and primary
+key. If a move fails before the rename, check which DDL completed, then use
+`dropStagingSql()` for objects created on staging and `recreateSourceSql()`
+for objects removed from the source. A failed move does not roll back
+completed DDL. For a foreign key dropped before a failed rename, use its
+`addSql()` to restore it on the source. If the rename succeeded, the same SQL
+adds the missing foreign key to the replacement. Resume writes only after
+all required constraints are in place.
+
+The planner scans the attached source schema and resolved child relations.
+Pass additional referencing tables as the fifth argument, including unresolved
+cross-schema references. References to the replacement, including self references, require
+that the referenced columns remain the primary key or have a modeled unfiltered
+unique user index. Keep a unique index on the old key if references still use it.
+
+The planner rejects unsupported constraints, modeled interleave parent and
+child relationships, TTL, and identity, hidden or generated columns. Index
+moves support ordinary user indexes. Check for additional live dependencies
+before running either plan.
+
+## Virtual generated column expression changes
+
+Change only the formula of an existing non-stored, unindexed generated column
+in a table diff. The factory emits a typed `ALTER COLUMN … AS (…)`. Changes
+to stored or indexed formulas, regular/generated conversions and primary-key
+changes require a separate migration. The current local emulator rejects
+expression replacement even for this virtual case. SQL generation is covered
+by unit tests, and hosted execution remains unverified.
+[GoogleSQL generated columns](https://docs.cloud.google.com/spanner/docs/generated-column/how-to#modify_a_generated_column_expression).
+
+## Identity column counter restart
+
+To restart an existing GoogleSQL identity column, clone the original table and
+set `SpannerAlterTableFactory.IDENTITY_RESTART_COUNTER_WITH` on the target
+column's specifics to the desired positive INT64 counter. Generate SQL from
+the table diff. The factory emits
+`ALTER COLUMN … ALTER IDENTITY RESTART COUNTER WITH …`. Apply other changes
+to that column in a separate diff.
+
+Choose the counter based on the migration's existing keys and allocation policy.
+`IDENTITY_START_WITH_COUNTER` in the information schema is the configured start.
+The standalone sequence snapshot API requires a named sequence and cannot
+capture the internal sequence backing an identity column.
+See the [Spanner primary key migration guide](https://docs.cloud.google.com/spanner/docs/migrating-primary-keys).
 
 ## Commit timestamp option changes
 
@@ -767,6 +911,13 @@ SET OPTIONS for OPTIONS. It requires a diff and rejects changes to the
 start counter or other sequence properties. See the
 [GoogleSQL ALTER SEQUENCE reference](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language#alter_sequence).
 
+## Allocating sequence values
+
+`SequenceValueGenerator` allocates batches of values from a GoogleSQL sequence
+using a read-write connection transaction. Set the sequence's schema name to
+allocate from a named schema. SQL generated through the registry follows its
+`decorateSchemaName` option, which is enabled by default.
+
 ## Sequence metadata validation
 
 Sequence reads reject missing names, duplicate catalog/schema/name identities,
@@ -780,13 +931,27 @@ The same query now reads sequence_kind from the existing SEQUENCE_OPTIONS
 table. Raw bit_reversed_positive and the corresponding single/double-quoted
 SQL literals normalize to specifics SEQUENCE_KIND=bit_reversed_positive and
 survive XML. Other non-null values fail explicitly; a missing option retains
-the prior behavior. No new physical catalog columns, JDBC calls, public APIs,
-dependencies or resolver boundaries are introduced. The CREATE factory keeps
+the prior behavior. Reading this option does not require an additional query.
+The CREATE factory keeps
 its existing BIT_REVERSED_POSITIVE generation. Tests cover 40 sequences,
 quoted/raw kind values, unknown/malformed values and bound schema/name filters.
 Reference: [Google emulator sequence options](https://github.com/GoogleCloudPlatform/cloud-spanner-emulator/blob/master/backend/query/information_schema_catalog.cc).
-Live catalog execution, older-service compatibility and restoration of the
-current allocation counter remain unverified.
+
+Full metadata reads also fetch the pre-bit-reversal counter with
+`GET_INTERNAL_SEQUENCE_STATE` in batches of up to 64 sequences. The observed
+counter plus one is stored as `lastValue`. Unused sequences have no
+`lastValue`. The configured `startValue` drives normal CREATE DDL, and changes
+in the observed counter alone generate no ALTER DDL.
+
+To restore into a fresh database, capture the desired sequences with
+`SpannerSequenceState.capture(connection, sequences)`, then call
+`state.forCreate(definition, buffer)` before generating CREATE DDL. Stop source
+writes before taking the final migration snapshot and choose a positive buffer.
+Create named schemas on the destination first. Counter snapshots identify each
+sequence by schema and name, including when multiple schemas use the same name.
+For an existing sequence, specify the explicit `RESTART_COUNTER_WITH` option
+described above. This applies to standalone GoogleSQL sequences.
+[GoogleSQL sequence functions](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/sequence_functions).
 
 ## Column metadata validation
 
@@ -874,3 +1039,30 @@ TTL execution are not verified by local tests.
 
 Sources: [TTL management](https://docs.cloud.google.com/spanner/docs/ttl/working-with-ttl)
 and [GoogleSQL DDL](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language).
+## Change Stream DDL
+
+Use `SpannerChangeStream` to generate GoogleSQL CREATE, DROP, tracking scope
+changes, and option updates. Choose `ALL` for database-wide tracking, `NONE`
+to watch nothing, or `TABLES` with explicit `Target` entries. A target's null
+column list tracks the entire table. An empty list tracks the primary key only.
+A nonempty list names the non-key columns to track alongside the primary key.
+`Options` supports retention, capture mode and the documented boolean filters.
+Omitted options retain service defaults on CREATE and current values on ALTER.
+Dropping a stream deletes its retained change records. The model produces SQL
+for explicit execution. Use `new SpannerChangeStreamReader().read(connection)`
+to load visible stream definitions, tracked tables and columns, and options
+from GoogleSQL information schema. The reader uses up to four bulk queries;
+primary key columns are excluded from explicit column lists because tracking
+includes them automatically. An absent `CHANGE_STREAMS` view yields an empty
+list. Missing detail views and unsupported option values fail explicitly.
+Full GoogleSQL Catalog reads include change stream definitions in Catalog XML
+extension data. Use `SpannerChangeStreams.get(catalog)` to inspect the snapshot
+and `SpannerChangeStreams.set(catalog, definitions)` to supply the desired
+definitions for a Catalog diff. Set an explicit empty original snapshot when
+the database has no streams. An absent target snapshot leaves streams alone;
+an explicit empty target requests deletion of the original streams and their
+retained change records. Catalog diffs create streams after schema operations
+and drop streams before them. Apply changes to a retained stream's tracking
+scope separately from schema changes. Set option replacement values explicitly.
+The local emulator requires DROP without IF EXISTS. The optional IF EXISTS SQL
+form is covered by unit tests against the documented GoogleSQL syntax.

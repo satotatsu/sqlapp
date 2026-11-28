@@ -54,9 +54,16 @@ public class JdbcIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
+		return JdbcMetadataUtils.readTables(connection, context,
+				CommonUtils.coalesce(getCatalogName(context), getCatalogName()),
+				CommonUtils.coalesce(getSchemaName(context), getSchemaName()), getTableName(context),
+				tableContext -> readTable(connection, tableContext, productVersionInfo));
+	}
+
+	private List<Index> readTable(Connection connection, ParametersContext context,
+			ProductVersionInfo productVersionInfo) {
 		List<Index> result = list();
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
@@ -67,18 +74,21 @@ public class JdbcIndexReader extends IndexReader {
 		}
 	}
 
-	protected List<Index> getAllIndex(DatabaseMetaData databaseMetaData,
-			ParametersContext context, boolean unique) throws SQLException {
+	protected List<Index> getAllIndex(DatabaseMetaData databaseMetaData, ParametersContext context, boolean unique)
+			throws SQLException {
 		ResultSet rs = null;
 		List<Index> result = list();
 		try {
 			rs = databaseMetaData.getIndexInfo(
-					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					, emptyToNull(this.getTableName(context))
-					, unique, false);
+					CommonUtils.coalesce(this.getCatalogName(context), this.getCatalogName()),
+					CommonUtils.coalesce(this.getSchemaName(context), this.getSchemaName()),
+					emptyToNull(this.getTableName(context)), unique, false);
 			TripleKeyMap<String, String, String, Index> tMap = tripleKeyMap();
 			while (rs.next()) {
+				short type = rs.getShort("TYPE");
+				if (type == DatabaseMetaData.tableIndexStatistic) {
+					continue;
+				}
 				String table_catalog = getString(rs, "TABLE_CAT");
 				String table_schema = getString(rs, "TABLE_SCHEM");
 				String table_name = getString(rs, TABLE_NAME);
@@ -93,15 +103,12 @@ public class JdbcIndexReader extends IndexReader {
 					index.setSchemaName(table_schema);
 					index.setTableName(table_name);
 					boolean nonUnique = rs.getBoolean("NON_UNIQUE");
-					short type = rs.getShort("TYPE");
 					if (type == DatabaseMetaData.tableIndexHashed) {
-						index.setIndexType(IndexType.BTree);
+						index.setIndexType(IndexType.Hash);
 					} else if (type == DatabaseMetaData.tableIndexClustered) {
 						index.setIndexType(IndexType.Clustered);
 					} else if (type == DatabaseMetaData.tableIndexOther) {
 						index.setIndexType(IndexType.Other);
-					} else if (type == DatabaseMetaData.tableIndexStatistic) {
-					} else {
 					}
 					index.setUnique(!nonUnique);
 					index.setWhere(getString(rs, "FILTER_CONDITION"));

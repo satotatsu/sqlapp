@@ -16,11 +16,38 @@ import com.sqlapp.data.schemas.Table;
 
 class SpannerAlterTableFactoryTest {
 	@Test
+	void replacesOnlyAnUnindexedVirtualGeneratedExpression() {
+		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		final var original = table();
+		final var column = original.getColumns().get("value");
+		column.setDataType(DataType.BIGINT).setNotNull(false).setFormula("id + 1").setFormulaPersisted(false);
+		final var target = original.clone();
+		target.getColumns().get("value").setFormula("id + 2");
+		final var sql = registry.createSql(original.diff(target), SqlType.ALTER).getFirst().getSqlText();
+		assertTrue(sql.endsWith("INT64 AS (id + 2)"), sql);
+
+		final var index = new com.sqlapp.data.schemas.Index("ByValue");
+		index.getColumns().add("value");
+		original.getIndexes().add(index);
+		target.getIndexes().add(index.clone());
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
+
+		original.getIndexes().clear();
+		target.getIndexes().clear();
+		column.setFormulaPersisted(true);
+		target.getColumns().get("value").setFormulaPersisted(true);
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
+	}
+
+	@Test
 	void restartsExistingIdentityCountersOnlyWhenExplicitlyRequested() {
 		final var original = table();
 		original.getColumns().get("id").setIdentity(true);
 		final var target = original.clone();
-		target.getColumns().get("id").getSpecifics().put(SpannerAlterTableFactory.IDENTITY_RESTART_COUNTER_WITH, "12345");
+		target.getColumns().get("id").getSpecifics().put(SpannerAlterTableFactory.IDENTITY_RESTART_COUNTER_WITH,
+				"12345");
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		assertEquals("ALTER TABLE `Sales`.`events` ALTER COLUMN `id` ALTER IDENTITY RESTART COUNTER WITH 12345",
 				registry.createSql(original.diff(target), SqlType.ALTER).getFirst().getSqlText());
@@ -48,11 +75,10 @@ class SpannerAlterTableFactoryTest {
 	@Test
 	void renamesSelfReferencingTablesWithoutChangingTheirForeignKeys() throws Exception {
 		final var original = table();
-		original.getConstraints().add(new ForeignKeyConstraint("SelfReference",
-				original.getColumns().get("value"), original.getColumns().get("id")));
+		original.getConstraints().add(new ForeignKeyConstraint("SelfReference", original.getColumns().get("value"),
+				original.getColumns().get("id")));
 		final var target = original.clone().setName("Renamed");
-		final var targetReference = (ForeignKeyConstraint) target.getConstraints()
-				.get("SelfReference");
+		final var targetReference = (ForeignKeyConstraint) target.getConstraints().get("SelfReference");
 		targetReference.setRelatedTableName("Renamed");
 		final Table restored = SchemaUtils.readXml(new java.io.StringReader(target.asXml()));
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
@@ -60,13 +86,12 @@ class SpannerAlterTableFactoryTest {
 				registry.createSql(original.diff(restored), SqlType.ALTER).getFirst().getSqlText());
 		assertEquals("ALTER TABLE `Sales`.`Renamed` RENAME TO `Sales`.`events`",
 				registry.createSql(restored.diff(original), SqlType.ALTER).getFirst().getSqlText());
-		assertEquals("events", ((ForeignKeyConstraint) original.getConstraints()
-				.get("SelfReference")).getRelatedTableName());
-		assertEquals("Renamed", ((ForeignKeyConstraint) restored.getConstraints()
-				.get("SelfReference")).getRelatedTableName());
+		assertEquals("events",
+				((ForeignKeyConstraint) original.getConstraints().get("SelfReference")).getRelatedTableName());
+		assertEquals("Renamed",
+				((ForeignKeyConstraint) restored.getConstraints().get("SelfReference")).getRelatedTableName());
 		final var changed = restored.clone();
-		((ForeignKeyConstraint) changed.getConstraints().get("SelfReference"))
-				.setDeleteRule(CascadeRule.Cascade);
+		((ForeignKeyConstraint) changed.getConstraints().get("SelfReference")).setDeleteRule(CascadeRule.Cascade);
 		assertThrows(UnsupportedOperationException.class,
 				() -> registry.createSql(original.diff(changed), SqlType.ALTER));
 		final var changedColumns = restored.clone();
@@ -78,16 +103,15 @@ class SpannerAlterTableFactoryTest {
 		final var changedSchema = restored.clone();
 		final var external = new Table("Renamed").setSchemaName("Archive");
 		external.getColumns().add(new Column("id").setDataType(DataType.BIGINT));
-		final var schemaReference = new ForeignKeyConstraint("SelfReference",
-				changedSchema.getColumns().get("value"), external.getColumns().get("id"));
+		final var schemaReference = new ForeignKeyConstraint("SelfReference", changedSchema.getColumns().get("value"),
+				external.getColumns().get("id"));
 		changedSchema.getConstraints().remove(changedSchema.getConstraints().get("SelfReference"));
 		changedSchema.getConstraints().add(schemaReference);
 		assertEquals("Archive", schemaReference.getRelatedTableSchemaName());
 		assertThrows(UnsupportedOperationException.class,
 				() -> registry.createSql(original.diff(changedSchema), SqlType.ALTER));
 		final var changedTable = restored.clone();
-		((ForeignKeyConstraint) changedTable.getConstraints().get("SelfReference"))
-				.setRelatedTableName("Other");
+		((ForeignKeyConstraint) changedTable.getConstraints().get("SelfReference")).setRelatedTableName("Other");
 		assertThrows(UnsupportedOperationException.class,
 				() -> registry.createSql(original.diff(changedTable), SqlType.ALTER));
 	}
@@ -103,8 +127,7 @@ class SpannerAlterTableFactoryTest {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		final var operations = registry.createSql(original.diff(restored), SqlType.ALTER);
 		assertEquals(1, operations.size());
-		assertEquals("ALTER TABLE `Sales`.`events` RENAME TO `Sales`.`Order`",
-				operations.getFirst().getSqlText());
+		assertEquals("ALTER TABLE `Sales`.`events` RENAME TO `Sales`.`Order`", operations.getFirst().getSqlText());
 		assertEquals(SqlType.ALTER, operations.getFirst().getSqlType());
 		assertEquals("ALTER TABLE `Sales`.`Order` RENAME TO `Sales`.`events`",
 				registry.createSql(restored.diff(original), SqlType.ALTER).getFirst().getSqlText());
@@ -129,8 +152,7 @@ class SpannerAlterTableFactoryTest {
 		assertThrows(UnsupportedOperationException.class,
 				() -> registry.createSql(original.diff(moved), SqlType.ALTER));
 		final var blank = original.clone().setName(" ");
-		assertThrows(IllegalArgumentException.class,
-				() -> registry.createSql(original.diff(blank), SqlType.ALTER));
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(original.diff(blank), SqlType.ALTER));
 	}
 
 	@Test
@@ -149,8 +171,7 @@ class SpannerAlterTableFactoryTest {
 				add.getFirst().getSqlText());
 		final var drop = registry.createSql(restored.diff(original), SqlType.ALTER);
 		assertEquals(1, drop.size());
-		assertEquals("ALTER TABLE `Sales`.`events` ALTER COLUMN `value` DROP ON UPDATE",
-				drop.getFirst().getSqlText());
+		assertEquals("ALTER TABLE `Sales`.`events` ALTER COLUMN `value` DROP ON UPDATE", drop.getFirst().getSqlText());
 	}
 
 	@Test
@@ -165,8 +186,9 @@ class SpannerAlterTableFactoryTest {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		final var add = registry.createSql(original.diff(target), SqlType.ALTER);
 		assertEquals(1, add.size());
-		assertEquals("ALTER TABLE `Sales`.`events` ALTER COLUMN `value` TIMESTAMP NOT NULL"
-				+ " DEFAULT (PENDING_COMMIT_TIMESTAMP()) ON UPDATE (PENDING_COMMIT_TIMESTAMP())",
+		assertEquals(
+				"ALTER TABLE `Sales`.`events` ALTER COLUMN `value` TIMESTAMP NOT NULL"
+						+ " DEFAULT (PENDING_COMMIT_TIMESTAMP()) ON UPDATE (PENDING_COMMIT_TIMESTAMP())",
 				add.getFirst().getSqlText());
 		final var drop = registry.createSql(target.diff(original), SqlType.ALTER);
 		assertEquals(1, drop.size());
@@ -226,7 +248,8 @@ class SpannerAlterTableFactoryTest {
 		assertThrows(IllegalArgumentException.class, () -> registry.createSql(original.diff(target), SqlType.ALTER));
 		identity.getSpecifics().put(SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MAX, 150L);
 		identity.setIdentityStartValue(123L);
-		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(target), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
 	}
 
 	private Table table() {
@@ -334,7 +357,8 @@ class SpannerAlterTableFactoryTest {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		assertTrue(registry.createSql(original.diff(target), SqlType.ALTER).get(0).getSqlText()
 				.endsWith("SET OPTIONS (fulltext_dictionary_staleness = '15m')"));
-		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(target.diff(original), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(target.diff(original), SqlType.ALTER));
 		target.getSpecifics().put("columnar_policy", "unknown");
 		assertThrows(IllegalArgumentException.class, () -> registry.createSql(original.diff(target), SqlType.ALTER));
 	}

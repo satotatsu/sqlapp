@@ -68,20 +68,19 @@ public class SqlappDataSource extends AbstractDataSource {
 	@Override
 	protected SqlappConnection getConnection(Connection connection) {
 		if (connection instanceof SqlappConnection) {
-			SqlappConnection conn= (SqlappConnection)connection;
+			SqlappConnection conn = (SqlappConnection) connection;
 			this.initializeChild(conn);
 			if (!dialectOptions.isEmpty()) {
 				conn.setDialectOptions(dialectOptions);
 			}
 			return conn;
 		}
-		SqlappConnection conn=  new SqlappConnection(connection);
+		SqlappConnection conn = new SqlappConnection(connection);
 		this.initializeChild(conn);
 		conn.setDialectOptions(dialectOptions);
 		return conn;
 	}
-	
-	
+
 	/**
 	 * @param debug the debug to set
 	 */

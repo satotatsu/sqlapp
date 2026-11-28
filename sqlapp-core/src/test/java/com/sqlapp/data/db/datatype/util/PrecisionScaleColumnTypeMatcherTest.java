@@ -70,4 +70,18 @@ class PrecisionScaleColumnTypeMatcherTest {
 		return columnOp.get();
 	}
 
+	@Test
+	void prefixMatcherReadsPrecisionAndScaleWithoutNamedTypeGroup() {
+		PrecisionScaleColumnTypeMatcher matcher = new PrecisionScaleColumnTypeMatcher("DECIMAL", "", "");
+		matcher.setDefaultPrecision(() -> 15);
+		matcher.setDefaultScale(() -> 0);
+		TypeInformation info = matcher.match("DECIMAL(8,2)").orElseThrow();
+		assertEquals(8L, info.getLength().orElseThrow());
+		assertEquals(2, info.getScale().orElseThrow());
+		assertTrue(info.getDataTypeName().isEmpty());
+		info = matcher.match("DECIMAL").orElseThrow();
+		assertEquals(15L, info.getLength().orElseThrow());
+		assertEquals(0, info.getScale().orElseThrow());
+	}
+
 }

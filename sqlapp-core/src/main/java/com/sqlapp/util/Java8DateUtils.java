@@ -36,12 +36,14 @@ import java.time.chrono.JapaneseDate;
 import java.time.chrono.MinguoDate;
 import java.time.chrono.ThaiBuddhistDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
 import java.time.temporal.TemporalAccessor;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 日付関係のユーティリティ
@@ -468,7 +470,9 @@ public final class Java8DateUtils {
 	public static final String DEFAULT_TIME_FORMAT = "HH:mm:ss";
 	public static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd";
 
-	private static Map<String, DateTimeFormatter> formatters = CommonUtils.map();
+	private static final Map<String, DateTimeFormatter> formatters = new ConcurrentHashMap<>();
+
+	private static final Map<String, DateTimeFormatter> parseFormatters = new ConcurrentHashMap<>();
 
 	/**
 	 * 指定したフォーマットのDateTimeFormatterを取得する
@@ -476,12 +480,77 @@ public final class Java8DateUtils {
 	 * @param format
 	 */
 	public static DateTimeFormatter getDateTimeFormatter(final String format) {
-		DateTimeFormatter dateFormat = formatters.get(format);
-		if (dateFormat == null) {
-			dateFormat = DateTimeFormatter.ofPattern(format);
-			formatters.put(format, dateFormat);
+		return formatters.computeIfAbsent(format, DateTimeFormatter::ofPattern);
+	}
+
+	/**
+	 * Returns a formatter for parsing. A fraction written as {@code .S} to
+	 * {@code .SSSSSSSSS} accepts 1 to 9 digits, so {@code "10:00:00.123456789"}
+	 * keeps its nanoseconds and {@code "10:00:00.5"} is accepted with the pattern
+	 * {@code "H:m:s.SSS"}. Use {@link #getDateTimeFormatter(String)} for output,
+	 * where the fixed number of digits is wanted.
+	 * 
+	 * @param format pattern
+	 * @return formatter for parsing
+	 */
+	public static DateTimeFormatter getParseDateTimeFormatter(final String format) {
+		return parseFormatters.computeIfAbsent(format, Java8DateUtils::createParseDateTimeFormatter);
+	}
+
+	private static DateTimeFormatter createParseDateTimeFormatter(final String format) {
+		final int[] fraction = findFraction(format);
+		if (fraction == null) {
+			return getDateTimeFormatter(format);
 		}
-		return dateFormat;
+		final DateTimeFormatterBuilder builder = new DateTimeFormatterBuilder();
+		if (fraction[0] > 0) {
+			builder.appendPattern(format.substring(0, fraction[0]));
+		}
+		builder.appendFraction(ChronoField.NANO_OF_SECOND, 1, 9, true);
+		if (fraction[1] < format.length()) {
+			builder.appendPattern(format.substring(fraction[1]));
+		}
+		return builder.toFormatter();
+	}
+
+	/**
+	 * @return start index of the unquoted {@code '.'} and end index of the
+	 *         following {@code S} run, or null
+	 */
+	private static int[] findFraction(final String format) {
+		boolean quoted = false;
+		for (int i = 0; i < format.length(); i++) {
+			final char c = format.charAt(i);
+			if (c == '\'') {
+				quoted = !quoted;
+			} else if (!quoted && c == '.' && i + 1 < format.length() && format.charAt(i + 1) == 'S') {
+				int end = i + 1;
+				while (end < format.length() && format.charAt(end) == 'S') {
+					end++;
+				}
+				if (end - i - 1 <= 9) {
+					return new int[] { i, end };
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Returns formatters for parsing.
+	 * 
+	 * @param formats patterns
+	 * @see #getParseDateTimeFormatter(String)
+	 */
+	public static DateTimeFormatter[] getParseDateTimeFormatters(final String... formats) {
+		if (CommonUtils.isEmpty(formats)) {
+			return new DateTimeFormatter[0];
+		}
+		final List<DateTimeFormatter> results = CommonUtils.list();
+		for (final String format : CommonUtils.linkedSet(formats)) {
+			results.add(getParseDateTimeFormatter(format));
+		}
+		return results.toArray(new DateTimeFormatter[0]);
 	}
 
 	/**

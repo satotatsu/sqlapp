@@ -45,9 +45,9 @@ release checklist must record which integration suites were actually run.
 |---|---|---|---|---|
 | IBM Db2 | `sqlapp-core-db2` | 9.5, 9.7, 9.8, 10.1, 10.5, 11.1, 11.5, 12.1.0, 12.1.2, 12.1.5 | Db2 Community 11.5.8.0 and 12.1.5.0 test images | Older resolver branches are retained but are not all represented by current container runs. |
 | DuckDB | `sqlapp-core-duckdb` | 1.0 (resolution only), 1.1, 1.2, 1.4 (also 1.5 / 2.x) | `duckdbCompatibilityTest` (in-process, no container): metadata round trip with DuckDB JDBC 1.1.3, 1.2.2.0, 1.4.4.0, 1.5.6.0 and 2.0.0.1; 1.0.0 fails clearly as designed | Constraint metadata requires 1.1+; DuckDB does not keep constraint names, index order or named ENUM types. See [scope and limits](../sqlapp-core-duckdb/README.md). |
-| Firebird | `sqlapp-core-firebird` | 2.0, 2.5, 3.0, 5.0 | Firebird 3.0 and 5.0 test images | Firebird 2.x compatibility is code-level/module coverage in the current suite. |
+| Firebird | `sqlapp-core-firebird` | 2.0, 2.1, 2.5, 3.0, 5.0 | Firebird 3.0 and 5.0 test images | Firebird 2.x compatibility is code-level/module coverage in the current suite. |
 | H2 | `sqlapp-core-h2` | Pre-2.x and 2.x split | Module-level H2 tests | The 1.x reader is preserved; current real-engine version evidence is not recorded here. |
-| HSQLDB | `sqlapp-core-hsql` | 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.3.4, 2.4.0 | Module/in-process tests; JDBC dependency 2.7.4 | Version branches older than the current driver remain compatibility code. |
+| HSQLDB | `sqlapp-core-hsql` | 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.3.4, 2.4.0 | Module/in-process tests; JDBC dependency 2.7.4 | Version branches older than the current driver remain compatibility code. HSQLDB 1.x is not supported: the resolver rejects it with an explicit error. |
 | Informix | `sqlapp-core-informix` | Generic Informix resolver | Informix Developer Database 14.10.FC9W1DE image | Older server-version boundaries are not expressed as separate dialect classes. |
 | Microsoft Access / MDB | `sqlapp-core-mdb` | Generic Access/MDB resolver through UCanAccess | Access 2010 database creation and metadata tests are documented | Japanese index collation in the supplied sample is read-only with the current Jackcess path. |
 | MariaDB | `sqlapp-core-mariadb` | 10.0, 10.0.5, 10.2.0, 10.2.5, 10.2.7, 10.3.0, 10.5.0, 11.4.0, 11.5.0, 11.8.0, 12.1.0 | MariaDB 10.5, 11.4, and 11.8 test images | MariaDB inherits compatible MySQL behavior and overrides version-specific differences. |
@@ -183,6 +183,52 @@ if the removed dialects are required.
 The general resolver fallback for unknown products is unchanged. Receiving a
 generic dialect does not establish support for a removed database. Do not use
 that fallback to generate or execute database-specific migration SQL.
+
+## Geometric types and spatial values
+
+### Removed 3D geometric types
+
+`Point3D`, `Box3D`, `Lseg3D`, `Line3D`, `Path3D`, `Polygon3D`, `Circle3D` and the
+`ToUpperDimensionType` / `ToLowerDimensionType` interfaces have been removed from
+`com.sqlapp.data.geometry`, together with `toUpperDimension()` on the 2D types.
+This is a breaking change for code using those classes. No database has a
+matching column type; the PostgreSQL built-in geometric types are all
+two-dimensional. Store 3D coordinates in a `GEOMETRY` column (`POINT Z`,
+`LINESTRING Z`, ...). The 2D converters no longer accept the removed 3D values.
+
+### Behavior changes
+
+- Geometry text output explicitly includes Z/ZM markers when EMPTY values would
+  otherwise lose their coordinate dimensions, including empty collection members.
+  GeometryCollection dimension declarations are checked recursively; conflicting
+  child declarations and coordinate counts are rejected. Line coefficient input
+  selects a stable axis and point spacing and rejects non-finite coefficients or
+  values that cannot safely be represented as two finite points.
+- `GEOMETRY` / `GEOGRAPHY` columns now convert text to Geolatte geometries in every
+  file format (CSV, JSON, YAML, Excel). Text is written as PostGIS EWKT and read as
+  WKT, EWKT or hex EWKB. Malformed input, including trailing data, raises
+  `IllegalArgumentException`; previously the value stayed a `String` and inserting
+  it failed with `ClassCastException`.
+- The PostgreSQL built-in geometric types are parsed strictly in the PostgreSQL
+  input formats, including `line` as `{A,B,C}`, `lseg` as `[...]` and open `path`
+  values. Wrong coordinate or point counts are rejected instead of truncated.
+- `SpatialGeometryConversions` converts between the built-in types and spatial
+  geometries. A closed `path` becomes a ring `LINESTRING` and `circle` becomes a
+  64-sided `POLYGON`; `line` has no equivalent and is rejected. Converting a
+  spatial geometry to a built-in type drops its SRID.
+- Values a database can't store are rejected instead of being silently changed.
+  MySQL and MariaDB reject Z/M coordinates and empty geometries other than
+  `GEOMETRYCOLLECTION EMPTY`. Oracle rejects empty geometries. PostGIS stores
+  `POINT EMPTY` as a point rather than `GEOMETRYCOLLECTION EMPTY`.
+- MySQL/MariaDB `LOAD DATA` keeps the connection usable when a value can't be
+  encoded. The statement fails without storing rows (on transactional tables),
+  and the value's exception is the cause. This needs MySQL 5.7 or later; older
+  servers keep the previous behavior.
+- Real-engine integration tests run only when `SQLAPP_TEST_POSTGIS_*`,
+  `SQLAPP_TEST_MYSQL_*`, `SQLAPP_TEST_MARIADB_*`, `SQLAPP_TEST_SQLSERVER_*` or
+  `SQLAPP_TEST_ORACLE_*` (`_URL`, `_USER`, `_PASSWORD`) is set. They were run
+  against PostgreSQL 16 + PostGIS 3.4, MySQL 8.4, MariaDB 11.4, SQL Server 2022
+  and Oracle 23 Free in disposable containers.
 
 ## Index schema qualification
 
@@ -2553,7 +2599,10 @@ module regression scope; this does not imply new server/cluster coverage.
 - Informix has a dialect-owned sequence CREATE factory. It omits unsupported AS
   type syntax, emits NOCACHE for a disabled/zero cache, and rejects negative or
   enabled size-one caches (Informix requires at least two cached values). The
-  sequence reader reflects whether catalog caching is enabled.
+  sequence reader reflects whether catalog caching is enabled. JDBC sequence
+  preallocation splits Informix requests into queries of at most 100 values.
+  Callers executing the generated `SEQUENCE_NEXT_VALUES` SQL directly must
+  respect `Dialect.getSequenceQueryBatchSize()`.
 - Vertica sequence CREATE/ALTER honors disabled caching and sizes 0/1 as NO CACHE;
   negative sizes fail clearly. Its reader reflects cache enablement. The sequence
   catalog has no original START value: CURRENT_VALUE is distribution state and

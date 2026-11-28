@@ -40,6 +40,12 @@ import com.sqlapp.jdbc.sql.CorrelationStrategy;
  * 
  */
 public class SqlServer2008 extends SqlServer2005 {
+	@Override
+	protected com.sqlapp.data.db.dialect.ColumnMigration.Result convertColumnForMigration(
+			final com.sqlapp.data.schemas.Column source) {
+		return migrateNativeTimestamp(source, 6, false, "SYSDATETIMEOFFSET()");
+	}
+
 	/**
 	 * serialVersionUID
 	 */
@@ -57,7 +63,7 @@ public class SqlServer2008 extends SqlServer2005 {
 		super.registerDataType();
 		// Date
 		getDbDataTypes().addDate(type -> {
-			type.setDefaultValueLiteral("CONVERT (date, " + getCurrentTimestampFunction() + ")");
+			type.setDefaultValueLiteral(getCurrentDateFunction());
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
@@ -66,12 +72,13 @@ public class SqlServer2008 extends SqlServer2005 {
 		});
 		// DateTimeOffset
 		getDbDataTypes().addTimestampWithTimeZone("DATETIMEOFFSET", type -> {
-			type.addColumnTypeMatcher("DATETIMEOFFSET");
+			type.clearColumnTypeMatchers().addColumnTypeMatcher("DATETIMEOFFSET");
 			type.setDefaultPrecision(7).setMaxPrecision(7).setCreateFormat("DATETIMEOFFSET(", ")")
 					.setDefaultValueLiteral(getCurrentTimestampWithTimeZoneFunction());
 		});
 		// Timestamp
 		getDbDataTypes().addTimestamp("DATETIME2", type -> {
+			type.clearColumnTypeMatchers().addColumnTypeMatcher("DATETIME2");
 			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(7).setMaxPrecision(7)
 					.setCreateFormat("DATETIME2(", ")");
 		});
@@ -89,6 +96,11 @@ public class SqlServer2008 extends SqlServer2005 {
 			}
 		});
 		getDbDataTypes().registerRecommend(DATETIME, TIMESTAMP);
+	}
+
+	@Override
+	public String getCurrentDateFunction() {
+		return "CONVERT (date, " + getCurrentTimestampFunction() + ")";
 	}
 
 	@Override

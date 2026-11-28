@@ -4,6 +4,7 @@ package com.sqlapp.data.db.dialect.phoenix.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcViewReader;
 import com.sqlapp.data.db.metadata.ColumnReader;
+import com.sqlapp.data.db.metadata.IndexReader;
 
 /** Retains the JDBC view path while using Phoenix-specific column metadata. */
 public class PhoenixViewReader extends JdbcViewReader {
@@ -24,5 +25,10 @@ public class PhoenixViewReader extends JdbcViewReader {
 	@Override
 	protected ColumnReader newColumnReader() {
 		return new PhoenixColumnReader(getDialect());
+	}
+
+	@Override
+	protected IndexReader newIndexReader() {
+		return new PhoenixIndexReader(getDialect());
 	}
 }

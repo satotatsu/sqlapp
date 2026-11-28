@@ -6,7 +6,8 @@ import java.io.StringReader;
 import org.junit.jupiter.api.Test;
 
 class RoutinePrivilegeTest {
-	@Test void xmlRetainsBothHierarchyValuesAndSpecificNames() throws Exception {
+	@Test
+	void xmlRetainsBothHierarchyValuesAndSpecificNames() throws Exception {
 		for (boolean hierarchy : new boolean[] { false, true }) {
 			for (String specific : new String[] { "P", "P_1" }) {
 				var original = privilege().setSpecificName(specific).setHierachy(hierarchy);
@@ -17,13 +18,16 @@ class RoutinePrivilegeTest {
 			}
 		}
 	}
-	@Test void missingHierarchyAttributeKeepsTheLegacyDefault() throws Exception {
+
+	@Test
+	void missingHierarchyAttributeKeepsTheLegacyDefault() throws Exception {
 		String xml = privilege().asXml().replaceAll("\\s+hierachy=\"(?:true|false)\"", "");
 		RoutinePrivilege restored = SchemaUtils.readXml(new StringReader(xml));
 		assertTrue(restored.isHierachy());
 	}
+
 	private static RoutinePrivilege privilege() {
-		return new RoutinePrivilege().setSchemaName("APP").setObjectName("P")
-				.setGranteeName("READER").setGrantorName("OWNER").setPrivilege("EXECUTE");
+		return new RoutinePrivilege().setSchemaName("APP").setObjectName("P").setGranteeName("READER")
+				.setGrantorName("OWNER").setPrivilege("EXECUTE");
 	}
 }

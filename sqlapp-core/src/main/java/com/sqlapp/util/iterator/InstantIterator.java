@@ -23,57 +23,61 @@ import java.time.Instant;
 
 /**
  * For文の代わりに使用する<code>java.time.Instant</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class InstantIterator extends AbstractObjectIterator<Instant, Integer>{
+final class InstantIterator extends AbstractObjectIterator<Instant, Integer> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start
 	 * @param end
 	 */
-	public InstantIterator(final Instant start, final Instant end){
-		this(start, end, 3600*24);
+	public InstantIterator(final Instant start, final Instant end) {
+		this(start, end, 3600 * 24);
 	}
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ(秒単位)
+	 * @param end   終了
+	 * @param step  ステップ(秒単位)
 	 */
-	public InstantIterator(final Instant start, final Instant end, final Integer step){
+	public InstantIterator(final Instant start, final Instant end, final Integer step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step>0){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step > 0);
 	}
 
 	@Override
 	protected Instant getNext() {
 		return current.plusSeconds(this.step.intValue());
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public InstantIterator clone(){
-		InstantIterator clone=new InstantIterator(this.start, this.end, this.step);
+	public InstantIterator clone() {
+		InstantIterator clone = new InstantIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

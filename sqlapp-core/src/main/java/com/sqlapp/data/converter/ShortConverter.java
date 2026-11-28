@@ -21,8 +21,6 @@ package com.sqlapp.data.converter;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 import com.sqlapp.util.CommonUtils;
 
@@ -46,6 +44,9 @@ public class ShortConverter extends AbstractNumberConverter<Short> {
 	public Short convertObject(final Object value) {
 		if (isSupplier(value)) {
 			return convertObject(getSupplierValue(value));
+		} else if (isOptional(value)) {
+			// any kind of Optional: empty is the default value
+			return convertObject(getOptionalValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof Short) {
@@ -92,9 +93,7 @@ public class ShortConverter extends AbstractNumberConverter<Short> {
 	}
 
 	public static short toShort(final byte[] bytes) {
-		final ByteBuffer keyBuffer = ByteBuffer.wrap(bytes);
-		keyBuffer.order(ByteOrder.BIG_ENDIAN);
-		return keyBuffer.getShort();
+		return (short) IntegralNumbers.fromBytes(bytes, "Short", Short.MIN_VALUE, Short.MAX_VALUE);
 	}
 
 	/*
@@ -107,7 +106,7 @@ public class ShortConverter extends AbstractNumberConverter<Short> {
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof ShortConverter)) {

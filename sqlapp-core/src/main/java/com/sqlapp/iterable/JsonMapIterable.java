@@ -14,12 +14,18 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
-import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectReader;
 
 /**
- * Reads a JSON array whose elements are row objects.
+ * Reads a JSON array whose elements are row objects. Rows are decoded
+ * incrementally; errors in later rows are reported during iteration. Close the
+ * returned {@link AutoCloseable} iterator when stopping early.
  */
 public class JsonMapIterable extends AbstractMapIterable {
 
@@ -47,7 +53,7 @@ public class JsonMapIterable extends AbstractMapIterable {
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(final File file) {
-		return getRows(converter.fromJsonString(file, Object.class), file.getAbsolutePath()).iterator();
+		return new JsonIterator(converter.getObjectMapper().createParser(file), file.getAbsolutePath());
 	}
 
 	@Override
@@ -57,12 +63,89 @@ public class JsonMapIterable extends AbstractMapIterable {
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(final InputStream inputStream) {
-		return getRows(converter.fromJsonString(inputStream, Object.class), "input stream").iterator();
+		return new JsonIterator(converter.getObjectMapper().createParser(inputStream), "input stream");
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(final Reader reader) {
-		return getRows(converter.fromJsonString(FileUtils.read(reader), Object.class), "reader").iterator();
+		return new JsonIterator(converter.getObjectMapper().createParser(reader), "reader");
+	}
+
+	private final class JsonIterator implements Iterator<Map<String, Object>>, AutoCloseable {
+		private final JsonParser parser;
+		private final String source;
+		private final ObjectReader rowReader = converter.getObjectMapper().readerFor(Object.class)
+				.without(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+		private JsonToken token;
+		private boolean closed;
+
+		JsonIterator(JsonParser parser, String source) {
+			this.parser = parser;
+			this.source = source;
+			try {
+				if (parser.nextToken() != JsonToken.START_ARRAY) {
+					throw invalidJson(source);
+				}
+				advance();
+			} catch (RuntimeException | Error failure) {
+				closeOnFailure(failure);
+				throw failure;
+			}
+		}
+
+		private void advance() {
+			token = parser.nextToken();
+			if (token == JsonToken.END_ARRAY) {
+				if (parser.nextToken() != null) {
+					throw invalidJson(source);
+				}
+				close();
+			} else if (token == null) {
+				throw invalidJson(source);
+			}
+		}
+
+		@Override
+		public boolean hasNext() {
+			return !closed;
+		}
+
+		@Override
+		@SuppressWarnings("unchecked")
+		public Map<String, Object> next() {
+			if (!hasNext()) {
+				throw new NoSuchElementException();
+			}
+			try {
+				if (token != JsonToken.START_OBJECT) {
+					throw invalidJson(source);
+				}
+				final Map<String, Object> row = (Map<String, Object>) rowReader.readValue(parser);
+				advance();
+				return row;
+			} catch (RuntimeException | Error failure) {
+				closeOnFailure(failure);
+				throw failure;
+			}
+		}
+
+		@Override
+		public void close() {
+			if (!closed) {
+				closed = true;
+				parser.close();
+			}
+		}
+
+		private void closeOnFailure(Throwable failure) {
+			try {
+				close();
+			} catch (RuntimeException | Error closeFailure) {
+				if (failure != closeFailure) {
+					failure.addSuppressed(closeFailure);
+				}
+			}
+		}
 	}
 
 	/**

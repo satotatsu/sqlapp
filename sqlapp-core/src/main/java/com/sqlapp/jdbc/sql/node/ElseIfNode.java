@@ -20,6 +20,7 @@
 package com.sqlapp.jdbc.sql.node;
 
 import com.sqlapp.exceptions.ExpressionExecutionException;
+import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 
 /**
@@ -34,12 +35,16 @@ public class ElseIfNode extends NeedsEndNode implements Cloneable {
 	private static final long serialVersionUID = 1L;
 
 	@Override
+	public void setExpression(String expression) {
+		super.setExpression(expression);
+		setParameterDefinition(new ParameterDefinition(expression));
+	}
+
+	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
 		boolean eval = evalBoolean(context);
 		if (eval) {
-			if (this.getExpression() != null) {
-				sqlParameters.addSql(this.getExpression());
-			}
+			evalChilds(context, sqlParameters);
 			return true;
 		}
 		return false;

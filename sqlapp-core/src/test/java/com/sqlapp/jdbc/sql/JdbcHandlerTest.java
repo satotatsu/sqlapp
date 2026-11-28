@@ -111,16 +111,19 @@ public class JdbcHandlerTest extends AbstractDbTest {
 			//
 			final SqlNode node = sqlRegistory.get(INSERT, null);
 			final ParametersContext context = new ParametersContext();
+			final int[] generatedKeyCalls = { 0 };
 			final JdbcHandler handler = new JdbcHandler(node, new GeneratedKeyHandler() {
 				@Override
 				public void handle(final long rowNo, final GeneratedKeyInfo generatedKeyInfo) {
-					assertEquals(rowNo, generatedKeyInfo.getValue());
+					assertEquals(0, rowNo);
+					assertEquals(generatedKeyCalls[0]++, generatedKeyInfo.getValue(Integer.class).intValue());
 				}
 			});
 			context.put("a", "vala");
 			handler.execute(connection, context);
 			context.put("a", "valb");
 			handler.execute(connection, context);
+			assertEquals(2, generatedKeyCalls[0]);
 			//
 			final List<ParametersContext> list = list();
 			ParametersContext val1 = context.clone();

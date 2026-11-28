@@ -24,8 +24,13 @@ import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 import static com.sqlapp.util.CommonUtils.lowerMap;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Connection;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class BooleanConverter extends AbstractConverter<Boolean> {
 
@@ -72,7 +77,7 @@ public class BooleanConverter extends AbstractConverter<Boolean> {
 		BOOL_MAP.put("'" + trueValue + "'", Boolean.TRUE);
 		BOOL_MAP.put("'" + falseValue + "'", Boolean.FALSE);
 		BOOL_TRUE_PARE_MAP.put("'" + trueValue + "'", "'" + falseValue + "'");
-		BOOL_FALSE_PARE_MAP.put("'" + falseValue + "'", "'" + trueValue);
+		BOOL_FALSE_PARE_MAP.put("'" + falseValue + "'", "'" + trueValue + "'");
 	}
 
 	/**
@@ -88,18 +93,96 @@ public class BooleanConverter extends AbstractConverter<Boolean> {
 		return convertObject(value);
 	}
 
+	/**
+	 * Converts a value to Boolean, accepting as many representations as possible.
+	 * <ul>
+	 * <li>null, empty or blank values: the default value</li>
+	 * <li>registered words such as true/false, yes/no, on/off, t/f, y/n, ok/ng
+	 * (case-insensitive, optionally single-quoted)</li>
+	 * <li>numbers and numeric text: zero is false, any other value is true (for
+	 * example {@code BigDecimal("1.00")}, {@code 2} and {@code "-1"} are true,
+	 * {@code "0.00"} is false)</li>
+	 * </ul>
+	 *
+	 * @throws ConverterException when the value cannot be interpreted as Boolean
+	 *                            (for example {@code "maybe"} or NaN)
+	 */
 	@Override
 	public Boolean convertObject(Object value) {
 		if (isSupplier(value)) {
 			return convertObject(getSupplierValue(value));
+		} else if (isOptional(value)) {
+			return convertObject(getOptionalValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
+		} else if (value instanceof Boolean bool) {
+			return bool;
+		} else if (value instanceof AtomicBoolean bool) {
+			return bool.get();
+		} else if (value instanceof Number number) {
+			return numberToBoolean(number, value);
 		}
-		String lower = value.toString().trim();
-		if (BOOL_MAP.containsKey(lower)) {
-			return BOOL_MAP.get(lower);
+		final String text = value.toString().trim();
+		if (text.isEmpty()) {
+			return getDefaultValue();
 		}
-		return getDefaultValue();
+		final Boolean bool = BOOL_MAP.get(text);
+		if (bool != null) {
+			return bool;
+		}
+		final Boolean numeric = textToBoolean(unquote(text));
+		if (numeric != null) {
+			return numeric;
+		}
+		throw new ConverterException(cannotConvertMessage(value));
+	}
+
+	private static String unquote(final String text) {
+		if (text.length() >= 2 && text.startsWith("'") && text.endsWith("'")) {
+			return text.substring(1, text.length() - 1).trim();
+		}
+		return text;
+	}
+
+	private static Boolean textToBoolean(final String text) {
+		if (text.isEmpty()) {
+			return null;
+		}
+		try {
+			return new BigDecimal(text).signum() != 0;
+		} catch (final NumberFormatException e) {
+			return null;
+		}
+	}
+
+	private static Boolean numberToBoolean(final Number number, final Object original) {
+		if (number instanceof BigDecimal decimal) {
+			return decimal.signum() != 0;
+		} else if (number instanceof BigInteger integer) {
+			return integer.signum() != 0;
+		} else if (number instanceof Integer || number instanceof Long || number instanceof Short
+				|| number instanceof Byte || number instanceof AtomicInteger || number instanceof AtomicLong) {
+			return number.longValue() != 0L;
+		} else if (number instanceof Double || number instanceof Float) {
+			final double value = number.doubleValue();
+			if (Double.isNaN(value)) {
+				throw new ConverterException(cannotConvertMessage(original));
+			}
+			return value != 0.0d;
+		}
+		final Boolean bool = textToBoolean(number.toString());
+		if (bool != null) {
+			return bool;
+		}
+		final double value = number.doubleValue();
+		if (Double.isNaN(value)) {
+			throw new ConverterException(cannotConvertMessage(original));
+		}
+		return value != 0.0d;
+	}
+
+	private static String cannotConvertMessage(final Object value) {
+		return "Cannot convert to Boolean: " + value + " (" + value.getClass().getName() + ")";
 	}
 
 	@Override
@@ -153,7 +236,7 @@ public class BooleanConverter extends AbstractConverter<Boolean> {
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof BooleanConverter)) {

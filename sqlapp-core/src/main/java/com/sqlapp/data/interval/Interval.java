@@ -19,57 +19,36 @@
 
 package com.sqlapp.data.interval;
 
-import static com.sqlapp.util.CommonUtils.abs;
-import static com.sqlapp.util.CommonUtils.compare;
-import static com.sqlapp.util.CommonUtils.first;
-import static com.sqlapp.util.CommonUtils.isEmpty;
-import static com.sqlapp.util.CommonUtils.last;
-import static com.sqlapp.util.CommonUtils.toRe;
-import static com.sqlapp.util.CommonUtils.trim;
-import static com.sqlapp.util.CommonUtils.unwrap;
-
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.text.ParseException;
+import java.time.Duration;
 import java.time.chrono.ChronoLocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import com.sqlapp.util.HashCodeBuilder;
-import com.sqlapp.util.Java8DateUtils;
+import java.util.Objects;
 
 /**
- * SQLのInterval型に相当するクラス
- * 
- * @author satoh
- *
+ * Mutable compatibility facade for SQL intervals. Computation delegates to
+ * IntervalValue; the original four fields and serialVersionUID remain the wire
+ * format. Nonzero constructor components must share one sign. Component setters
+ * accept magnitudes and preserve the explicitly selected sign.
  */
 public class Interval implements Serializable, Cloneable, Comparable<Interval> {
-
-	/**
-	 * serialVersionUID
-	 */
 	private static final long serialVersionUID = -5789019381885490073L;
 	protected static final DecimalFormat secondsFormat;
-
 	static {
-		secondsFormat = new DecimalFormat("0.######");
-		final DecimalFormatSymbols dfs = secondsFormat.getDecimalFormatSymbols();
-		dfs.setDecimalSeparator('.');
-		secondsFormat.setDecimalFormatSymbols(dfs);
+		secondsFormat = new DecimalFormat("0.#########");
+		final DecimalFormatSymbols symbols = secondsFormat.getDecimalFormatSymbols();
+		symbols.setDecimalSeparator('.');
+		secondsFormat.setDecimalFormatSymbols(symbols);
 	}
+	// Stored totals are reconstructed as an IntervalValue for arithmetic.
 	private boolean positive = true;
-	/**
-	 * 月
-	 */
 	private int months;
-	/**
-	 * 日
-	 */
 	private int seconds;
 	private int nanos;
 	protected static final int NANO_LIMIT = 1000000000;
@@ -77,25 +56,17 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval> {
 	protected static final int MINUTE_LIMIT = 60;
 	protected static final int HOUR_LIMIT = 24;
 	protected static final int MONTH_LIMIT = 12;
-
 	protected static final int MINUTE_SECONDS = SECOND_LIMIT;
 	protected static final int HOUR_SECONDS = MINUTE_LIMIT * SECOND_LIMIT;
 	protected static final int HOUR_MINUTES = MINUTE_LIMIT;
 	protected static final int DAY_SECONDS = HOUR_LIMIT * HOUR_SECONDS;
-
 	protected static final String TO = "TO";
-
 	protected static final String YEAR = "YEAR";
 	protected static final String MONTH = "MONTH";
 	protected static final String DAY = "DAY";
 	protected static final String HOUR = "HOUR";
 	protected static final String MINUTE = "MINUTE";
 	protected static final String SECOND = "SECOND";
-
-	private static final String[] UNITS = new String[] { YEAR, MONTH, DAY, HOUR, MINUTE, SECOND };
-	/**
-	 * YEAR TO MONTH
-	 */
 	protected static final String YEAR_TO_MONTH = getTypeName(YEAR, MONTH);
 	protected static final String MONTH_TO_DAY = getTypeName(MONTH, DAY);
 	protected static final String YEAR_TO_DAY = getTypeName(YEAR, DAY);
@@ -104,955 +75,441 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval> {
 	protected static final String HOUR_TO_SECOND = getTypeName(HOUR, SECOND);
 	protected static final String MINUTE_TO_SECOND = getTypeName(MINUTE, SECOND);
 
-	protected static String getTypeName(final String type1, final String type2) {
-		return type1 + " " + TO + " " + type2;
+	protected static String getTypeName(final String first, final String last) {
+		return first + " " + TO + " " + last;
 	}
 
-	/**
-	 * コンストラクタ
-	 */
 	public Interval() {
 	}
 
-	/**
-	 * コンストラクタ
-	 * 
-	 * @param years
-	 * @param months
-	 * @param days
-	 * @param hours
-	 * @param minutes
-	 * @param seconds
-	 * @param nanos
-	 */
-	public Interval(final int years, final int months, final int days, final int hours, final int minutes,
-			final int seconds, final long nanos) {
-		setValue(years * MONTH_LIMIT + months,
-				days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS + seconds, nanos);
+	public Interval(final int years, final int months, final int days, final int hours,
+			final int minutes, final int seconds, final long nanos) {
+		store(LegacyIntervalSupport.components(years, months, days, hours, minutes, BigDecimal.valueOf(seconds), nanos));
 	}
 
-	/**
-	 * コンストラクタ
-	 * 
-	 * @param years
-	 * @param months
-	 * @param days
-	 * @param hours
-	 * @param minutes
-	 * @param seconds
-	 */
-	public Interval(final int years, final int months, final int days, final int hours, final int minutes,
-			final double seconds) {
-		setValue(years * MONTH_LIMIT + months, (double) days * DAY_SECONDS + (double) hours * HOUR_SECONDS
-				+ (double) minutes * MINUTE_SECONDS + seconds);
+	public Interval(final int years, final int months, final int days, final int hours,
+			final int minutes, final double seconds) {
+		store(LegacyIntervalSupport.components(years, months, days, hours, minutes, LegacyIntervalSupport.decimal(seconds), 0));
 	}
 
-	/**
-	 * コンストラクタ
-	 * 
-	 * @param years
-	 * @param months
-	 * @param days
-	 * @param hours
-	 * @param minutes
-	 * @param seconds
-	 */
-	public Interval(final int years, final int months, final int days, final int hours, final int minutes,
-			final int seconds) {
-		setValue(years * MONTH_LIMIT + months,
-				days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS + seconds, 0);
+	public Interval(final int years, final int months, final int days, final int hours,
+			final int minutes, final int seconds) {
+		this(years, months, days, hours, minutes, seconds, 0);
 	}
 
-	/**
-	 * IntervalにScaleをかける(-1を設定すると負の値になる)
-	 * 
-	 * @param scale
-	 */
-	public Interval scale(final int scale) {
-		if (scale < 0) {
-			this.positive = false;
-		} else {
-			this.positive = true;
+	/** Reconstructs the common value without relying on overridden component getters. */
+	public IntervalValue toIntervalValue() {
+		final int sign = positive ? 1 : -1;
+		return new IntervalValue((long) months * sign, (long) (seconds / DAY_SECONDS) * sign,
+				Duration.ofSeconds(seconds % DAY_SECONDS, nanos).multipliedBy(sign));
+	}
+
+	/** Preserves the established type restrictions of legacy subclasses. */
+	protected IntervalValue constrainValue(final IntervalValue value) {
+		return value;
+	}
+
+	private void store(final IntervalValue input) {
+		final IntervalValue value = constrainValue(input);
+		final Duration time = Duration.ofDays(value.days()).plus(value.timePart());
+		final int monthSign = Long.signum(value.months());
+		final int timeSign = time.isZero() ? 0 : time.isNegative() ? -1 : 1;
+		if (monthSign != 0 && timeSign != 0 && monthSign != timeSign) {
+			throw new IllegalArgumentException("Legacy Interval cannot retain mixed month/time signs; use IntervalValue");
 		}
-		final int absScale = abs(scale);
-		setValue(months * absScale, (long) seconds * absScale, (long) nanos * absScale);
+		final int newMonths = Math.toIntExact(Math.absExact(value.months()));
+		final Duration magnitude = time.isNegative() ? time.negated() : time;
+		final int newSeconds = Math.toIntExact(magnitude.getSeconds());
+		// Validate everything before committing a mutation.
+		this.months = newMonths;
+		this.seconds = newSeconds;
+		this.nanos = magnitude.getNano();
+		this.positive = monthSign >= 0 && timeSign >= 0;
+	}
+
+	public Interval scale(final int scale) {
+		final boolean negativeZero = !positive && months == 0 && seconds == 0 && nanos == 0;
+		store(toIntervalValue().multipliedBy(scale));
+		if (negativeZero && scale > 0) {
+			positive = false;
+		}
 		return this;
 	}
 
 	protected void setValue(final int months, final double seconds) {
-		final int secondsInt = (int) seconds;
-		final int nanoInt = (int) ((seconds - secondsInt) * NANO_LIMIT);
-		setValue(months, secondsInt, nanoInt);
+		setMagnitude(Math.absExact((long) months), LegacyIntervalSupport.duration(LegacyIntervalSupport.decimal(seconds).abs()));
 	}
 
-	protected void setValue(int months, long seconds, long nanos) {
-		months = abs(months);
-		seconds = abs(seconds);
-		nanos = abs(nanos);
-		final long val = (nanos / NANO_LIMIT);
-		if (val > 0) {
-			this.nanos = (int) (nanos % NANO_LIMIT);
-			seconds = seconds + val;
-		} else {
-			this.nanos = (int) nanos;
-		}
-		this.seconds = (int) (seconds);
-		this.months = (months);
+	protected void setValue(final int months, final long seconds, final long nanos) {
+		setMagnitude(Math.absExact((long) months), Duration.ofSeconds(Math.absExact(seconds), Math.absExact(nanos)));
 	}
 
-	/**
-	 * 指定した日付に期間を加算した結果を返します
-	 * 
-	 * @param ts
-	 */
-	public Timestamp add(final Timestamp ts) {
-		return add(ts, 1);
+	private void setMagnitude(final long months, final Duration time) {
+		final boolean sign = positive;
+		store(new IntervalValue(months, 0, time));
+		positive = sign;
 	}
 
-	/**
-	 * 指定した日付に期間を加算した結果を返します
-	 * 
-	 * @param ts
-	 */
-	public Timestamp add(final Timestamp ts, final int multiplicity) {
-		final int nanos = ts.getNanos();
-		Calendar cal = Calendar.getInstance();
-		cal.setTime(ts);
-		cal.set(Calendar.MILLISECOND, 0);
-		cal = add(cal, multiplicity);
-		final Timestamp ret = new Timestamp(cal.getTimeInMillis());
-		ret.setTime(cal.getTime().getTime());
-		if (isPositive()) {
-			ts.setNanos(nanos + getNanos() * multiplicity);
-		} else {
-			ret.setNanos(nanos - getNanos() * multiplicity);
-		}
-		return ts;
+	public Timestamp add(final Timestamp timestamp) {
+		return add(timestamp, 1);
 	}
 
-	/**
-	 * 指定した日付に期間を加算した結果を返します
-	 * 
-	 * @param cal
-	 */
-	public Calendar add(final Calendar cal) {
-		return add(cal, 1);
+	/** Adds total months, then days, then exact time; never changes the input. */
+	public Timestamp add(final Timestamp timestamp, final int multiplicity) {
+		Objects.requireNonNull(timestamp, "timestamp");
+		final IntervalValue value = toIntervalValue().multipliedBy(multiplicity);
+		final Calendar calendar = Calendar.getInstance();
+		calendar.setTimeInMillis(timestamp.getTime());
+		calendar.set(Calendar.MILLISECOND, 0);
+		addDateParts(calendar, value);
+		return Timestamp.from(calendar.toInstant().plusNanos(timestamp.getNanos()).plus(value.timePart()));
 	}
 
-	/**
-	 * 指定した日付に期間を指定した回数だけ加算した結果を返します
-	 * 
-	 * @param cal
-	 * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
-	 */
-	public Calendar add(final Calendar cal, final int multiplicity) {
-		final Calendar ret = (Calendar) cal.clone();
-		if (isPositive()) {
-			ret.add(Calendar.MILLISECOND, getMilliseconds() * multiplicity);
-			ret.add(Calendar.SECOND, getSeconds() * multiplicity);
-			ret.add(Calendar.MINUTE, getMinutes() * multiplicity);
-			ret.add(Calendar.HOUR_OF_DAY, getHours() * multiplicity);
-			ret.add(Calendar.DATE, getDays() * multiplicity);
-			ret.add(Calendar.MONTH, getMonths() * multiplicity);
-			ret.add(Calendar.YEAR, getYears() * multiplicity);
-		} else {
-			ret.add(Calendar.MILLISECOND, -getMilliseconds() * multiplicity);
-			ret.add(Calendar.SECOND, -getSeconds() * multiplicity);
-			ret.add(Calendar.MINUTE, -getMinutes() * multiplicity);
-			ret.add(Calendar.HOUR_OF_DAY, -getHours() * multiplicity);
-			ret.add(Calendar.DATE, -getDays() * multiplicity);
-			ret.add(Calendar.MONTH, -getMonths() * multiplicity);
-			ret.add(Calendar.YEAR, -getYears() * multiplicity);
-		}
-		return ret;
+	public Calendar add(final Calendar calendar) {
+		return add(calendar, 1);
 	}
 
-	/**
-	 * 指定した日付に期間を加算した結果を返します
-	 * 
-	 * @param date
-	 */
+	/** Adds total months, days, then time at Calendar's millisecond precision. */
+	public Calendar add(final Calendar calendar, final int multiplicity) {
+		Objects.requireNonNull(calendar, "calendar");
+		final IntervalValue value = toIntervalValue().multipliedBy(multiplicity);
+		final Calendar result = (Calendar) calendar.clone();
+		addDateParts(result, value);
+		final long millis = value.timePart().toMillis();
+		result.add(Calendar.SECOND, Math.toIntExact(millis / 1000));
+		result.add(Calendar.MILLISECOND, (int) (millis % 1000));
+		return result;
+	}
+
+	private static void addDateParts(final Calendar calendar, final IntervalValue value) {
+		calendar.add(Calendar.MONTH, Math.toIntExact(value.months()));
+		calendar.add(Calendar.DATE, Math.toIntExact(value.days()));
+	}
+
 	public Date add(final Date date) {
 		return add(date, 1);
 	}
 
-	/**
-	 * 指定した日付に期間を指定した回数だけ加算した結果を返します
-	 * 
-	 * @param date
-	 * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
-	 */
 	public Date add(final Date date, final int multiplicity) {
-		Calendar cal = Calendar.getInstance();
-		cal.setTime(date);
-		cal = add(cal, multiplicity);
-		return cal.getTime();
+		final Calendar calendar = Calendar.getInstance();
+		calendar.setTime(date);
+		return add(calendar, multiplicity).getTime();
 	}
 
-	/**
-	 * 指定した日付に期間を加算した結果を返します
-	 * 
-	 * @param date
-	 */
 	public java.sql.Date add(final java.sql.Date date) {
 		return add(date, 1);
 	}
 
-	/**
-	 * 指定した日付に期間を指定した回数だけ加算した結果を返します
-	 * 
-	 * @param date
-	 * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
-	 */
 	public java.sql.Date add(final java.sql.Date date, final int multiplicity) {
-		Calendar cal = Calendar.getInstance();
-		cal.setTime(date);
-		cal = add(cal, multiplicity);
-		return new java.sql.Date(cal.getTimeInMillis());
+		return new java.sql.Date(add((Date) date, multiplicity).getTime());
 	}
 
-	/**
-	 * 指定した時間に期間を指定した回数だけ加算した結果を返します
-	 * 
-	 * @param time
-	 * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
-	 */
 	public java.sql.Time add(final java.sql.Time time, final int multiplicity) {
-		final Calendar cal = Calendar.getInstance();
-		cal.setTime(time);
-		if (isPositive()) {
-			cal.add(Calendar.MILLISECOND, getMilliseconds() * multiplicity);
-			cal.add(Calendar.SECOND, getSeconds() * multiplicity);
-			cal.add(Calendar.MINUTE, getMinutes() * multiplicity);
-			cal.add(Calendar.HOUR_OF_DAY, getHours() * multiplicity);
-		} else {
-			cal.add(Calendar.MILLISECOND, -getMilliseconds() * multiplicity);
-			cal.add(Calendar.SECOND, -getSeconds() * multiplicity);
-			cal.add(Calendar.MINUTE, -getMinutes() * multiplicity);
-			cal.add(Calendar.HOUR_OF_DAY, -getHours() * multiplicity);
-		}
-		return new java.sql.Time(cal.getTimeInMillis() * multiplicity);
+		return new java.sql.Time(add((Date) time, multiplicity).getTime());
 	}
 
-	/**
-	 * 指定した時間に期間を加算した結果を返します
-	 * 
-	 * @param time
-	 */
 	public java.sql.Time add(final java.sql.Time time) {
 		return add(time, 1);
 	}
 
-	/**
-	 * <code>java.time.Temporal</code>にIntervalを指定した回数だけ加算した結果を返します。
-	 * 
-	 * @param temporal
-	 * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
-	 */
+	@SuppressWarnings("unchecked")
 	public <T extends java.time.temporal.Temporal> T add(final T temporal, final int multiplicity) {
-		T ret = temporal;
-		if (months != 0) {
-			ret = Java8DateUtils.addMonths(ret, this.months * multiplicity);
+		Objects.requireNonNull(temporal, "temporal");
+		final IntervalValue value = toIntervalValue().multipliedBy(multiplicity);
+		java.time.temporal.Temporal result = temporal;
+		if (value.months() != 0) {
+			result = result.plus(value.months(), ChronoUnit.MONTHS);
 		}
-		if (this.seconds != 0) {
-			if (ret instanceof ChronoLocalDate) {
-				ret = Java8DateUtils.addDays(ret, this.seconds * multiplicity / 24 / 3600);
-			} else {
-				ret = Java8DateUtils.addSeconds(ret, this.seconds * multiplicity);
+		if (value.days() != 0 && result.isSupported(ChronoUnit.DAYS)) {
+			result = result.plus(value.days(), ChronoUnit.DAYS);
+		}
+		if (result instanceof ChronoLocalDate) {
+			// Retain the legacy date-only projection: sub-day time is ignored.
+			result = result.plus(value.timePart().dividedBy(Duration.ofDays(1)), ChronoUnit.DAYS);
+		} else {
+			final Duration time = result.isSupported(ChronoUnit.DAYS) ? value.timePart()
+					: Duration.ofDays(value.days()).plus(value.timePart());
+			if (!time.isZero()) {
+				result = result.plus(time);
 			}
 		}
-		return ret;
+		return (T) result;
 	}
 
-	/**
-	 * <code>java.time.Month</code>にIntervalを指定した回数だけ加算した結果を返します。
-	 * 
-	 * @param temporal
-	 * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
-	 */
 	public java.time.Month add(final java.time.Month temporal, final int multiplicity) {
-		java.time.Month ret = temporal;
-		if (months != 0) {
-			ret = Java8DateUtils.addMonths(ret, this.months * multiplicity);
-		}
-		return ret;
+		return temporal.plus(toIntervalValue().multipliedBy(multiplicity).months());
 	}
 
-	/**
-	 * <code>java.time.YearMonth</code>にIntervalを指定した回数だけ加算した結果を返します。
-	 * 
-	 * @param temporal
-	 * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
-	 */
+	/** MonthDay arithmetic uses leap year 2000 as the explicit reference calendar. */
 	public java.time.MonthDay add(final java.time.MonthDay temporal, final int multiplicity) {
-		java.time.MonthDay ret = temporal;
-		if (months != 0) {
-			ret = Java8DateUtils.addMonths(ret, this.months * multiplicity);
-		}
-		if (months != 0) {
-			ret = Java8DateUtils.addDays(ret, this.getDays() * multiplicity);
-		}
-		return ret;
+		final IntervalValue value = toIntervalValue().multipliedBy(multiplicity);
+		return java.time.MonthDay.from(temporal.atYear(2000).plusMonths(value.months())
+				.plusDays(Math.addExact(value.days(), value.timePart().dividedBy(Duration.ofDays(1)))));
 	}
 
-	/**
-	 * <code>java.time.YearMonth</code>にIntervalを指定した回数だけ加算した結果を返します。
-	 * 
-	 * @param temporal
-	 * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
-	 */
 	public java.time.YearMonth add(final java.time.YearMonth temporal, final int multiplicity) {
-		java.time.YearMonth ret = temporal;
-		if (months != 0) {
-			ret = Java8DateUtils.addMonths(ret, this.months * multiplicity);
-		}
-		return ret;
+		return temporal.plusMonths(toIntervalValue().multipliedBy(multiplicity).months());
 	}
 
-	/**
-	 * <code>java.time.Instant</code>にIntervalを加算した結果を返します。
-	 * 
-	 * @param temporal
-	 */
 	public <T extends java.time.temporal.Temporal> T add(final T temporal) {
 		return add(temporal, 1);
 	}
 
-	/**
-	 * 指定した時間に期間を加算した結果を返します
-	 * 
-	 * @param temporal
-	 */
 	public java.time.Month add(final java.time.Month temporal) {
 		return add(temporal, 1);
 	}
 
-	/**
-	 * 指定した時間に期間を加算した結果を返します
-	 * 
-	 * @param temporal
-	 */
 	public java.time.YearMonth add(final java.time.YearMonth temporal) {
 		return add(temporal, 1);
 	}
 
-	/**
-	 * Intervalを加算します。
-	 * 
-	 * @param interval
-	 */
+	/** Adds this interval to the argument, preserving the original mutating API. */
 	public void add(final Interval interval) {
-		if (isPositive()) {
-			interval.setYears(getYears() + interval.getYears());
-			interval.setMonths(interval.getMonths() + getMonths());
-			interval.setDays(interval.getDays() + getDays());
-			interval.setHours(interval.getHours() + getHours());
-			interval.setMinutes(interval.getMinutes() + getMinutes());
-			interval.setSeconds(interval.getSeconds() + getSeconds());
-			interval.setNanos(interval.getNanos() + getNanos());
-		} else {
-			interval.setYears(getYears() - interval.getYears());
-			interval.setMonths(interval.getMonths() - getMonths());
-			interval.setDays(interval.getDays() - getDays());
-			interval.setHours(interval.getHours() - getHours());
-			interval.setMinutes(interval.getMinutes() - getMinutes());
-			interval.setSeconds(interval.getSeconds() - getSeconds());
-			interval.setNanos(interval.getNanos() - getNanos());
-		}
+		Objects.requireNonNull(interval, "interval");
+		interval.store(interval.toIntervalValue().plus(toIntervalValue()));
 	}
 
-	private static final String MONTH_PIPE_SECOND = MONTH + "|" + DAY + "|" + HOUR + "|" + MINUTE + "|" + SECOND;
-
-	private static final String YEAR_PIPE_SECOND = YEAR + "|" + MONTH_PIPE_SECOND;
-
-	/**
-	 * 文字列を解析する時に使用する正規表現
-	 */
-	private final static Pattern INTERVAL_PATTERN = Pattern.compile("\\s*('?[-+]?[0-9]+[ -:0-9]*'?)\\s*("
-			+ YEAR_PIPE_SECOND + "){0,1}\\s*(\\([0-9]+\\)){0,1}\\s*(TO){0,1}\\s*(" + MONTH_PIPE_SECOND + "){0,1}.*");
-
-	/**
-	 * 文字列からIntervalの構築
-	 * 
-	 * @param val
-	 */
-	public static Interval parse(final String val) {
-		if (isEmpty(val)) {
+	public static Interval parse(final String text) {
+		if (text == null || text.trim().isEmpty()) {
 			return null;
 		}
-		return parseDetail(val);
-	}
-
-	public static boolean isParsable(final String val) {
-		Matcher mathcer = null;
-		final String upperVal = val.toUpperCase();
-		if (upperVal.startsWith("INTERVAL")) {
-			mathcer = INTERVAL_PATTERN.matcher(upperVal.substring("INTERVAL".length()));
-		} else {
-			mathcer = INTERVAL_PATTERN.matcher(upperVal);
-		}
-		return mathcer.matches();
-	}
-
-	protected static Interval parseDetail(final String val) {
-		final String upperVal = val.toUpperCase();
-		Matcher mathcer = null;
-		if (upperVal.startsWith("INTERVAL")) {
-			mathcer = INTERVAL_PATTERN.matcher(upperVal.substring("INTERVAL".length()));
-		} else {
-			mathcer = INTERVAL_PATTERN.matcher(upperVal);
-		}
-		if (!mathcer.matches()) {
-			throw toRe(new ParseException("Interval#parse(" + val + ") fail.", 0));
-		}
-		int count = 1;
-		final String matchValue = mathcer.group(count++);
-		final String firstUnit = mathcer.group(count++);
-		final String secondUnit = mathcer.group(count++);
-		final String secondUnit2 = mathcer.group(count++);
-		final String secondUnit3 = mathcer.group(count++);
-		if (isEmpty(firstUnit)) {
-			return null;
-		}
-		return parse(matchValue, firstUnit, getUnit(secondUnit, secondUnit2, secondUnit3));
-	}
-
-	private static String getUnit(final String... args) {
-		for (final String arg : args) {
-			if (arg == null) {
-				continue;
-			}
-			if ("TO".equals(arg)) {
-				continue;
-			}
-			return arg;
-		}
-		return null;
-	}
-
-	protected static Interval parse(final String value, final String firstUnit, final String secondUnit) {
-		final Interval result = new Interval();
-		final String matchValue = trim(unwrap(trim(value), '\''));
-		if (matchValue.startsWith("-")) {
-			result.scale(-1);
-		}
-		if (!isEmpty(secondUnit)) {
-			final String[] tmp = matchValue.split("[- ]");
-			String[] splits = null;
-			if (isEmpty(first(tmp))) {
-				splits = new String[tmp.length - 1];
-				System.arraycopy(tmp, 1, splits, 0, tmp.length - 1);
-			} else {
-				splits = tmp;
-			}
-			int dayPosition = unitPosition("DAY");
-			int hourPosition = dayPosition + 1;
-			int firstUnitPosition = unitPosition(firstUnit);
-			int secondUnitPosition = unitPosition(secondUnit);
-			if (dayPosition < firstUnitPosition) {
-				// 時刻のみ
-				final String[] timeSplits = last(splits).split(":");
-				for (int i = 0; i < timeSplits.length; i++) {
-					if (timeSplits[i].contains(".")) {
-						setValue(result, UNITS[firstUnitPosition], timeSplits[i]);
-					} else {
-						setValue(result, UNITS[firstUnitPosition], Integer.valueOf(timeSplits[i]).intValue());
-					}
-					firstUnitPosition++;
-				}
-			} else {
-				// 日付を含む
-				if (dayPosition < secondUnitPosition) {
-					// 時刻を含む
-					for (int i = splits.length - 2; i >= 0; i--) {
-						setValue(result, UNITS[dayPosition], Integer.valueOf(splits[i]).intValue());
-						dayPosition--;
-					}
-					final String[] timeSplits = last(splits).split(":");
-					for (int i = 0; i < timeSplits.length; i++) {
-						if (timeSplits[i].contains(".")) {
-							setValue(result, UNITS[hourPosition], timeSplits[i]);
-						} else {
-							setValue(result, UNITS[hourPosition], Integer.valueOf(timeSplits[i]).intValue());
-						}
-						hourPosition++;
-					}
-				} else {
-					for (int i = splits.length - 1; i >= 0; i--) {
-						setValue(result, UNITS[secondUnitPosition], Integer.valueOf(splits[i]).intValue());
-						secondUnitPosition--;
-					}
-				}
-			}
-		} else {
-			if (matchValue.contains(".")) {
-				setValue(result, firstUnit, matchValue);
-			} else {
-				setValue(result, firstUnit, Integer.valueOf(matchValue).intValue());
-			}
+		final Interval result = parseDetail(text);
+		if (result == null) {
+			throw new IllegalArgumentException("Interval units are required; use a typed interval parser for a bare value");
 		}
 		return result;
 	}
 
-	/**
-	 * 単位を指定して値を設定
-	 * 
-	 * @param unit  YEAR,MONTH,DAY,HOUR,MINUTE,SECONDのいずれか
-	 * @param value
-	 */
-	protected static void setValue(final Interval interval, final String unit, final String value) {
-		if (YEAR.equalsIgnoreCase(unit)) {
-			interval.setYears(Double.valueOf(value).doubleValue());
-		} else if (MONTH.equalsIgnoreCase(unit)) {
-			interval.setMonths(Double.valueOf(value).intValue());
-		} else if (DAY.equalsIgnoreCase(unit)) {
-			interval.setDays(Double.valueOf(value).intValue());
-		} else if (HOUR.equalsIgnoreCase(unit)) {
-			interval.setHours(Double.valueOf(value).intValue());
-		} else if (MINUTE.equalsIgnoreCase(unit)) {
-			interval.setMinutes(Double.valueOf(value).intValue());
-		} else if (SECOND.equalsIgnoreCase(unit)) {
-			final String[] sp = value.split("\\.");
-			final int sec = Integer.valueOf(sp[0]).intValue();
-			final int nano = Integer.valueOf((sp[1] + "000000000").substring(0, 9)).intValue();
-			interval.setSeconds(sec);
-			interval.setNanos(nano);
+	public static boolean isParsable(final String text) {
+		if (text == null || text.trim().isEmpty()) {
+			return false;
+		}
+		try {
+			return parseDetail(text) != null;
+		} catch (IllegalArgumentException | ArithmeticException | java.time.DateTimeException exception) {
+			return false;
 		}
 	}
 
-	private static int unitPosition(final String unit) {
-		for (int i = 0; i < UNITS.length; i++) {
-			if (UNITS[i].equalsIgnoreCase(unit)) {
-				return i;
+	protected static Interval parseDetail(final String text) {
+		IntervalValue value = LegacyIntervalSupport.qualified(text);
+		if (value == null) {
+			String bare = text.trim();
+			if (bare.startsWith("'") && bare.endsWith("'") && bare.length() >= 2) {
+				bare = bare.substring(1, bare.length() - 1).trim();
 			}
+			if (!LegacyIntervalSupport.complete(bare)) {
+				return null;
+			}
+			value = LegacyIntervalSupport.parse(bare, YEAR, SECOND);
 		}
-		return -1;
+		final Interval result = new Interval();
+		result.store(value);
+		return result;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#equals(java.lang.Object)
-	 */
+	protected static Interval parse(final String text, final String firstUnit, final String lastUnit) {
+		final Interval result = new Interval();
+		result.store(LegacyIntervalSupport.parse(text, firstUnit, lastUnit));
+		return result;
+	}
+
+	protected static void setValue(final Interval interval, final String unit, final String value) {
+		final double number = new BigDecimal(value).doubleValue();
+		if (YEAR.equalsIgnoreCase(unit)) interval.setYears(number);
+		else if (MONTH.equalsIgnoreCase(unit)) interval.setMonths(new BigDecimal(value).intValueExact());
+		else if (DAY.equalsIgnoreCase(unit)) interval.setDays(number);
+		else if (HOUR.equalsIgnoreCase(unit)) interval.setHours(number);
+		else if (MINUTE.equalsIgnoreCase(unit)) interval.setMinutes(number);
+		else if (SECOND.equalsIgnoreCase(unit)) {
+			final Duration time = LegacyIntervalSupport.duration(new BigDecimal(value).abs());
+			interval.setSeconds(Math.toIntExact(time.getSeconds()));
+			interval.setNanos(time.getNano());
+		} else throw new IllegalArgumentException("Unknown interval unit: " + unit);
+	}
+
+	protected static void setValue(final Interval interval, final String unit, final int value) {
+		if (YEAR.equalsIgnoreCase(unit)) interval.setYears(value);
+		else if (MONTH.equalsIgnoreCase(unit)) interval.setMonths(value);
+		else if (DAY.equalsIgnoreCase(unit)) interval.setDays(value);
+		else if (HOUR.equalsIgnoreCase(unit)) interval.setHours(value);
+		else if (MINUTE.equalsIgnoreCase(unit)) interval.setMinutes(value);
+		else if (SECOND.equalsIgnoreCase(unit)) interval.setSeconds(value);
+		else interval.setNanos(value);
+	}
+
 	@Override
-	public boolean equals(final Object obj) {
-		if (obj == null) {
-			return false;
-		}
-		if (obj == this) {
-			return true;
-		}
-		if (!(obj instanceof Interval)) {
-			return false;
-		}
-		final Interval val = (Interval) obj;
-		if (val.positive != this.positive) {
-			return false;
-		}
-		if (val.months != this.months) {
-			return false;
-		}
-		if (val.seconds != this.seconds) {
-			return false;
-		}
-		if (abs(val.nanos - this.nanos) > 1) {
-			return false;
-		}
-		return true;
+	public boolean equals(final Object object) {
+		return object instanceof Interval other && positive == other.positive && months == other.months
+				&& seconds == other.seconds && nanos == other.nanos;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
 	@Override
 	public int hashCode() {
-		final HashCodeBuilder builder = new HashCodeBuilder();
-		builder.append(this.positive);
-		builder.append(this.months);
-		builder.append(this.seconds);
-		builder.append(this.nanos);
-		return builder.hashCode();
+		return Objects.hash(positive, months, seconds, nanos);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#clone()
-	 */
 	@Override
 	public Interval clone() {
 		try {
 			return (Interval) super.clone();
-		} catch (final CloneNotSupportedException e) {
-			throw new RuntimeException(e);
+		} catch (CloneNotSupportedException exception) {
+			throw new AssertionError(exception);
 		}
 	}
 
-	/**
-	 * 単位を指定して値を設定
-	 * 
-	 * @param unit  YEAR,MONTH,DAY,HOUR,MINUTE,SECONDのいずれか
-	 * @param value
-	 */
-	protected static void setValue(final Interval interval, final String unit, final int value) {
-		if (YEAR.equalsIgnoreCase(unit)) {
-			interval.setYears(value);
-		} else if (MONTH.equalsIgnoreCase(unit)) {
-			interval.setMonths(value);
-		} else if (DAY.equalsIgnoreCase(unit)) {
-			interval.setDays(value);
-		} else if (HOUR.equalsIgnoreCase(unit)) {
-			interval.setHours(value);
-		} else if (MINUTE.equalsIgnoreCase(unit)) {
-			interval.setMinutes(value);
-		} else if (SECOND.equalsIgnoreCase(unit)) {
-			interval.setSeconds(value);
-		} else {
-			interval.setNanos(value);
-		}
-	}
-
-	/**
-	 * @return the years
-	 */
 	public int getYears() {
 		return months / MONTH_LIMIT;
 	}
-
-	/**
-	 * @param years the years to set
-	 */
-	public void setYears(final int years) {
-		setValue(years * MONTH_LIMIT + (getMonths() % MONTH_LIMIT), seconds, nanos);
-	}
-
-	/**
-	 * @param years the years to set
-	 */
-	public void setYears(final double years) {
-		final int calc = (int) (years * MONTH_LIMIT);
-		setValue(calc, seconds, nanos);
-	}
-
-	/**
-	 * @return the months
-	 */
 	public int getMonths() {
 		return months % MONTH_LIMIT;
 	}
-
-	/**
-	 * @return the months
-	 */
 	public int getMonthsFull() {
 		return months;
 	}
-
-	/**
-	 * @param months the months to set
-	 */
-	public void setMonths(final int months) {
-		int calc = 0;
-		if (months >= MONTH_LIMIT) {
-			calc = months;
-		} else {
-			calc = getYears() * MONTH_LIMIT + months;
-		}
-		setValue(calc, seconds, nanos);
-	}
-
-	/**
-	 * @return the days
-	 */
 	public int getDays() {
 		return seconds / DAY_SECONDS;
 	}
-
-	/**
-	 * @param days the days to set
-	 */
-	public void setDays(final int days) {
-		final int calc = days * DAY_SECONDS + getHours() * HOUR_SECONDS + getMinutes() * MINUTE_SECONDS + getSeconds();
-		setValue(months, calc, nanos);
-	}
-
-	/**
-	 * @param days
-	 */
-	public void setDays(final double days) {
-		final double calc = (days - (int) days) * HOUR_LIMIT;
-		if (calc != 0.0d) {
-			setHours(calc);
-		}
-		setDays((int) days);
-	}
-
-	/**
-	 * @return the hours
-	 */
 	public int getHours() {
-		return (seconds - getDays() * DAY_SECONDS) / HOUR_SECONDS;
+		return seconds % DAY_SECONDS / HOUR_SECONDS;
 	}
-
-	/**
-	 * @return the hours
-	 */
 	protected int getHoursFull() {
-		return (seconds) / HOUR_SECONDS;
+		return seconds / HOUR_SECONDS;
 	}
-
-	/**
-	 * @param hours the hours to set
-	 */
-	public void setHours(final int hours) {
-		int calc = 0;
-		if (hours >= HOUR_LIMIT) {
-			setDays(hours / HOUR_LIMIT);
-		}
-		calc = getDays() * DAY_SECONDS + (hours % HOUR_LIMIT) * HOUR_SECONDS + getMinutes() * MINUTE_SECONDS
-				+ getSeconds();
-		setValue(months, calc, nanos);
-	}
-
-	/**
-	 * @param hours
-	 */
-	public void setHours(final double hours) {
-		final double calc = (hours - (int) hours) * HOUR_MINUTES;
-		if (calc != 0.0d) {
-			setMinutes(calc);
-		}
-		setHours((int) hours);
-	}
-
-	/**
-	 * @return the minutes
-	 */
 	public int getMinutes() {
-		return (seconds - getDays() * DAY_SECONDS - getHours() * HOUR_SECONDS) / MINUTE_SECONDS;
+		return seconds % HOUR_SECONDS / MINUTE_SECONDS;
 	}
-
-	/**
-	 * @return the minutes
-	 */
 	protected int getMinutesFull() {
-		return (seconds) / MINUTE_SECONDS;
+		return seconds / MINUTE_SECONDS;
 	}
-
-	/**
-	 * @param minutes the minutes to set
-	 */
-	public void setMinutes(final int minutes) {
-		int calc = 0;
-		if (minutes >= MINUTE_LIMIT) {
-			setHours(minutes / MINUTE_LIMIT);
-		}
-		calc = getDays() * DAY_SECONDS + getHours() * HOUR_SECONDS + (minutes % MINUTE_LIMIT) * MINUTE_SECONDS
-				+ getSeconds();
-		;
-		setValue(months, calc, nanos);
-	}
-
-	/**
-	 * @param minutes
-	 */
-	public void setMinutes(final double minutes) {
-		final double calc = (minutes - (int) minutes) * MINUTE_SECONDS;
-		if (calc != 0.0d) {
-			setSeconds(calc);
-		}
-		setMinutes((int) minutes);
-	}
-
-	/**
-	 * @return the seconds
-	 */
 	public int getSeconds() {
 		return seconds % SECOND_LIMIT;
 	}
-
 	public int getSecondsFull() {
 		return seconds;
 	}
-
-	/**
-	 * doubleで秒を取得
-	 * 
-	 * @return the seconds
-	 */
-	public double getSecondsAsDouble() {
-		double ret = getSeconds();
-		ret = ret + (double) getNanos() / NANO_LIMIT;
-		return ret;
-	}
-
-	/**
-	 * @param seconds the seconds to set
-	 */
-	public void setSeconds(final int seconds) {
-		int calc = 0;
-		if (seconds >= SECOND_LIMIT) {
-			setMinutes(seconds / SECOND_LIMIT);
-		}
-		calc = getDays() * DAY_SECONDS + getHours() * HOUR_SECONDS + getMinutes() * MINUTE_SECONDS
-				+ (seconds % SECOND_LIMIT);
-		setValue(months, calc, nanos);
-	}
-
-	/**
-	 * @param seconds the seconds to set
-	 */
-	public void setSeconds(final double seconds) {
-		final double nanos = seconds - (int) seconds;
-		setNanos((int) (nanos * NANO_LIMIT));
-		final int sec = (int) seconds;
-		setSeconds(sec);
-	}
-
 	public int getMilliseconds() {
-		return getNanos() / 1000000;
+		return nanos / 1_000_000;
 	}
-
-	/**
-	 * @return the nanos
-	 */
 	public int getNanos() {
 		return nanos;
 	}
-
-	/**
-	 * @param nanos the nanos to set
-	 */
-	public void setNanos(final int nanos) {
-		setValue(months, seconds, nanos);
-	}
-
-	/**
-	 * @param nanos the nanos to set
-	 */
-	public void setNanos(final long nanos) {
-		setValue(months, seconds, nanos);
-	}
-
-	/**
-	 * Intervalが正の値かを返す
-	 */
 	public boolean isPositive() {
 		return positive;
 	}
-
-	/**
-	 * Intervalを負の値に設定
-	 */
 	public void setNegative() {
-		this.positive = false;
+		positive = false;
 	}
-
-	/**
-	 * Intervalを正の値に設定
-	 */
 	public void setPositive() {
-		this.positive = true;
+		positive = true;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Comparable#compareTo(java.lang.Object)
-	 */
+	public void setYears(final int years) {
+		setMagnitude(Math.addExact(Math.multiplyExact(Math.absExact((long) years), 12), months % 12),
+				Duration.ofSeconds(seconds, nanos));
+	}
+
+	public void setYears(final double years) {
+		setMagnitude(LegacyIntervalSupport.decimal(years).abs().multiply(BigDecimal.valueOf(12)).toBigInteger().longValueExact(),
+				Duration.ofSeconds(seconds, nanos));
+	}
+
+	/** Values below 12 replace the month component; values >=12 replace total months. */
+	public void setMonths(final int months) {
+		final long value = Math.absExact((long) months);
+		setMagnitude(value >= 12 ? value : this.months / 12 * 12L + value, Duration.ofSeconds(seconds, nanos));
+	}
+
+	public void setDays(final int days) {
+		replaceTime(BigDecimal.valueOf(days).abs(), DAY_SECONDS, false);
+	}
+	public void setDays(final double days) {
+		replaceTime(LegacyIntervalSupport.decimal(days).abs(), DAY_SECONDS, true);
+	}
+	public void setHours(final int hours) {
+		replaceTime(BigDecimal.valueOf(hours).abs(), HOUR_SECONDS, false);
+	}
+	public void setHours(final double hours) {
+		replaceTime(LegacyIntervalSupport.decimal(hours).abs(), HOUR_SECONDS, true);
+	}
+	public void setMinutes(final int minutes) {
+		replaceTime(BigDecimal.valueOf(minutes).abs(), MINUTE_SECONDS, false);
+	}
+	public void setMinutes(final double minutes) {
+		replaceTime(LegacyIntervalSupport.decimal(minutes).abs(), MINUTE_SECONDS, true);
+	}
+	public void setSeconds(final int seconds) {
+		replaceTime(BigDecimal.valueOf(seconds).abs(), 1, false);
+	}
+	public void setSeconds(final double seconds) {
+		replaceTime(LegacyIntervalSupport.decimal(seconds).abs(), 1, true);
+	}
+
+	private void replaceTime(final BigDecimal component, final int unitSeconds, final boolean decimal) {
+		final Duration replacement = LegacyIntervalSupport.duration(component.multiply(BigDecimal.valueOf(unitSeconds)));
+		final long whole = replacement.getSeconds();
+		long boundary = unitSeconds == DAY_SECONDS ? Long.MAX_VALUE : unitSeconds == HOUR_SECONDS ? DAY_SECONDS
+				: unitSeconds == MINUTE_SECONDS ? HOUR_SECONDS : MINUTE_SECONDS;
+		while (boundary <= whole && boundary < DAY_SECONDS) {
+			boundary = boundary == MINUTE_SECONDS ? HOUR_SECONDS : DAY_SECONDS;
+		}
+		final long higher = boundary == Long.MAX_VALUE || whole >= DAY_SECONDS ? 0 : seconds / boundary * boundary;
+		final boolean replaceLower = decimal && (unitSeconds == 1 || component.remainder(BigDecimal.ONE).signum() != 0);
+		final long lower = replaceLower ? 0 : seconds % unitSeconds;
+		final Duration result = Duration.ofSeconds(Math.addExact(higher, Math.addExact(whole, lower)),
+				replaceLower ? replacement.getNano() : nanos);
+		setMagnitude(months, result);
+	}
+
+	public double getSecondsAsDouble() {
+		return getSeconds() + (double) nanos / NANO_LIMIT;
+	}
+	public void setNanos(final int nanos) {
+		setNanos((long) nanos);
+	}
+	public void setNanos(final long nanos) {
+		setMagnitude(months, Duration.ofSeconds(seconds, Math.absExact(nanos)));
+	}
+
+	/** Legacy signed lexicographic order (months, seconds, nanos), not SQL ordering. */
 	@Override
-	public int compareTo(final Interval o) {
-		if (o == null) {
-			return 1;
-		}
-		int val = compare(this.positive, o.positive);
-		if (val != 0) {
-			return val;
-		}
-		val = compare(this.months, o.months);
-		if (val != 0) {
-			return val;
-		}
-		val = compare(this.seconds, o.seconds);
-		if (val != 0) {
-			return val;
-		}
-		val = compare(this.nanos, o.nanos);
-		if (val != 0) {
-			return val;
-		}
-		return 0;
+	public int compareTo(final Interval other) {
+		if (other == null) return 1;
+		if (positive != other.positive) return Boolean.compare(positive, other.positive);
+		int result = Integer.compare(months, other.months);
+		if (result == 0) result = Integer.compare(seconds, other.seconds);
+		if (result == 0) result = Integer.compare(nanos, other.nanos);
+		return positive ? result : -result;
 	}
 
-	/**
-	 * Interval型への変換
-	 */
 	public Interval toInterval() {
-		final Interval interval = new Interval();
-		// Copy the stored totals; the component setters expect a single unit.
-		interval.setValue(this.months, this.seconds, this.nanos);
-		interval.positive = this.positive;
-		return interval;
+		final Interval copy = new Interval();
+		cloneProperties(copy);
+		return copy;
 	}
 
-	/**
-	 * プロパティをコピーします
-	 * 
-	 * @param clone
-	 */
 	protected void cloneProperties(final Interval clone) {
-		clone.months = this.months;
-		clone.nanos = this.nanos;
-		clone.seconds = this.seconds;
-		clone.positive = this.positive;
+		clone.months = months;
+		clone.seconds = seconds;
+		clone.nanos = nanos;
+		clone.positive = positive;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#toString()
-	 */
+	/** Exact locale-independent legacy seconds text, shared by time facades. */
+	protected final String formatSeconds(final long wholeSeconds) {
+		return BigDecimal.valueOf(wholeSeconds).add(BigDecimal.valueOf(nanos, 9)).stripTrailingZeros().toPlainString();
+	}
+
 	@Override
 	public String toString() {
-		final StringBuilder builder = new StringBuilder("");
-		if (!this.isPositive()) {
-			builder.append("-");
-		}
-		builder.append(this.getYears());
-		builder.append("-");
-		builder.append(this.getMonths());
-		builder.append("-");
-		builder.append(this.getDays());
-		builder.append(" ");
-		builder.append(this.getHours());
-		builder.append(":");
-		builder.append(this.getMinutes());
-		builder.append(":");
-		if (this.getNanos() > 0) {
-			synchronized (secondsFormat) {
-				final double val = (double) this.getNanos() / NANO_LIMIT + this.getSeconds();
-				builder.append(secondsFormat.format(val));
-			}
-		} else {
-			builder.append(this.getSeconds());
-		}
-		builder.append("");
-		return builder.toString();
+		return (positive ? "" : "-") + getYears() + "-" + getMonths() + "-" + getDays() + " "
+				+ getHours() + ":" + getMinutes() + ":" + formatSeconds(getSeconds());
 	}
 
-	/**
-	 * 第2引数で指定した桁以下の数をゼロにする
-	 * 
-	 * @param val
-	 * @param sub
-	 */
-	protected int truncate(final int val, final int sub) {
-		return (val / sub) * sub;
+	protected int truncate(final int value, final int sub) {
+		return value / sub * sub;
 	}
-
-	protected long truncate(final long val, final long sub) {
-		return (val / sub) * sub;
+	protected long truncate(final long value, final long sub) {
+		return value / sub * sub;
 	}
 }

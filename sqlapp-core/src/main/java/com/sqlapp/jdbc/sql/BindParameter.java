@@ -184,13 +184,11 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 	 */
 	@Override
 	public BindParameter clone() {
-		final BindParameter clone = new BindParameter();
-		clone.setBindingName(this.bindingName);
-		clone.setDirection(this.direction);
-		clone.setDataType(this.dataType);
-		clone.setName(this.name);
-		clone.setOrdinal(this.ordinal);
-		return clone;
+		try {
+			return (BindParameter) super.clone();
+		} catch (CloneNotSupportedException e) {
+			throw new AssertionError(e);
+		}
 	}
 
 	/*

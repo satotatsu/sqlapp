@@ -52,14 +52,14 @@ public class SequenceGetter implements Closeable {
 		this.connection = connection;
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.sequence = sequence;
-		this.cacheSize = cacheSize;
+		this.cacheSize = Math.min(cacheSize, dialect.getSequenceQueryBatchSize());
 	}
 
 	public SequenceGetter(Connection connection, Dialect dialect, Sequence sequence, int cacheSize) {
 		this.connection = connection;
 		this.dialect = dialect;
 		this.sequence = sequence;
-		this.cacheSize = cacheSize;
+		this.cacheSize = Math.min(cacheSize, dialect.getSequenceQueryBatchSize());
 	}
 
 	private void initialize() throws SQLException {

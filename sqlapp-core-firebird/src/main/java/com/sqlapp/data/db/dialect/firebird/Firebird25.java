@@ -33,7 +33,7 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
  * @author SATOH
  * 
  */
-public class Firebird25 extends Firebird20 {
+public class Firebird25 extends Firebird21 {
 	@Override
 	public boolean supportsWith() {
 		return true;

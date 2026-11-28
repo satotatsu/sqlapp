@@ -40,6 +40,58 @@ public class MigrationModelConfiguration {
 		private List<Column> columns = new ArrayList<>();
 		/** Optional primary key; requires {@link #columns}. */
 		private List<String> primaryKey = new ArrayList<>();
+		/** Checks of the built model. */
+		private List<DataTest> dataTests = new ArrayList<>();
+	}
+
+	/**
+	 * One check of a built model. Set exactly one of the rule properties; name and
+	 * severity are optional.
+	 */
+	@Getter
+	@Setter
+	public static class DataTest {
+		/** Unique test name; defaults to the model, rule and columns. */
+		private String name;
+		/** {@code error} (default) fails the run, {@code warn} only reports. */
+		private String severity;
+		/** Columns that must not be NULL. */
+		private List<String> notNull;
+		/** Columns whose combination must be unique. */
+		private List<String> unique;
+		private AcceptedValues acceptedValues;
+		private Relationships relationships;
+		/** Condition that must be true for every row. */
+		private String expression;
+		private RowCount rowCount;
+		/** Query that returns the failing rows; may use $ref and $source. */
+		private String sql;
+	}
+
+	@Getter
+	@Setter
+	public static class AcceptedValues {
+		private String column;
+		private List<Object> values = new ArrayList<>();
+	}
+
+	/** Every non-NULL value must exist in the referenced model or source. */
+	@Getter
+	@Setter
+	public static class Relationships {
+		private String column;
+		private List<String> columns;
+		/** Referenced model or source. */
+		private String to;
+		private String field;
+		private List<String> fields;
+	}
+
+	@Getter
+	@Setter
+	public static class RowCount {
+		private Long min;
+		private Long max;
 	}
 
 	@Getter
@@ -72,6 +124,11 @@ public class MigrationModelConfiguration {
 		private Map<String, Given> given = new LinkedHashMap<>();
 		private Expect expect;
 		private boolean ordered;
+		/**
+		 * Test an incremental model as when it adds rows: isIncremental is true and the
+		 * fixture named after the model is its existing table.
+		 */
+		private boolean incremental;
 	}
 
 	@Getter

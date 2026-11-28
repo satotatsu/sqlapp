@@ -162,8 +162,12 @@ public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 		this.lineBreakBytes = this.lineBreak.getBytes(charset);
 		boolean first = true;
 		for (final FixedByteLengthFieldSetting fieldSetting : fixedByteLengthFields) {
-			if (fieldSetting.getLength() == 0) {
-				continue;
+			if (fieldSetting.getLength() <= 0) {
+				throw new IllegalArgumentException("Field '" + fieldSetting.getName()
+						+ "' requires an explicit positive byte length.");
+			}
+			if (fieldSetting.paddingType == null) {
+				fieldSetting.paddingType = paddingType == null ? PaddingType.RIGHT : paddingType;
 			}
 			if (!first) {
 				len = len + this.separatorBytes.length;
@@ -172,6 +176,9 @@ public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 				fieldSetting.paddingBytes = fieldSetting.padding.getBytes(charset);
 			} else {
 				fieldSetting.paddingBytes = this.paddingBytes;
+			}
+			if (fieldSetting.paddingBytes.length == 0 && !fieldSetting.paddingType.isNoPadding()) {
+				throw new IllegalArgumentException("Field '" + fieldSetting.getName() + "' requires non-empty padding.");
 			}
 			len = len + fieldSetting.length;
 			first = false;
@@ -230,6 +237,10 @@ public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 		return row;
 	}
 
+	/**
+	 * Encodes a row without truncating fields.
+	 * @throws IllegalArgumentException if an encoded value exceeds its configured byte length
+	 */
 	protected void setByteRow(final Row row, final byte[] buffer) {
 		int position = 0;
 		boolean first = true;
@@ -246,10 +257,35 @@ public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 				continue;
 			}
 			final Object value = row.get(fieldSetting.getColumn());
+			if (value == null) {
+				throw new IllegalArgumentException("Field '" + fieldSetting.getName()
+						+ "' is NULL; provide an explicit non-null value for fixed-length output.");
+			}
 			@SuppressWarnings({ "unchecked", "rawtypes" })
 			final String text = ((Converter) fieldSetting.getConverter()).format(value);
+			if (text == null) {
+				throw new IllegalArgumentException("Field '" + fieldSetting.getName() + "' formatted to NULL.");
+			}
 			final byte[] bytes = text.getBytes(charset);
-			fieldSetting.paddingType.setBytes(bytes, fieldSetting.paddingBytes, position, fieldSetting.length, buffer);
+			if (bytes.length > fieldSetting.length) {
+				throw new IllegalArgumentException("Field '" + fieldSetting.getName() + "' requires "
+						+ bytes.length + " bytes but its configured length is " + fieldSetting.length + ".");
+			}
+			final int remaining = fieldSetting.length - bytes.length;
+			if (fieldSetting.paddingType.isNoPadding()) {
+				if (remaining != 0) {
+					throw new IllegalArgumentException("Field '" + fieldSetting.getName()
+							+ "' must exactly fill its byte length when NO_PADDING is used.");
+				}
+				System.arraycopy(bytes, 0, buffer, position, bytes.length);
+			} else {
+				if (remaining % fieldSetting.paddingBytes.length != 0) {
+					throw new IllegalArgumentException("Field '" + fieldSetting.getName()
+							+ "' has " + remaining + " padding bytes to fill, which is not a multiple of "
+							+ fieldSetting.paddingBytes.length + ".");
+				}
+				fieldSetting.paddingType.setBytes(bytes, fieldSetting.paddingBytes, position, fieldSetting.length, buffer);
+			}
 			position = position + fieldSetting.length;
 			first = false;
 		}

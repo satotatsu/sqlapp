@@ -24,12 +24,70 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
 class CombinedIterableTest {
+
+	@Test
+	void closesRepeatedIteratorOnceAndUsesIdentityRatherThanEquality() {
+		final AtomicInteger closes = new AtomicInteger();
+		final class EqualIterator implements Iterator<Integer>, AutoCloseable {
+			@Override
+			public boolean hasNext() {
+				return false;
+			}
+
+			@Override
+			public Integer next() {
+				throw new java.util.NoSuchElementException();
+			}
+
+			@Override
+			public void close() {
+				closes.incrementAndGet();
+			}
+
+			@Override
+			public boolean equals(Object other) {
+				return other instanceof EqualIterator;
+			}
+
+			@Override
+			public int hashCode() {
+				return 1;
+			}
+		}
+		final EqualIterator first = new EqualIterator();
+		final EqualIterator second = new EqualIterator();
+		final Iterable<Integer> repeated = () -> first;
+		final Iterable<Integer> distinct = () -> second;
+		final Iterator<Integer> iterator = new CombinedIterable<>(List.of(repeated, distinct, repeated)).iterator();
+		assertEquals(false, iterator.hasNext());
+		assertEquals(2, closes.get());
+	}
+
+	@Test
+	void removesLastReturnedElementAfterSwitchingAndExhaustion() {
+		final List<Integer> first = new ArrayList<>(List.of(1));
+		final List<Integer> second = new ArrayList<>(List.of(2));
+		final Iterator<Integer> iterator = new CombinedIterable<Integer>(List.of(first, List.of(), second)).iterator();
+		assertThrows(IllegalStateException.class, iterator::remove);
+		assertEquals(1, iterator.next());
+		assertEquals(true, iterator.hasNext());
+		iterator.remove();
+		assertEquals(List.of(), first);
+		assertEquals(List.of(2), second);
+		assertThrows(IllegalStateException.class, iterator::remove);
+		assertEquals(2, iterator.next());
+		assertEquals(false, iterator.hasNext());
+		iterator.remove();
+		assertEquals(List.of(), second);
+		assertThrows(IllegalStateException.class, iterator::remove);
+	}
 
 	@Test
 	void test() {

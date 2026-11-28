@@ -106,6 +106,40 @@ The task reports the comparison through command logging. It does not write a
 migration SQL file. Advanced callers can set `equalsHandler` to customize
 schema equality; use the same comparison rules when generating corresponding SQL.
 
+Sequence and identity next values (`lastValue`, `identityLastValue`) advance
+with every insert, so they are not compared by default. To verify a migration
+or to generate `RESTART` statements, compare them explicitly; use the same
+setting for `diffSchemaXml`, `generateDiffSql` and `synchronizeSchema`:
+
+```groovy
+tasks.named('generateDiffSql') {
+    equalsHandler { compareSequenceValues = true }
+}
+```
+
+A changed next value then becomes `ALTER SEQUENCE ... RESTART WITH` on
+PostgreSQL, H2 and HSQLDB, and `RESTART START WITH` on Oracle 18c and later.
+Databases that cannot restart in place (Oracle before 18c, DuckDB) and Db2,
+which never restarts automatically, fail with the sequence name instead of
+skipping it. CREATE starts a sequence at its next value when one is known:
+Oracle and DuckDB use it as `START WITH`; PostgreSQL, H2 and HSQLDB keep the
+original `START WITH` and add the restart; Firebird sets the generator. Db2
+CREATE never applies it.
+
+Schema reading fills these next values where the database exposes them
+without consuming a value. Values ahead of the real counter because of
+caching are allowed; a value never falls behind it.
+
+| Read | Sequences | Identity / auto-increment |
+|---|---|---|
+| Next value | PostgreSQL (and YugabyteDB), Oracle, Db2, H2, HSQLDB, DuckDB, Firebird, SQL Server, MariaDB (`next_not_cached_value`), CockroachDB, SAP HANA (`M_SEQUENCES`) | PostgreSQL, Oracle 12c+, Db2, H2, HSQLDB, SQL Server, Firebird 3+, MySQL, SAP ASE (`next_identity`), SQLite `AUTOINCREMENT` (`sqlite_sequence`) |
+| Left unknown | Vertica (its catalog reports how many values were distributed, not the counter), Phoenix (CREATE takes an explicit `startValue` instead) | SQLite rowid keys without `AUTOINCREMENT`, which follow the inserted keys |
+
+A next value the reader may not see (missing privileges on the sequence) stays
+unknown instead of failing the read. MySQL 8.0.3+ reads `AUTO_INCREMENT` with
+`information_schema_stats_expiry` set to 0 for the read, so the cached table
+statistics do not hide recent inserts.
+
 ## Generate CREATE SQL
 
 ```groovy

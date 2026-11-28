@@ -117,5 +117,11 @@ public class ChunkedBulkMigrationOption implements Serializable {
 		java.util.Objects.requireNonNull(bulkUpsertOption, "bulkUpsertOption");
 		java.util.Objects.requireNonNull(retryOption, "retryOption");
 		retryOption.validate();
+		if (mode == BulkMigrationMode.UPSERT && !bulkUpsertOption.isUpdateWhenMatched()
+				&& (bulkUpsertOption.getDuplicateKeyStrategy() == BulkUpsertDuplicateKeyStrategy.KEEP_LAST
+						|| bulkUpsertOption.getDuplicateKeyStrategy() == BulkUpsertDuplicateKeyStrategy.CUSTOM)) {
+			throw new IllegalArgumentException("Chunked KEEP_LAST and CUSTOM require updateWhenMatched=true; "
+					+ "use KEEP_FIRST or ERROR when updates are disabled");
+		}
 	}
 }

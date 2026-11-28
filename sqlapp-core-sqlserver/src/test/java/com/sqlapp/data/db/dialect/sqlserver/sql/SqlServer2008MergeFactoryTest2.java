@@ -61,7 +61,7 @@ public class SqlServer2008MergeFactoryTest2 extends AbstractSqlServer11SqlFactor
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE INTO tableA AS _target_
+				MERGE INTO tableA WITH ( HOLDLOCK ) AS _target_
 				USING (
 					VALUES (
 						  ${colA}
@@ -79,7 +79,7 @@ public class SqlServer2008MergeFactoryTest2 extends AbstractSqlServer11SqlFactor
 					THEN UPDATE
 						SET _target_.col_b = _source_.col_b
 						, _target_.updated_at = _source_.updated_at
-						, _target_.lock_version = _source_.lock_version
+						, _target_.lock_version = COALESCE( _target_.lock_version, 0 ) + 1
 				WHEN NOT MATCHED
 					THEN INSERT
 					(

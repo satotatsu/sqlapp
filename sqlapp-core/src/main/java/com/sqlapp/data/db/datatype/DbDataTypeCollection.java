@@ -334,39 +334,32 @@ public class DbDataTypeCollection implements Serializable {
 		if (noMatchProductDataTypeDbTypeCache.contains(productDataType)) {
 			return Optional.empty();
 		}
-		DbDataType<?> dbDataType;
-		if (length != null) {
-			dbDataType = productDataLengthTypeDbTypeCache.get(productDataType, length);
-			if (dbDataType != null) {
-				final Optional<TypeInformation> optional = dbDataType.matchDataTypeName(productDataType);
-				return optional;
-			}
+		DbDataType<?> dbDataType = length == null ? null
+				: productDataLengthTypeDbTypeCache.get(productDataType, length);
+		if (dbDataType == null) {
+			dbDataType = productDataTypeDbTypeCache.get(productDataType);
 		}
-		dbDataType = productDataTypeDbTypeCache.get(productDataType);
-		if (dbDataType != null) {
-			final Optional<TypeInformation> optional = dbDataType.matchDataTypeName(productDataType);
-			return optional;
-		}
-		final Optional<TypeInformation> optional = matchTypeInformationInternal(productDataType, length);
+		final Optional<TypeInformation> optional = dbDataType == null
+				? matchTypeInformationInternal(productDataType, length)
+				: dbDataType.matchDataTypeName(productDataType);
 		if (optional.isPresent()) {
 			TypeInformation column = optional.get();
+			// Cache the source matcher; a surrogate may not match the input name.
+			dbDataType = column.getDbDataType();
+			if (dbDataType instanceof LengthProperties || dbDataType instanceof PrecisionProperties) {
+				productDataLengthTypeDbTypeCache.put(productDataType, length, dbDataType);
+			} else {
+				productDataTypeDbTypeCache.put(productDataType, dbDataType);
+			}
 			if (column.isLengthOver()) {
 				// 取得した型が桁数を超えていた場合、型を差し替える
 				String dataTypeName = column.getDataTypeName().orElse(null);
-				dbDataType = getDbType(column.getDataType().get(), column.getLength().get());
-				productDataLengthTypeDbTypeCache.put(productDataType, length, dbDataType);
+				Long declaredLength = column.getLength().orElseThrow();
+				dbDataType = getDbType(column.getDataType().get(), declaredLength);
 				column.setDbDataType(dbDataType);
 				column.setDataTypeName(dataTypeName);// 退避しておいた型を元に戻す
-				Optional<Long> opLong = column.getDefaultLength();
-				if (opLong.isPresent()) {
-					column.setLength(opLong.get());
-				}
-			} else {
-				if ((column.getDbDataType() instanceof LengthProperties)
-						|| (column.getDbDataType() instanceof PrecisionProperties)) {
-					productDataLengthTypeDbTypeCache.put(productDataType, length, dbDataType);
-				} else {
-					productDataTypeDbTypeCache.put(productDataType, dbDataType);
+				if (dbDataType instanceof LengthProperties || dbDataType instanceof PrecisionProperties) {
+					column.setLength(declaredLength);
 				}
 			}
 			return optional;
@@ -467,11 +460,12 @@ public class DbDataTypeCollection implements Serializable {
 	}
 
 	/**
-	 * データ型を登録します
+	 * データ型を登録します。独自のDialect型は型の解決を始める前の初期化時に登録します。
 	 * 
 	 * @param dbDataType データ型
+	 * @return 登録した型
 	 */
-	protected DbDataType<?> register(DbDataType<?> dbDataType) {
+	public DbDataType<?> register(DbDataType<?> dbDataType) {
 		if (dataTypeMap.containsKey(dbDataType.getDataType())) {
 			dataTypeMap.remove(dbDataType.getDataType());
 		}
@@ -1872,6 +1866,15 @@ public class DbDataTypeCollection implements Serializable {
 		IntervalType type = new IntervalType();
 		cons.accept(type);
 		register(type);
+	}
+
+	/** Registers a standard qualifier with separate leading/fractional precision. */
+	public void addStandardInterval(DataType type, int maximumPrecision, int maximumScale) {
+		register(new StandardIntervalType(type, maximumPrecision, maximumScale));
+	}
+
+	public void addStandardInterval(DataType type, int maximumPrecision, int maximumScale, int maximumArrayDimensions) {
+		register(new StandardIntervalType(type, maximumPrecision, maximumScale, maximumArrayDimensions));
 	}
 
 	/**

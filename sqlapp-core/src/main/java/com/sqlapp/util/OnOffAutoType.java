@@ -20,6 +20,7 @@
 package com.sqlapp.util;
 
 import com.sqlapp.data.converter.BooleanConverter;
+import com.sqlapp.data.converter.ConverterException;
 import com.sqlapp.data.converter.EnumConvertable;
 
 public enum OnOffAutoType implements EnumConvertable<String>{
@@ -73,7 +74,13 @@ public enum OnOffAutoType implements EnumConvertable<String>{
 		if ("A".equalsIgnoreCase(val)) {
 			return AUTO;
 		}
-		final Boolean bool=converter.convertObject(obj);
+		final Boolean bool;
+		try {
+			bool = converter.convertObject(obj);
+		} catch (final ConverterException e) {
+			// unknown text keeps the previous lenient behavior
+			return defaultValue;
+		}
 		if (bool!=null&&bool.booleanValue()) {
 			return ON;
 		}

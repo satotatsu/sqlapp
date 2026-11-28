@@ -3,9 +3,11 @@ package com.sqlapp.data.db.dialect.aurora.mysql.resolver;
 
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.aurora.mysql.AuroraMySql80;
 import com.sqlapp.data.db.dialect.aurora.mysql.AuroraMySql84;
+import com.sqlapp.data.db.dialect.mysql.MySqlTinyInt1Mapping;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 /** Resolves MySQL compatibility versions separately from Aurora releases. */
@@ -27,6 +29,21 @@ public class AuroraMySqlDialectResolver extends ProductNameDialectResolver {
 		}
 		throw new IllegalArgumentException("Unsupported Aurora MySQL compatibility version: " + major + "." + minor
 				+ ". Expected MySQL 8.0 (Aurora 3.x) or 8.4; do not supply the Aurora 3.x release number.");
+	}
+
+	private static final Dialect MYSQL80_NUMERIC = new AuroraMySql80(MySqlTinyInt1Mapping.NUMERIC);
+	private static final Dialect MYSQL84_NUMERIC = new AuroraMySql84(MySqlTinyInt1Mapping.NUMERIC);
+
+	@Override
+	public Dialect applyDialectOptions(final Dialect dialect, final java.util.Map<String, String> options) {
+		final var mapping = MySqlTinyInt1Mapping.fromOptions(options);
+		if (mapping == null)
+			return dialect;
+		if (dialect instanceof AuroraMySql80)
+			return mapping == MySqlTinyInt1Mapping.NUMERIC ? MYSQL80_NUMERIC : MYSQL80;
+		if (dialect instanceof AuroraMySql84)
+			return mapping == MySqlTinyInt1Mapping.NUMERIC ? MYSQL84_NUMERIC : MYSQL84;
+		throw new IllegalArgumentException("Not an Aurora MySQL dialect: " + dialect);
 	}
 
 	@Override

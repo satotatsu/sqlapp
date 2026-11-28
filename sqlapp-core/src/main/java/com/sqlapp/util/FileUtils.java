@@ -982,11 +982,12 @@ public final class FileUtils {
 	 * @param path 親ディレクトリを作成するファイル、ディレクトリのパスのファイルオブジェクト
 	 */
 	public static void createParentDirectory(final Path path) {
-		if (!Files.exists(path)) {
+		final Path parent = path.getParent();
+		if (parent == null) {
 			return;
 		}
 		try {
-			Files.createDirectories(path);
+			Files.createDirectories(parent);
 		} catch (final IOException e) {
 			throw new RuntimeException(e);
 		}

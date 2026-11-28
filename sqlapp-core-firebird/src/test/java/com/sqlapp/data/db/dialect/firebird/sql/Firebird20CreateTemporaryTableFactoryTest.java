@@ -48,6 +48,12 @@ import com.sqlapp.util.CommonUtils;
 public class Firebird20CreateTemporaryTableFactoryTest extends Firebird20SqlFactoryTest {
 	SqlFactory<Table> operation;
 
+	/** Global temporary tables exist from Firebird 2.1. */
+	@Override
+	protected int getMinorVersion() {
+		return 1;
+	}
+
 	@BeforeEach
 	public void before() {
 		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.CREATE_TEMPORARY);
@@ -67,6 +73,14 @@ public class Firebird20CreateTemporaryTableFactoryTest extends Firebird20SqlFact
 					, "cold" TIMESTAMP
 				) ON COMMIT PRESERVE ROWS""";
 		assertEquals(expected, operation.getSqlText());
+	}
+
+	@Test
+	public void firebird20RejectsGlobalTemporaryTables() {
+		final SqlFactory<Table> factory = com.sqlapp.data.db.dialect.firebird.DialectHolder.defaultDialect20
+				.createSqlFactoryRegistry().getSqlFactory(new Table(), SqlType.CREATE_TEMPORARY);
+		org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+				() -> factory.createSql(getTable1("tableA")));
 	}
 
 	private Table getTable(String tableName) {

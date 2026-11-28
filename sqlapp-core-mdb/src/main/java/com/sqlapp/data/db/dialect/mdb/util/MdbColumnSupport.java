@@ -58,16 +58,18 @@ public final class MdbColumnSupport {
 	public static DataType dataType(final io.github.spannm.jackcess.DataType type) {
 		return switch (type) {
 		case BOOLEAN -> DataType.BOOLEAN;
-		case BYTE -> DataType.TINYINT;
+		case BYTE -> DataType.UTINYINT;
 		case INT -> DataType.SMALLINT;
 		case LONG -> DataType.INT;
 		case BIG_INT -> DataType.BIGINT;
-		case MONEY, NUMERIC -> DataType.DECIMAL;
+		case MONEY -> DataType.MONEY;
+		case NUMERIC -> DataType.DECIMAL;
 		case FLOAT -> DataType.REAL;
 		case DOUBLE -> DataType.DOUBLE;
 		case SHORT_DATE_TIME, EXT_DATE_TIME -> DataType.DATETIME;
 		case BINARY -> DataType.VARBINARY;
-		case TEXT, GUID -> DataType.NVARCHAR;
+		case GUID -> DataType.UUID;
+		case TEXT -> DataType.NVARCHAR;
 		case MEMO -> DataType.LONGNVARCHAR;
 		case OLE, COMPLEX_TYPE -> DataType.BLOB;
 		default -> DataType.OTHER;

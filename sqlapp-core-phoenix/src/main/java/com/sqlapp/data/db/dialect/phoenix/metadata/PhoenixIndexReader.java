@@ -8,6 +8,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.db.dialect.phoenix.sql.PhoenixDdlOptions;
 import com.sqlapp.data.db.dialect.phoenix.sql.PhoenixCreateTableFactory;
+import com.sqlapp.data.db.dialect.phoenix.sql.PhoenixCreateIndexFactory;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.*;
 import com.sqlapp.jdbc.ExResultSet;
@@ -40,8 +41,13 @@ public class PhoenixIndexReader extends IndexReader {
 				index.setCatalogName(rs.getString("catalog_name"));
 				index.setSchemaName(rs.getString("schema_name"));
 				index.setTableName(rs.getString("table_name"));
+				if (index.getName() == null || index.getName().isBlank() || index.getTableName() == null
+						|| index.getTableName().isBlank())
+					throw new IllegalStateException("Phoenix index metadata requires an index name and owning table");
 				index.setUnique(false);
 				final Long salt = rs.getLongValue("salt_buckets");
+				if (salt != null && (salt < 0 || salt > 256))
+					throw new IllegalStateException("Invalid Phoenix index SALT_BUCKETS: " + salt);
 				final Integer type = rs.getInteger("index_type");
 				if (type != null && type != 1 && type != 2)
 					throw new UnsupportedOperationException("Unsupported Phoenix index type: " + type);
@@ -50,7 +56,8 @@ public class PhoenixIndexReader extends IndexReader {
 								&& version.getMinorVersion() == null));
 				final String indexType = unknown ? "UNKNOWN" : type != null && type == 2 ? "LOCAL" : "GLOBAL";
 				index.getSpecifics().put("phoenix.indexType", indexType);
-				if (salt != null)
+				// Zero buckets on a LOCAL index do not describe a separate physical layout.
+				if (salt != null && !(salt == 0 && indexType.equals("LOCAL")))
 					index.getSpecifics().put(PhoenixDdlOptions.SALT_BUCKETS, salt);
 				else if (indexType.equals("GLOBAL"))
 					index.getSpecifics().put(PhoenixDdlOptions.SALT_BUCKETS, 0);
@@ -79,11 +86,13 @@ public class PhoenixIndexReader extends IndexReader {
 				final int separator = nativeName.indexOf(':');
 				final String family = separator > 0 ? nativeName.substring(0, separator) : null;
 				final String name = separator >= 0 ? nativeName.substring(separator + 1) : nativeName;
-				if (name.isBlank() || name.contains("(") || name.contains(")"))
-					throw new UnsupportedOperationException(
-							"Phoenix functional/internal index keys require native DDL: " + nativeName);
-				final var column = new ReferenceColumn(name);
-				if (family != null)
+				if (name.isBlank())
+					throw new IllegalStateException("Blank Phoenix index source column: " + nativeName);
+				final boolean opaque = nativeName.indexOf('(') >= 0 || nativeName.indexOf(')') >= 0;
+				if (opaque)
+					source.index().getSpecifics().put(PhoenixCreateIndexFactory.NATIVE_KEY_METADATA_ONLY, true);
+				final var column = new ReferenceColumn(opaque ? nativeName : name);
+				if (!opaque && family != null)
 					column.getSpecifics().put(PhoenixCreateTableFactory.COLUMN_FAMILY, family);
 				final boolean included = rs.getString("column_family") != null;
 				if (!included) {
@@ -98,8 +107,9 @@ public class PhoenixIndexReader extends IndexReader {
 								+ source.index().getName() + "." + nativeName + ": " + sortOrder);
 				}
 				final int ordinal = rs.getInt("ordinal_position");
-				if (ordinal <= 0 || (included ? source.includes() : source.keys()).putIfAbsent(ordinal, column) != null)
+				if (ordinal <= 0 || source.keys().containsKey(ordinal) || source.includes().containsKey(ordinal))
 					throw new IllegalStateException("Invalid Phoenix index column ordinal: " + ordinal);
+				(included ? source.includes() : source.keys()).put(ordinal, column);
 			}
 		});
 		final List<Index> result = new ArrayList<>();

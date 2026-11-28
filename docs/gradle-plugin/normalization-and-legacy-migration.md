@@ -233,6 +233,11 @@ records:
   - name: CUSTOMER-REC
     tableName: CUSTOMER        # default: record name with '-' replaced by '_'
     primaryKey: [CUST-ID]      # COBOL or column names
+  - name: ORDER-LINE-REC       # detail record that follows its header in the data set
+    parent: CUSTOMER-REC       # key: the parent key and a sequence number
+    sequenceColumn: LINE_NO    # default: occurrenceColumnNamePattern
+  - name: TRAILER-REC          # control record: no table, layout kept for trailerChecks
+    control: true
 redefines:                     # redefined item (path or name): selected alternative
   BIRTH-DATE: BIRTH-DATE-N
 columnNames:                   # item path: column name
@@ -246,6 +251,13 @@ prefixGroupRemarks: true
 - Each record becomes a table. Group items are flattened; COBOL names become
   column names with `-` replaced by `_`. Two items with the same name in one
   table are rejected; give one of them a name in `columnNames`.
+- A record with `control: true`, such as a trailer with record counts and
+  totals, becomes no table and no contract data set; its layout is kept in the
+  mapping (`options.cobolControlRecords`) for `extractCobolCsv`'s
+  `trailerChecks`. It cannot be a parent or declare a table.
+- A record with `parent` (header and detail records) becomes a child table of
+  the parent record's table. It inherits the parent key and is numbered from 1
+  after each parent record, in file order; it must not declare `primaryKey`.
 - An item with OCCURS becomes a child table keyed by the parent key and an
   occurrence number, as with PL/I arrays.
 - FILLER items are not imported; named items inside a FILLER group are.
@@ -275,8 +287,95 @@ USAGE POINTER, OCCURS DEPENDING ON followed by other items or inside another
 OCCURS, and a redefining item longer than the item it redefines. Level 66
 RENAMES is skipped with a warning.
 
-Reading host data sets (EBCDIC, packed decimal) directly with this layout is
-planned; until then, extract CSV on the host as for PL/I.
+`extractCobolCsv` reads host data sets with this layout, so no extraction
+program is needed on the host.
+
+## `extractCobolCsv`
+
+Reads a host data set transferred in binary and writes the contract's CSV
+files, as `generatePliCsvExtractor`'s host program would. It uses the storage
+layout of a mapping from `cobolSchemaImport` and checks that the mapping has
+not changed since the contract was generated.
+
+| Property | Type | Required | Convention | Description |
+|---|---|---:|---|---|
+| `contractFile` | `RegularFileProperty` | yes | — | Contract from `generateLegacyMigrationContract` |
+| `mappingFile` | `RegularFileProperty` | no | contract's `mappingFile` | Migration mapping with storage layout |
+| `configurationFile` | `RegularFileProperty` | yes | — | Extraction configuration (below) |
+| `dataFile` | `RegularFileProperty` | yes | — | Host data set |
+| `outputDirectory` | `DirectoryProperty` | yes | — | CSV output directory |
+
+```yaml
+formatVersion: 1
+recordFormat: FIXED            # FIXED, VARIABLE (RDW), VARIABLE_BLOCKED (BDW+RDW), COMPUTED
+recordLength: 15               # FIXED; default: the length of a single record type
+encoding:
+  profile: IBM                 # IBM (JDK charset) or TABLE (conversion table files)
+  charset: x-IBM939            # IBM: x-IBM939, x-IBM930, x-IBM1399, x-IBM1390, IBM037, ...
+  # profile TABLE, for code sets without a JDK charset such as Fujitsu JEF:
+  # singleByteTable: jef-sbcs.txt
+  # doubleByteTable: jef-dbcs.txt
+  # shiftOut: "28"             # hexadecimal; required for TABLE
+  # shiftIn: "29"
+  userDefinedCharacters: gaiji.txt   # optional, checked before the code set
+  unmappable: ERROR            # or REPLACE (U+FFFD)
+floatingPoint: HEXADECIMAL     # COMP-1/COMP-2: IBM hexadecimal, or IEEE
+trimTrailingSpaces: true
+invalidNumeric: ERROR          # or NULL
+blankNumeric: ERROR            # spaces or LOW-VALUES: ERROR, NULL or ZERO
+lowValueText: ERROR            # text that is all LOW-VALUES: ERROR or NULL
+recordTypes:                   # several record layouts in one data set, checked in order
+  - record: HEADER-REC
+    when: {offset: 0, length: 1, text: H}
+  - record: DETAIL-REC
+    when: {offset: 0, hex: C4}
+  - record: TRAILER-REC
+    expression: "record.text(0, 1) == 'T'"   # MVEL: record, recordNumber
+    skip: true                 # recognized but not written
+recordTypeResolver: com.example.MyResolver   # CobolRecordTypeResolver, after recordTypes
+unknownRecord: ERROR           # or SKIP
+trailerChecks:                 # control records imported with control: true
+  - record: TRAILER-REC        # needs a recordTypes entry with skip: true
+    count: TRAILER-REC.REC-COUNT
+    countOf: [DETAIL-REC]      # default: every record that is not a control record
+    sums:
+      - field: TRAILER-REC.TOTAL-QTY
+        of: DETAIL-REC.QTY     # numeric item of a loaded record, outside OCCURS
+    required: true             # the data set must end with this trailer
+```
+
+- `FIXED` reads `recordLength` bytes per record; with several record types,
+  each layout must fit in that length. `VARIABLE` and `VARIABLE_BLOCKED` read
+  the record descriptor words; spanned records (VS/VBS) are rejected. FTP
+  binary transfer removes the RDW unless `SITE RDW` is used; for such files
+  `COMPUTED` derives each record's length from its layout and its OCCURS
+  DEPENDING ON counter.
+- The JDK has `x-IBM930` and `x-IBM939` but not CCSID 1390/1399. With
+  `com.ibm.icu:icu4j-charset` on the classpath (for example as a `buildscript`
+  dependency), `x-IBM1390` and `x-IBM1399` (also `ibm-1390`, `ibm-1399`) work
+  the same way; they add characters such as € (X'E1'), 𠮟 and ①, and round-trip
+  characters such as 剝 that 930/939 map to another character. The converters
+  differ in Unicode mappings: the JDK's 939 decodes X'43A1' as U+FF5E (～),
+  ICU's 1399 as U+301C (〜). Use one converter for a whole migration.
+- Conversion tables have one entry per line: the host code in hexadecimal
+  (2 digits single-byte, 4 digits double-byte) and `U+XXXX`; `#` starts a
+  comment. Fujitsu JEF tables are not shipped; build them from your
+  environment's conversion tables.
+- Zoned decimal, packed decimal and binary items are checked digit by digit;
+  invalid or blank values stop the extraction with the record number and the
+  item path unless the configuration maps them to NULL.
+- A detail record takes its parent key from the most recent parent record and
+  is numbered from 1 after each parent; a detail before any parent record is
+  an error. OCCURS DEPENDING ON writes as many rows as its counter holds.
+- A trailer check compares the trailer's count and totals with the records
+  read since the previous record of the same trailer, or since the start of
+  the data set, so the same configuration fits one trailer at the end and one
+  trailer per group. A mismatch stops the extraction with the record number.
+  With `required: true`, a data set without the trailer, or with counted
+  records after the last trailer, is also an error. NULL values (allowed by
+  `blankNumeric` or `invalidNumeric`) add nothing to a total.
+- Not supported: `NUMBERED_COLUMNS` contracts (1NF-normalized OCCURS) and
+  OCCURS DEPENDING ON that is not the last item of a record.
 
 ## `generateLegacyMigrationContract`
 

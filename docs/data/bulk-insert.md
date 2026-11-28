@@ -20,6 +20,9 @@ is configured. Iterators are closed after completion or failure.
 
 ## Bulk upsert
 
+For transaction ownership, failed rollback and uncertain commit outcomes, see
+[Bulk transaction recovery](bulk-transaction-recovery.md).
+
 `BulkUpsertResolver` performs a set-oriented upsert by creating a staging
 table, loading it through the existing bulk-insert provider, and applying the
 staged rows to the target. The target primary key is the default match key;
@@ -234,6 +237,33 @@ path for INSERT migration jobs and batched `MERGE` statements for UPSERT,
 including update-only and insert-only policies. Oracle retains its native
 empty-string-is-NULL semantics. Informix character conversion follows the
 database and client locales configured for the JDBC connection.
+
+## DuckDB
+
+DuckDB uses the DuckDB Appender, which writes rows into DuckDB's column
+vectors directly instead of executing one `INSERT` per row. In a local
+measurement of 300,000 five-column rows (BIGINT, VARCHAR, DECIMAL, TIMESTAMP,
+DATE) on embedded DuckDB 2.0, the Appender took about 0.3 seconds and the JDBC
+batch about 140 seconds.
+
+The Appender is selected only when it stores exactly what the batch would:
+
+- the runtime driver is duckdb_jdbc 1.4 or later;
+- every column of the target table, except generated columns reported by
+  DuckDB, is written from the row, so no column relies on its `DEFAULT`;
+- every target column is BOOLEAN, TINYINT, SMALLINT, INTEGER, BIGINT, HUGEINT,
+  FLOAT, DOUBLE, DECIMAL, VARCHAR, BLOB, DATE, TIME, TIMESTAMP,
+  TIMESTAMP WITH TIME ZONE or UUID;
+- `bulkCopyTimeout` is not set.
+
+Otherwise the type-aware JDBC batch is used, and `insertMethod = JDBC_BATCH`
+always selects it. Values go through the same column converters on both paths.
+DECIMAL values are rounded half away from zero to the column scale; out-of-range
+values and constraint violations fail with the table and column named.
+
+Both paths take part in the caller's transaction. With auto-commit enabled,
+rows the Appender flushed in earlier internal chunks remain after a later
+failure, as completed JDBC batches do.
 
 ## Resumable chunk migration
 

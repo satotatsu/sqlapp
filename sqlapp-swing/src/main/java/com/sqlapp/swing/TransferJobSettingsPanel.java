@@ -304,7 +304,8 @@ final class TransferJobSettingsPanel extends JPanel {
 					!schemaOnly.isSelected() && stagedReplace.isSelected()
 							? TransferJobConfiguration.TargetPreparation.STAGED_REPLACE
 							: original.targetPreparation() == TransferJobConfiguration.TargetPreparation.REQUIRE_EMPTY
-									&& !schemaOnly.isSelected() ? original.targetPreparation() : null);
+									&& !schemaOnly.isSelected() ? original.targetPreparation() : null,
+					original.generatedKeyCounters(), original.defaultConversion());
 		} catch (Exception failure) {
 			status.setText(mode == TransferJobConfiguration.DataMode.FILE
 					? "Check chunk size (1..1000000), target schema, generated PK column name, character encoding, header and NULL/empty-field settings before saving."

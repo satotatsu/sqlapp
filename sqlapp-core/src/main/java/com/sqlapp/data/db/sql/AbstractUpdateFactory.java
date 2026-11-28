@@ -43,13 +43,18 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 		final SqlSignature sqlSignature = this.createSqlSignature(table);
 		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
 				.getUpdateKeyColumnsMatchingStrategy().apply(table);
-		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
+		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy, requiresKeyColumns());
 		addUpdateTable(table, sqlSignature, builder);
 		addSql(sqlList, builder, getSqlType(), table);
 		return sqlList;
 	}
 
 	protected abstract SqlType getSqlType();
+
+	/** Whether this operation identifies rows through the selected key. */
+	protected boolean requiresKeyColumns() {
+		return true;
+	}
 
 	protected void addUpdateTable(final Table obj, SqlSignature sqlSignature, final S builder) {
 		SqlSignature.ColumnsHolder keyColumnHolder = sqlSignature.getSelectedColumnsHolder();
@@ -75,6 +80,10 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 				builder.space().eq().space()._add(def);
 				first[0] = false;
 			});
+		}
+		if (first[0]) {
+			throw new IllegalArgumentException("No updatable non-key columns for table " + obj.getName()
+					+ "; include an updatable non-key column or skip UPDATE generation.");
 		}
 		addKeyColumnsCondition(obj, sqlSignature, builder);
 		addUpdateAfter(obj, sqlSignature, builder);

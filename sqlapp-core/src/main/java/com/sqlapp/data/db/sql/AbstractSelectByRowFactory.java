@@ -73,7 +73,7 @@ public abstract class AbstractSelectByRowFactory<S extends AbstractSqlBuilder<?>
 			for (final Column column : obj.getTable().getColumns()) {
 				builder.lineBreak();
 				builder.comma(!first);
-				builder.name(alias + ".", column);
+				addJdbcReadColumn(column, alias + ".", builder);
 				this.addSelectColumnComment(column, builder);
 				first = false;
 			}

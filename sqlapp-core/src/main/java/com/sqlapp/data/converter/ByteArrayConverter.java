@@ -57,7 +57,7 @@ public class ByteArrayConverter extends AbstractBinaryConverter {
 		try {
 			return value.getBytes(charset);
 		} catch (final UnsupportedEncodingException e) {
-			throw new RuntimeException(e);
+			throw new ConverterException(e.getMessage(), e);
 		}
 	}
 
@@ -66,7 +66,7 @@ public class ByteArrayConverter extends AbstractBinaryConverter {
 		try {
 			return new String(value, charset);
 		} catch (final UnsupportedEncodingException e) {
-			throw new RuntimeException(e);
+			throw new ConverterException(e.getMessage(), e);
 		}
 	}
 
@@ -85,7 +85,7 @@ public class ByteArrayConverter extends AbstractBinaryConverter {
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof ByteArrayConverter)) {

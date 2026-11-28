@@ -183,7 +183,11 @@ public class SybaseColumnReader extends ColumnReader {
 		if (obj.isIdentity()) {
 			obj.setIdentityStartValue(rs.getLongValue("ident_seed"));
 			obj.setIdentityStep(rs.getLongValue("ident_increment"));
-			obj.setIdentityLastValue(rs.getLongValue("ident_current"));
+			// next_identity(): the value the next insert receives (identity_gap
+			// reservations make it an upper bound, which the model allows).
+			java.math.BigDecimal next = rs.contains("ident_current") ? rs.getBigDecimal("ident_current") : null;
+			if (next != null && next.compareTo(java.math.BigDecimal.valueOf(Long.MAX_VALUE)) <= 0)
+				obj.setIdentityLastValue(next.longValueExact());
 		}
 		obj.setCollation(getString(rs, COLLATION_NAME));
 		obj.setRemarks(getString(rs, "remarks"));

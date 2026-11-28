@@ -92,9 +92,9 @@ public class SqliteMergeFactory extends SqliteInsertFactory {
 		// target.
 		var index = table.getIndexes().stream().filter(candidate -> candidate.isUnique()
 				&& com.sqlapp.util.CommonUtils.isEmpty(candidate.getWhere())
-				&& (candidate.getSpecifics().get("sqlite.index.keys") == null
-						|| !com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl
-								.hasIndexExpressions(candidate.getSpecifics().get("sqlite.index.keys")))
+				&& (com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.retainedIndexKeys(candidate) == null
+						|| !com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.hasIndexExpressions(
+								com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.retainedIndexKeys(candidate)))
 				&& candidate.getColumns().size() == keys.size()
 				&& candidate.getColumns().stream().map(c -> c.getName()).collect(Collectors.toSet()).equals(keyNames))
 				.findFirst().orElse(null);
@@ -106,8 +106,9 @@ public class SqliteMergeFactory extends SqliteInsertFactory {
 			throw new IllegalArgumentException(
 					"SQLite MERGE key columns must be writable input columns: " + table.getName());
 		builder.lineBreak()._add("ON CONFLICT ").brackets(() -> {
-			if (constraint == null && index.getSpecifics().get("sqlite.index.keys") != null) {
-				builder._add(index.getSpecifics().get("sqlite.index.keys"));
+			if (constraint == null
+					&& com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.retainedIndexKeys(index) != null) {
+				builder._add(com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.retainedIndexKeys(index));
 				return;
 			}
 			int i = 0;
@@ -128,7 +129,7 @@ public class SqliteMergeFactory extends SqliteInsertFactory {
 		if (name.isBlank() || index == null || !index.isUnique())
 			throw new IllegalArgumentException(
 					"SQLite UPSERT conflict index must name a modeled unique index: " + name);
-		String storedKeys = index.getSpecifics().get("sqlite.index.keys");
+		String storedKeys = com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.retainedIndexKeys(index);
 		boolean hasKeys = storedKeys != null && !storedKeys.isBlank();
 		if (!hasKeys && (index.getColumns().isEmpty()
 				|| index.getColumns().stream().anyMatch(column -> table.getColumns().get(column.getName()) == null)))

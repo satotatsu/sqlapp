@@ -37,7 +37,8 @@ public class GeometryUtils {
 	public static void run(Runnable run){
 		try{
 			Class.forName("org.geolatte.geom.Geometry");
-			Class.forName("com.vividsolutions.jts.geom.Geometry");
+			// GeometryConverter が使用する JTS (org.locationtech.jts)
+			Class.forName("org.locationtech.jts.geom.Geometry");
 			exists=true;
 		} catch (Exception e){
 			

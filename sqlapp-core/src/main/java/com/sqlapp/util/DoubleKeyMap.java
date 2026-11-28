@@ -237,7 +237,9 @@ public class DoubleKeyMap<S, T, U> implements Serializable, Cloneable {
 	@Override
 	public DoubleKeyMap<S, T, U> clone() {
 		DoubleKeyMap<S, T, U> clone = new DoubleKeyMap<S, T, U>();
-		clone.innerMap = linkedMap(this.innerMap);
+		for (Map.Entry<S, Map<T, U>> entry : innerMap.entrySet()) {
+			clone.innerMap.put(entry.getKey(), linkedMap(entry.getValue()));
+		}
 		return clone;
 	}
 

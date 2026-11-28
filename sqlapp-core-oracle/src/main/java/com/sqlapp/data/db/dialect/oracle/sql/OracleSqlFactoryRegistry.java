@@ -52,6 +52,12 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	}
 
 	@Override
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+		registerSqlFactory(Sequence.class, com.sqlapp.data.schemas.State.Modified, SqlType.ALTER);
+	}
+
+	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.CREATE, OracleCreateViewFactory.class);
@@ -79,6 +85,7 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Partitioning.class, SqlType.CREATE, OracleCreatePartitioningFactory.class);
 		// Sequence
 		registerSqlFactory(Sequence.class, SqlType.CREATE, OracleCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.ALTER, OracleAlterSequenceFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, OracleSequenceNextValuesFactory.class);
 		// Synonym
 		registerSqlFactory(Synonym.class, SqlType.CREATE, OracleCreateSynonymFactory.class);

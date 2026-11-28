@@ -59,13 +59,13 @@ class SqlServerLockTableFactoryTest extends AbstractSqlServerSqlFactoryTest {
 		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
 		List<SqlOperation> list = operationfactory.createSql(table);
 		SqlOperation commandText = CommonUtils.first(list);
-		String expect = "SELECT * FROM tableA WITH ( TABLOCK, UPDLOCK )";
+		String expect = "SELECT COUNT_BIG(*) FROM tableA WITH ( TABLOCKX, HOLDLOCK )";
 		assertEquals(expect, commandText.getSqlText());
 		//
 		operationfactory.getTableOptions().setLockMode(t -> TableLockMode.SHARE);
 		list = operationfactory.createSql(table);
 		commandText = CommonUtils.first(list);
-		expect = "SELECT * FROM tableA WITH ( TABLOCK, HOLDLOCK )";
+		expect = "SELECT COUNT_BIG(*) FROM tableA WITH ( TABLOCK, HOLDLOCK )";
 		assertEquals(expect, commandText.getSqlText());
 	}
 

@@ -81,9 +81,12 @@ public class LocalDateConverter extends AbstractJava8DateConverter<LocalDate, Lo
 			final String lowerVal = ((String) value).toLowerCase();
 			if (isCurrentText(lowerVal)) {
 				return LocalDate.now();
-			} else if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+			} else if (lowerVal.length() >= 2 && lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
 				final String val = cast(value);
 				return parseDate(val.substring(1, val.length() - 1));
+			} else if (isNumberPattern(lowerVal)) {
+				// uuuuMMdd or epoch milliseconds, as for the other date-time converters
+				return toZonedDateTime(toInstant(lowerVal)).toLocalDate();
 			}
 			return parseDate((String) value);
 		}

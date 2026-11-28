@@ -144,7 +144,18 @@ destructive behavior are explicitly authorized.
 Report commands run, passes, failures, unexecuted tests, external databases and
 intentional generated-file changes.
 
-## Completion
+## Documentation website
+
+- Follow `site/README.md` for VitePress, translations, offline demos and Pages deployment.
+- English guides in `docs/` are canonical. Keep existing GitHub paths intact.
+- Japanese counterparts live at matching paths in `site/translations/ja/`.
+- Preserve fenced code, inline identifiers and existing heading IDs in translations.
+- Review translations before accepting source hashes. Report missing translations;
+  never claim English fallback content is translated.
+- Run site checks independently from Java releases. Never edit staged `.generated/`
+  files or publish arbitrary build output, credentials or personal paths.
+
+## Completion reporting
 
 Report the change summary, modified modules, public API and compatibility
 impact, tests, documentation, database impact and remaining limitations.

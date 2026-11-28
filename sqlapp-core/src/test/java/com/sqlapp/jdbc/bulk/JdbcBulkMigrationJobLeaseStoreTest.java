@@ -225,18 +225,20 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 				closeable.close();
 		}
 	}
+
 	@Test
 	void retriesDeadlockOnlyAfterRollingBackOwnedTransaction() throws Exception {
 		final var dataSource = createDataSource();
 		try (var delegate = dataSource.getConnection()) {
 			var inject = new java.util.concurrent.atomic.AtomicBoolean();
 			var rollbacks = new java.util.concurrent.atomic.AtomicInteger();
-			var connection = (java.sql.Connection) java.lang.reflect.Proxy.newProxyInstance(
-					getClass().getClassLoader(), new Class<?>[] {java.sql.Connection.class}, (proxy, method, args) -> {
+			var connection = (java.sql.Connection) java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+					new Class<?>[] { java.sql.Connection.class }, (proxy, method, args) -> {
 						if (method.getName().equals("prepareStatement") && inject.compareAndSet(true, false)) {
 							throw new SQLException("injected deadlock", "40P01");
 						}
-						if (method.getName().equals("rollback")) rollbacks.incrementAndGet();
+						if (method.getName().equals("rollback"))
+							rollbacks.incrementAndGet();
 						try {
 							return method.invoke(delegate, args);
 						} catch (java.lang.reflect.InvocationTargetException e) {
@@ -251,7 +253,8 @@ class JdbcBulkMigrationJobLeaseStoreTest extends AbstractDbTest {
 			assertTrue(delegate.getAutoCommit());
 			assertEquals("owner", store.load("job").orElseThrow().ownerId());
 		} finally {
-			if (dataSource instanceof AutoCloseable closeable) closeable.close();
+			if (dataSource instanceof AutoCloseable closeable)
+				closeable.close();
 		}
 	}
 

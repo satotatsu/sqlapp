@@ -175,6 +175,39 @@ versions cannot consume jobs using it. No module dependency was added.
 
 See [the schema-only example](../examples/direct-transfer/schema-only.yaml).
 
+### Column defaults between database products
+
+When tables are created or changed in another product, column DEFAULT
+expressions are converted for the target before its CREATE or ALTER SQL is
+generated. The captured source Schema keeps its expressions. The source product
+comes from the captured Schema metadata. For example, SQL Server
+`getdate()` becomes `CAST(statement_timestamp() AS timestamp)` on PostgreSQL,
+`N'a''b'` becomes `'a''b'`, and a `bit` default `1` becomes `TRUE`. The same
+product keeps the source text.
+
+Approximate translations proceed with `[SCHEMA_DEFAULT_CONVERTED]` warnings
+that name the difference (time basis, evaluation point, precision). Expressions
+that are not recognized are omitted from the target SQL and reported as
+`[SCHEMA_DEFAULT_UNRESOLVED]`. Copied rows bind every column, so an omitted
+DEFAULT does not change transferred data; it affects later inserts and remains
+to be corrected or accepted before cutover. Java callers read the same results
+from `Plan.defaults()`.
+
+```yaml
+defaultConversion:              # optional
+  # sourceProductName: Microsoft SQL Server   # when the captured Schema lacks it
+  # sourceProductMajorVersion: 16
+  # strict: true                # stop on any approximate or unresolved DEFAULT
+  columns:                      # target table and column names after name mapping
+    - {table: ORDERS, column: TOTAL, replace: '0'}
+    - {table: ORDERS, column: CHECKSUM, remove: true}
+```
+
+A column entry takes precedence over conversion and requires exactly one of
+`replace` or `remove: true`. Entries that match no selected column are rejected.
+With `strict: true`, every DEFAULT is analyzed first and preparation then stops
+when any finding remains open, listing them all.
+
 ### INSERT tables without a usable primary key
 
 Direct JDBC initial copy now accepts tables without a complete NOT NULL primary
@@ -345,6 +378,17 @@ during verification. A non-NULL value that cannot be represented in the type sto
 the copy instead of becoming NULL. Primary-key columns keep their source type while
 copying, so ordering and resume tokens are unchanged; their mapped type changes
 only the target definition.
+
+A table entry can set `contract: true`, as the mapping written by
+[`executeMigrationModels`](migration-models.md#publishing-into-existing-tables)
+does. Every column then needs a `type`, and the mapping is a contract: before
+anything is written, an existing target table must accept every row the
+contract allows without changing a value. Its columns must have a type of the
+same family that is at least as wide (length, precision and scale, integer
+width, fractional seconds), it must not be NOT NULL where the contract allows
+NULL, an extra NOT NULL column needs a default, and every unique key must
+contain the source primary key. Otherwise review fails and names each column.
+Tables that the job creates are created from the contract and need no check.
 
 `conversion` is an MVEL expression. It receives `value` (this column's source
 value), `column` (the source column name) and `row` (a read-only map of every
@@ -706,25 +750,36 @@ Common initial-copy jobs explicitly preserve source identity values and NULLs.
 Generated per-table bulk options use `keepIdentity: true` and `keepNulls: true`,
 so parent keys are not silently regenerated while children retain their original
 foreign keys. Low-level Bulk API defaults are unchanged. Existing shared jobs
-need no new option; review them again after upgrading. Sequence/identity counter
-synchronization for subsequent generated inserts remains a separate concern.
-Selected columns modeled as identity or auto-increment now produce a per-column
-`[GENERATED_KEY_COUNTER]` warning in review and outcomes, including for
-`REQUIRE_EXISTING`. It names the resolved target table/column and states that
-counter alignment has not been checked or changed. `WARN` permits transfer;
-`ERROR` rejects this unverified condition before copying. This follows the same
-shared policy in GUI and Gradle. A target without a generator can treat that
-follow-up as not applicable after inspection. The stable code and
-`TransferGeneratedKeyChecks.messages` expose this warning category without
-changing job/report record layouts. The GUI calls out the pending follow-up even
-when copied-row verification matches.
+need no new option; review them again after upgrading.
 
-Before application writes, check the target's next generated values against
-imported keys, accounting for increment direction, bounds, cycling, caches and
-concurrent writers. No automatic MAX+1 restart or probe INSERT/nextval is executed.
-Detection uses canonical identity/auto-increment metadata; independent sequences
-and vendor default expressions not represented that way are not comprehensively
-detected. Existing generic DDL/default/identity compatibility warnings remain.
+After a verified copy (direct, file import or `STAGED_REPLACE`, where the final
+tables are synchronized after the committed replacement), the generators of
+selected identity/serial columns are raised past the imported keys so later automatic inserts cannot
+collide with them. The required next value is the larger of the source's next
+value and the imported maximum plus the increment (the smaller for a negative
+increment), and a generator is never moved back. The outcome lists each column
+in `generatedKeyCounters` with its action (`RESTARTED`, `ALREADY_SAFE`,
+`FOLLOWS_INSERTED_KEYS`, `NO_GENERATOR`) and the executed statement. A failure
+at this step is reported as `FINALIZATION`; the copied rows stay committed.
+
+```yaml
+generatedKeyCounters: WARN   # optional; default SYNCHRONIZE
+```
+
+PostgreSQL 10+, H2 2.x and Oracle 12c+ are restarted and SQL Server 2005+ is
+reseeded with `DBCC CHECKIDENT` (which needs ALTER permission on the table);
+MySQL, MariaDB, HSQLDB and
+SQLite raise the counter past inserted keys by themselves. Db2 for LUW never
+restarts a generator unless the job sets `generatedKeyCounters: SYNCHRONIZE`
+explicitly; its catalog reports a restart only after the next generated value,
+so a repeated run with a smaller source value can move an unused restart point
+back, never below the imported keys. On other databases and with `WARN`, each such column still produces a `[GENERATED_KEY_COUNTER]`
+warning in review and outcomes stating that counter alignment has not been
+checked or changed; `WARN` permits transfer and `ERROR` rejects it before
+copying. `TransferGeneratedKeyChecks.messages` exposes this warning category,
+and the GUI calls out the pending follow-up. Detection uses canonical
+identity/auto-increment metadata; independent sequences and vendor default
+expressions not represented that way are not synchronized. Existing generic DDL/default/identity compatibility warnings remain.
 
 The bulk job target uses the command's nontransactional connection wrapper:
 the chunk executor alone commits/rolls back data and checkpoint transactions.

@@ -38,19 +38,30 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 		final List<Column> staged = plan.getStagingColumns();
 		final List<Column> updates = plan.getUpdateColumns();
 		final String stage = stageName(option), stageSql = quote(stage);
-		final String target = dialect.getObjectFullName(table.getCatalogName(), table.getSchemaName(), table.getName());
+		final String target = targetName(table);
+		String marker = "sqlapp_bulk_matched";
+		for (int suffix = 1; containsName(staged, marker); suffix++)
+			marker = "sqlapp_bulk_matched_" + suffix;
+		final String matched = quote(marker);
 		try (var scope = BulkUpsertExecutionScope.begin(connection, option.isUseTransaction())) {
 			try {
 				try (var statement = connection.createStatement()) {
-					statement.execute("CREATE TEMPORARY TABLE " + stageSql + " AS SELECT " + list(staged, null)
-							+ " FROM " + target + " WHERE 1 = 0");
+					statement.execute("CREATE TEMPORARY TABLE " + stageSql
+							+ (option.isInsertWhenNotMatched() ? " (" + matched + " TINYINT NOT NULL DEFAULT 0)" : "")
+							+ " AS SELECT " + list(staged, null) + " FROM " + target + " WHERE 1 = 0");
 				}
 				scope.addCleanupSql("DROP TEMPORARY TABLE " + stageSql);
 				BulkInsertResolver.resolve(dialect).execute(connection, plan.createStagingTable(stage),
 						bulkOption(option.getBulkOption()));
-				final long affected;
+				long affected = 0;
 				try (var statement = connection.createStatement()) {
-					affected = statement.executeUpdate(sql(target, stageSql, keys, staged, updates, option));
+					final List<String> statements = sql(target, stageSql, keys, staged, updates, option, matched);
+					for (int i = 0; i < statements.size(); i++) {
+						final int count = statement.executeUpdate(statements.get(i));
+						// The first statement only classifies rows in the staging table.
+						if (!option.isInsertWhenNotMatched() || i != 0)
+							affected += count;
+					}
 				}
 				scope.commit();
 				return affected;
@@ -61,31 +72,56 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 		}
 	}
 
-	private String sql(final String target, final String stage, final List<Column> keys, final List<Column> staged,
-			final List<Column> updates, final BulkUpsertOption option) {
-		if (!option.isInsertWhenNotMatched()) {
+	private boolean containsName(final List<Column> columns, final String name) {
+		return columns.stream().anyMatch(column -> column.getName().equalsIgnoreCase(name));
+	}
+
+	private String targetName(final Table table) {
+		final String catalog = table.getCatalogName();
+		final String schema = table.getSchemaName();
+		if (!CommonUtils.isEmpty(schema)) {
+			// INFORMATION_SCHEMA uses catalog "def"; JDBC may use the database as catalog.
+			if (!CommonUtils.isEmpty(catalog) && !"def".equals(catalog) && !catalog.equals(schema)) {
+				throw new IllegalArgumentException(
+						"Conflicting MySQL database identifiers: catalog=" + catalog + ", schema=" + schema);
+			}
+			return dialect.getObjectFullName(schema, table.getName());
+		}
+		return dialect.getObjectFullName(catalog, table.getName());
+	}
+
+	private List<String> sql(final String target, final String stage, final List<Column> keys,
+			final List<Column> staged, final List<Column> updates, final BulkUpsertOption option,
+			final String matched) {
+		final List<String> statements = new java.util.ArrayList<>();
+		if (option.isInsertWhenNotMatched()) {
+			final StringBuilder classify = new StringBuilder("UPDATE ").append(stage).append(" AS source LEFT JOIN ")
+					.append(target).append(" AS target ON ");
+			match(classify, keys);
+			classify.append(" SET source.").append(matched).append(" = CASE WHEN target.")
+					.append(quote(keys.get(0).getName())).append(" IS NULL THEN 0 ELSE 1 END");
+			statements.add(classify.toString());
+		}
+		if (option.isUpdateWhenMatched() && !updates.isEmpty()) {
 			final StringBuilder s = new StringBuilder("UPDATE ").append(target).append(" AS target JOIN ").append(stage)
 					.append(" AS source ON ");
 			match(s, keys);
 			s.append(" SET ");
 			assignments(s, updates, "source");
-			return s.toString();
+			if (option.isInsertWhenNotMatched())
+				s.append(" WHERE source.").append(matched).append(" = 1");
+			statements.add(s.toString());
 		}
-		final StringBuilder s = new StringBuilder("INSERT INTO ").append(target).append(" (").append(list(staged, null))
-				.append(") SELECT ").append(list(staged, "source")).append(" FROM ").append(stage)
-				.append(" AS source WHERE 1 = 1");
-		if (option.isUpdateWhenMatched() && !updates.isEmpty()) {
-			s.append(" ON DUPLICATE KEY UPDATE ");
-			for (int i = 0; i < updates.size(); i++) {
-				if (i > 0)
-					s.append(", ");
-				final String n = quote(updates.get(i).getName());
-				s.append(n).append(" = VALUES(").append(n).append(')');
-			}
-		} else
-			s.append(" ON DUPLICATE KEY UPDATE ").append(quote(keys.get(0).getName())).append(" = ")
-					.append(quote(keys.get(0).getName()));
-		return s.toString();
+		if (option.isInsertWhenNotMatched()) {
+			final StringBuilder s = new StringBuilder("INSERT INTO ").append(target).append(" (")
+					.append(list(staged, null)).append(") SELECT ").append(projection(staged)).append(" FROM ")
+					.append(stage).append(" AS source");
+			// Freeze match classification before target DML, so concurrent conflicts cannot
+			// silently change an insert into an update or skip a requested action.
+			s.append(" WHERE source.").append(matched).append(" = 0");
+			statements.add(s.toString());
+		}
+		return statements;
 	}
 
 	private void match(final StringBuilder s, final List<Column> keys) {
@@ -102,8 +138,25 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 			if (i > 0)
 				s.append(", ");
 			final String n = quote(cols.get(i).getName());
-			s.append("target.").append(n).append(" = ").append(alias).append('.').append(n);
+			s.append("target.").append(n).append(" = ").append(sourceValue(cols.get(i), alias));
 		}
+	}
+
+	private String projection(final List<Column> columns) {
+		return columns.stream().map(column -> sourceValue(column, "source"))
+				.collect(java.util.stream.Collectors.joining(", "));
+	}
+
+	private String sourceValue(final Column column, final String alias) {
+		final String reference = alias + "." + quote(column.getName());
+		if (dialect instanceof com.sqlapp.data.db.dialect.mysql.MySql8019
+				&& column.getDataType() == com.sqlapp.data.db.datatype.DataType.TIMESTAMPVERSION) {
+			// A plain assignment can reconstruct TIMESTAMP from ambiguous local fields at a
+			// DST overlap.
+			return "CONCAT(TIMESTAMPADD(MICROSECOND, UNIX_TIMESTAMP(" + reference
+					+ ") * 1000000, CAST('1970-01-01 00:00:00' AS DATETIME(6))), '+00:00')";
+		}
+		return reference;
 	}
 
 	private BulkOption bulkOption(final BulkOption source) {

@@ -15,16 +15,23 @@ class ForeignKeyConstraintReaderTest {
 	private final ForeignKeyConstraintReader reader = new ForeignKeyConstraintReader(null) {
 		@Override
 		protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
-				ProductVersionInfo version) { return List.of(); }
+				ProductVersionInfo version) {
+			return List.of();
+		}
 	};
 
 	private ForeignKeyConstraint read(String parentSchema, String parentName) {
 		var fk = new ForeignKeyConstraint("parent_fk");
-		fk.setSchemaName("child_schema"); fk.setTableName("child");
+		fk.setSchemaName("child_schema");
+		fk.setTableName("child");
 		var pairs = new FlexList<ColumnPair>();
 		for (String name : List.of("b", "a")) {
-			var pair = new ColumnPair(); pair.columnName = name; pair.refColumnName = name;
-			pair.refTableName = parentName; pair.refSchemaName = parentSchema; pair.refCatalogName = "catalog";
+			var pair = new ColumnPair();
+			pair.columnName = name;
+			pair.refColumnName = name;
+			pair.refTableName = parentName;
+			pair.refSchemaName = parentSchema;
+			pair.refCatalogName = "catalog";
 			pairs.add(pair);
 		}
 		var map = new TripleKeyMap<String, String, String, FlexList<ColumnPair>>();
@@ -37,7 +44,8 @@ class ForeignKeyConstraintReaderTest {
 	void retainsDetachedParentOwnershipWithSameNamedChildColumns() {
 		var fk = read("parent_schema", "Parent table");
 		var child = new Table("child").setSchemaName("child_schema");
-		child.getColumns().add("a"); child.getColumns().add("b");
+		child.getColumns().add("a");
+		child.getColumns().add("b");
 		child.getConstraints().add(fk);
 		assertEquals("Parent table", fk.getRelatedTable().getName());
 		assertEquals("parent_schema", fk.getRelatedTable().getSchemaName());
@@ -52,11 +60,20 @@ class ForeignKeyConstraintReaderTest {
 	@Test
 	void resolvesCanonicalParentWhenAddedToSchemaAndKeepsSelfReferences() {
 		var schema = new Schema("child_schema");
-		var parent = new Table("parent"); schema.getTables().add(parent); parent.getColumns().add("a"); parent.getColumns().add("b");
-		var child = new Table("child"); schema.getTables().add(child); child.getColumns().add("a"); child.getColumns().add("b");
-		var fk = read("child_schema", "parent"); child.getConstraints().add(fk);
+		var parent = new Table("parent");
+		schema.getTables().add(parent);
+		parent.getColumns().add("a");
+		parent.getColumns().add("b");
+		var child = new Table("child");
+		schema.getTables().add(child);
+		child.getColumns().add("a");
+		child.getColumns().add("b");
+		var fk = read("child_schema", "parent");
+		child.getConstraints().add(fk);
 		assertSame(parent, fk.getRelatedTable());
-		var self = read("child_schema", "child"); self.setName("self_fk"); child.getConstraints().add(self);
+		var self = read("child_schema", "child");
+		self.setName("self_fk");
+		child.getConstraints().add(self);
 		assertSame(child, self.getRelatedTable());
 	}
 }

@@ -84,7 +84,7 @@ public class JapaneseDateConverter extends AbstractJava8DateConverter<JapaneseDa
 			final String lowerVal = ((String) value).toLowerCase();
 			if (isCurrentText(lowerVal)) {
 				return JapaneseDate.now();
-			} else if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+			} else if (lowerVal.length() >= 2 && lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
 				final String val = cast(value);
 				return parseDate(val.substring(1, val.length() - 1));
 			}

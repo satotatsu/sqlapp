@@ -22,6 +22,7 @@ package com.sqlapp.jdbc.sql.node;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -229,22 +230,80 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 
 	/**
 	 * バインドパラメタの再評価
+	 * <p>
+	 * Array bindings are refreshed only when their SQL and parameter counts remain
+	 * unchanged. Non-fixed arrays inside loops or VALUES require a new {@link #eval(Object)}
+	 * evaluation and return false without updating existing values.
+	 * Grouped bindings also require the recorded source row count to match.
 	 * 
 	 * @param context
 	 * @param sqlParameters
 	 * @return SQL再評価が不要か?
 	 */
 	public boolean reEval(Object context, SqlParameterCollection sqlParameters) {
+		// Reject changed or unknown row shapes before updating scalar or grouped values.
+		for (BindParameterHolder holder : sqlParameters.getBindParameters()) {
+			if (holder.getBindParameter() == null
+					&& holder.stream().anyMatch(parameter -> !parameter.isFixed())) {
+				List<Row> rows = getRowList(context);
+				if (rows == null || rows.isEmpty() || holder.getRowCount() != rows.size()
+						|| holder.getBindParameters().size() % rows.size() != 0) {
+					return false;
+				}
+			}
+		}
+		// Validate array SQL before changing any existing bind values.
+		Map<BindParameter, Object> arrayValues = new IdentityHashMap<>();
+		Map<BindVariableArrayNode, Boolean> arrays = new IdentityHashMap<>();
+		for (CommentNode part : sqlParameters.getSqlParts().keySet()) {
+			if (part instanceof BindVariableArrayNode) {
+				arrays.put((BindVariableArrayNode) part, Boolean.TRUE);
+			}
+		}
+		for (BindParameterHolder holder : sqlParameters.getBindParameters()) {
+			for (BindParameter parameter : holder.stream().toList()) {
+				if (parameter.getCommentNode() instanceof BindVariableArrayNode) {
+					arrays.put((BindVariableArrayNode) parameter.getCommentNode(), Boolean.TRUE);
+				}
+			}
+		}
+		for (BindVariableArrayNode array : arrays.keySet()) {
+			List<BindParameter> previous = sqlParameters.getBindParameters(array);
+			if (!previous.isEmpty() && previous.stream().allMatch(BindParameter::isFixed)) {
+				continue;
+			}
+			// Loop and VALUES parameters require their original per-row context.
+			for (Node parent = array.getParent(); parent != null; parent = parent.getParent()) {
+				if (parent instanceof ForNode || parent instanceof ValuesBindVariableNode) {
+					return false;
+				}
+			}
+			SqlParameterCollection next = new SqlParameterCollection(sqlParameters.getDialect());
+			array.eval(context, next);
+			List<BindParameter> updated = next.getBindParameters(array);
+			if (!Objects.equals(sqlParameters.getSqlParts().get(array), next.getSql())
+					|| previous.size() != updated.size()) {
+				return false;
+			}
+			for (int i = 0; i < previous.size(); i++) {
+				arrayValues.put(previous.get(i), updated.get(i).getValue());
+			}
+		}
 		int cnt = 0;
 		for (final BindParameterHolder bindParameterHolder : sqlParameters.getBindParameters()) {
 			if (bindParameterHolder.getBindParameter() != null) {
 				final BindParameter bindParameter = bindParameterHolder.getBindParameter();
 				if (!bindParameter.isFixed()) {
-					final Object value = evalValueAndSetDataType(context, bindParameter);
+					final Object value = arrayValues.containsKey(bindParameter) ? arrayValues.get(bindParameter)
+							: evalValueAndSetDataType(context, bindParameter);
 					bindParameter.setValue(value);
 				}
 				cnt++;
 			} else {
+				if (bindParameterHolder.stream().allMatch(BindParameter::isFixed)) {
+					cnt += bindParameterHolder.getBindParameters().size();
+					continue;
+				}
 				final List<Row> rows = getRowList(context);
 				int rowSize = rows.size();
 				int paramSize = bindParameterHolder.getBindParameters().size();
@@ -253,8 +312,12 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 					Row row = rows.get(i);
 					for (int j = i * columnSize; j < ((i + 1) * columnSize); j++) {
 						final BindParameter bindParameter = bindParameterHolder.getBindParameters().get(j);
+						if (bindParameter.isFixed()) {
+							cnt++;
+							continue;
+						}
 						if (isRowNumber(bindParameter)) {
-							bindParameter.setValue(row.getRowId());
+							bindParameter.setValue(SchemaUtils.getInternalRowId(row));
 							cnt++;
 						} else {
 							final Column column = bindParameter.getColumn();
@@ -274,7 +337,11 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		Column column = this.getColumn(context, parameter.getName());
 		Object val;
 		if (column != null) {
-			parameter.setDataType(column.getDataType());
+			// Retain precision/scale for column-aware JDBC handlers without changing
+			// the expression used to evaluate this parameter on subsequent rows.
+			String parameterName = parameter.getName();
+			parameter.setColumn(column);
+			parameter.setName(parameterName);
 			if (context instanceof Row) {
 				final Row row = (Row) context;
 				val = row.get(column);
@@ -374,7 +441,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	public static final String ROW_NO = "__row_no";
 
 	private boolean isRowNumber(BindParameter param) {
-		return ROW_NO.equals(param.getValue());
+		return ROW_NO.equals(param.getName());
 	}
 
 	protected BindParameter createRowNo(Row row) {
@@ -579,7 +646,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		try {
 			Node clone = (Node) super.clone();
 			if (this.childNodeList != null) {
-				clone.childNodeList.clear();
+				clone.childNodeList = new ArrayList<Node>(childNodeList.size());
 				for (Node node : childNodeList) {
 					clone.addChildNode(node.clone());
 				}
